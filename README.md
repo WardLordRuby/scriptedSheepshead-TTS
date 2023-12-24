@@ -15,7 +15,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Custom model "Schrute Silver" coins  
 * Custom Gameplay rules and tips booklet  
 * Custom chat commands relevant to the game  
-*Italic*(.help) in chat will list commands:  
-*Italic*(.rules) Displays Rule and Gameplay Tip Booklet  
-*Italic*(.hiderules) Hides Rule and Gameplay Tip Booklet  
-*Italic*(.settings) Opens Window to Change Game Settings - admins only  
+*(.help) in chat will list commands:*  
+*(.rules) Displays Rule and Gameplay Tip Booklet*  
+*(.hiderules) Hides Rule and Gameplay Tip Booklet*  
+*(.settings) Opens Window to Change Game Settings - admins only*  
