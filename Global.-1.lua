@@ -37,7 +37,11 @@ SPAWN_POS = {
   tableBlock = Vector(0, 3.96, 0),
   pickerCounter = Vector(0, 1.83, -4.04),
   tableCounter = Vector(0, 1.83, 4.04),
-  ruleBook = Vector(0, 0.96, -9.5)
+  ruleBook = Vector(0, 0.96, -9.5),
+  blinds = {
+    Vector(-0.7, 1, 0),
+    Vector(0.8, 1, 0)
+  }
 }
 
 ROTATION = {
@@ -750,17 +754,13 @@ end
 
 --Calculates the rotation of blinds and deals blinds
 function dealToBlinds(deck, rotationVal)
-  local rotatedPos = {
-    Vector(-0.7, 1, 0):rotateOver('y', rotationVal.y),
-    Vector(0.8, 1, 0):rotateOver('y', rotationVal.y)
-  }
   deck.takeObject({
-    position = rotatedPos[1],
+    position = SPAWN_POS.blinds[1]:copy():rotateOver('y', rotationVal.y),
     rotation = {rotationVal.x, rotationVal.y, 180}
   })
   pause(0.15)
   deck.takeObject({
-    position = rotatedPos[2],
+    position = SPAWN_POS.blinds[2]:copy():rotateOver('y', rotationVal.y),
     rotation = {rotationVal.x, rotationVal.y, 180}
   })
 end
