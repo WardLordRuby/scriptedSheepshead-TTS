@@ -1,5 +1,5 @@
 --[[ Scripted version of Sheepshead built inside of Tabletop Simulator By: WardLordRuby
-     Scoring currently uses this modified version of the blackjack counting script by: MrStump
+     Scoring currently uses a modified version of the blackjack counting script by: MrStump
      I liked how EpicWolverine handled rebuilding the deck so I modified his code ]]--
 
 DEBUG = true
@@ -22,6 +22,42 @@ GUID = {
 }
 
 ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
+
+OFFSET = {
+  dealerChip = Vector(4, -2.58, 7),
+  deck = Vector(2, -2.5, 5),
+  chips =  {
+    Vector(4.62, -2, 3),
+    Vector(6.12, -2, 3.13),
+    Vector(5.31, -2, 4.35)
+  }
+}
+
+SPAWN_POS = {
+  tableBlock = Vector(0, 3.96, 0),
+  pickerCounter = Vector(0, 1.83, -4.04),
+  tableCounter = Vector(0, 1.83, 4.04),
+  ruleBook = Vector(0, 0.96, -9.5)
+}
+
+ROTATION = {
+  color = {
+    White = 0,
+    Red = 60,
+    Yellow = 120,
+    Green = 180,
+    Blue = 240,
+    Pink = 300
+  },
+  block = {
+    Pink = 30,
+    Yellow = 30,
+    White = 270,
+    Green = 270,
+    Red = 330,
+    Blue = 330
+  }
+}
 
 COIN_PRAM = {
   mesh = "http://cloud-3.steamusercontent.com/ugc/2205135744307283952/DEF0BF91642CF5636724CA3A37083385C810BA06/",
@@ -69,7 +105,7 @@ end
 function getDeck(zone, size)
   local decks = {}
   for _, obj in ipairs(zone.getObjects()) do
-    if obj.tag == 'Deck' then
+    if obj.type == 'Deck' then
       table.insert(decks, obj)
     end
   end
@@ -94,7 +130,7 @@ function getDeck(zone, size)
     end
     return bigDeck
   else
-    print("[DC0000]Deck size not defined")
+    print("[DC0000]Deck size not defined[-]")
     return nil
   end
 end
@@ -103,8 +139,8 @@ end
 function getLooseCards(zone)
   local looseCards = {}
     for _, obj in pairs(zone.getObjects()) do
-      if obj.tag == "Deck" or obj.tag == "Card" then
-        looseCards[#looseCards+1] = obj
+      if obj.type == "Deck" or obj.type == "Card" then
+        table.insert(looseCards, obj)
       end
     end
   return looseCards
@@ -116,72 +152,38 @@ function pause(time)
   repeat coroutine.yield(0) until os.time() > start + time
 end
 
---Called to set global variables that other math functions use
---Variables are set based on the given player color
+--Called to retrieve rotationAngle and playerPos of a given color
 function retrieveItemMoveData(color)
-  local rotationAngle = getColorRotation(color)
-  local playerPos = getPlayerPos(color)
+  local rotationAngle = ROTATION.color[color]
+  local playerPos = Player[color].getHandTransform().position
   return rotationAngle, playerPos
 end
 
---Returns rotation angle in reference to given color
-function getColorRotation(color)
-  local colorToRotation = {
-    White = 0,
-    Red = 60,
-    Yellow = 120,
-    Green = 180,
-    Blue = 240,
-    Pink = 300
-  }
-  return colorToRotation[color]
-end
-
---Returns the player position of given color
-function getPlayerPos(color)
-  if color then
-    local position = Player[color].getHandTransform().position
-    return position
-  end
-end
-
---Called to move the dealer chip in frot of a given player color
---On player change retrieveItemMoveData() must be called before running
-function moveDealerChipInFrontOfPlayer(color, rotationAngle, playerPos)
-  local originalOffset = vector(4, -2.58, 7)
-  local rotatedOffset = originalOffset:rotateOver('y', rotationAngle)
-  local currentRotation = dealerChip.getRotation()
-  dealerChip.setRotationSmooth(
-  {currentRotation.x, rotationAngle - 90, currentRotation.z}
-  )
-  dealerChip.setPositionSmooth(playerPos + rotatedOffset)
-end
-
---Called to move the deck in frot of a given player color
---On player change retrieveItemMoveData() must be called before running
-function moveDeckInFrontOfPlayer(color, rotationAngle, playerPos)
+--Called to move the deck and dealer chip in front of a given color
+function moveDeckAndDealerChipToColor(color)
   local deck = getDeck(tableZone)
-  local originalOffset = vector(2, -2.5, 5)
-  local rotatedOffset = originalOffset:rotateOver('y', rotationAngle)
-  local currentRotation = deck.getRotation()
-  deck.setRotationSmooth({currentRotation.x, rotationAngle, 180})
-  deck.setPositionSmooth(playerPos + rotatedOffset)
+  local rotationAngle, playerPos = retrieveItemMoveData(color)
+  local rotatedChipOffset = OFFSET.dealerChip:copy():rotateOver('y', rotationAngle)
+  local rotatedDeckOffset = OFFSET.deck:copy():rotateOver('y', rotationAngle)
+  local chipRotation = dealerChip.getRotation()
+  dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
+  dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
+  deck.setRotationSmooth({deck.getRotation().x, rotationAngle, 180})
+  deck.setPositionSmooth(playerPos + rotatedDeckOffset)
 end
 
 --Returns a table with the color removed from the given color 
 function removeColorFromList(color, list)
-  local json = JSON.encode(list)
-  local removedColorList = JSON.decode(json)
   local currentIndex
-  for i, colors in ipairs(removedColorList) do
+  for i, colors in ipairs(list) do
     if colors == color then
       currentIndex = i
       break
     end
   end
   if currentIndex then
-    table.remove(removedColorList, currentIndex)
-    return removedColorList
+    table.remove(list, currentIndex)
+    return list
   end
   return list
 end
@@ -198,7 +200,7 @@ end
 function rebuildDeck()
   for _, obj in pairs(getLooseCards(tableZone)) do
     local faceRotation = moreFaceUpOrDown(tableZone)
-    if obj.tag == 'Card' then
+    if obj.type == 'Card' then
       obj.setRotation({0,math.random(0,360),faceRotation})
       obj.setPosition({math.random(-5.75,5.75),3,math.random(-5.75,5.75)})
       pause(0.01)
@@ -230,13 +232,13 @@ function moreFaceUpOrDown(zone)
   local faceUpCount, faceDownCount = 0, 0
   local objectsInZone = zone.getObjects()
   for _, obj in pairs(objectsInZone) do
-    if obj.tag == 'Card' then
+    if obj.type == 'Card' then
       if obj.is_face_down then
         faceDownCount = faceDownCount + 1
       else
         faceUpCount = faceUpCount + 1
       end
-    elseif obj.tag == 'Deck' then
+    elseif obj.type == 'Deck' then
       if obj.is_face_down then
         faceDownCount = faceDownCount + obj.getQuantity()
       else
@@ -251,23 +253,14 @@ function moreFaceUpOrDown(zone)
   end
 end
 
---Returns the zoneObject associated with a given color
-function findZoneObject(color, zoneList)
-  for colors, zoneObject in pairs(zoneList) do
-    if color == colors then
-      return zoneObject
-    end
-  end
-end
-
 --Returns the number of cards in a given zone
 function countCards(zone)
   local objects = zone.getObjects()
   local cardCount = 0
   for _, obj in ipairs(objects) do
-    if obj.tag == 'Deck' then
+    if obj.type == 'Deck' then
       cardCount = cardCount + obj.getQuantity()
-    elseif obj.tag == 'Card' then
+    elseif obj.type == 'Card' then
       cardCount = cardCount + 1
     end
   end
@@ -305,8 +298,8 @@ function onChat(message, player)
     local lowerMessage = string.lower(message)
     if lowerMessage == "y" then
       if player.steam_name == gameSetUpPlayer.steam_name then
-        print(player.steam_name .. " selected new game.")
-        print("[21AF21]New game is being set up.")
+        print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
+        print("[21AF21]New game is being set up.[-]")
         continue = true
         return false
       end
@@ -319,10 +312,10 @@ function onChat(message, player)
   if string.sub(message, 1, 1) == "." then
     local command = string.lower(string.sub(message, 2))
     if command == "help" then
-      print("[b415ff]Sheepshead Console Help")
-      print("[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet]")
-      print("[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet]")
-      print("[21AF21].settings[-] [Opens Window to Change Game Settings]")
+      print("[b415ff]Sheepshead Console Help[-]")
+      print("[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]")
+      print("[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]")
+      print("[21AF21].settings[-] [Opens Window to Change Game Settings][-]")
     end
     if command == "rules" then
       getRuleBook(player.color)
@@ -334,7 +327,7 @@ function onChat(message, player)
       if player.admin then
         UI.show("settingsWindow")
       else
-        print("[DC0000]You do not have permission to access this feature.")
+        print("[DC0000]You do not have permission to access this feature.[-]")
       end
     end
     return false
@@ -343,9 +336,8 @@ end
 
 --Moves the rule book in front of player color from either the hiddenBag or tableZone
 function getRuleBook(color)
-  local playerRotation = getColorRotation(color)
-  local ruleBookSpawnPos = vector(0, 0.96, -9.5)
-  local ruleBookPos = ruleBookSpawnPos:rotateOver('y', playerRotation)
+  local playerRotation = ROTATION.color[color]
+  local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
   for _, containedObject in pairs(hiddenBag.getObjects()) do
     if containedObject.guid == GUID.RULE_BOOK then
       hiddenBag.takeObject({
@@ -388,7 +380,7 @@ end
 --Removes all chips and sets varSetup to false
 function resetBoard()
   for _, obj in pairs(tableZone.getObjects()) do
-    if obj.tag == "Chip" then
+    if obj.type == "Chip" then
       obj.destruct()
       pause(0.06)
     end
@@ -418,7 +410,7 @@ function printGameSettings()
   end
 
   if #sortedSeatedPlayers < 3 then
-    print("[DC0000]Sheepshead requires 3 to 6 players.")
+    print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
     gameSetUpInProgress = false
     stopCoroutine = true
     return
@@ -431,10 +423,8 @@ function printGameSettings()
       returnDecktoPiquet(deck)
     end
   end
-  local rotationAngle, playerPos = retrieveItemMoveData(gameSetUpPlayer.color)
-  moveDealerChipInFrontOfPlayer(gameSetUpPlayer.color, rotationAngle, playerPos)
-  moveDeckInFrontOfPlayer(gameSetUpPlayer.color, rotationAngle, playerPos)
-  print("[21AF21]Sheepshead set up for ",#sortedSeatedPlayers, " players!")
+  moveDeckAndDealerChipToColor(gameSetUpPlayer.color)
+  print("[21AF21]Sheepshead set up for ",#sortedSeatedPlayers, " players![-]")
 end
 
 --Called to add the blackSevens to a given deck
@@ -445,14 +435,11 @@ function returnDecktoPiquet(deck)
   hiddenBag.takeObject({
     guid = blackSevens,
     position = deck.getPosition(),
-    roation = deck.getRotation(),
+    rotation = deck.getRotation(),
     smooth = false
   })
-  pause(0.5)
-  local decks = getLooseCards(tableZone)
-  group(decks)
-  pause(0.5)
-  print("[21AF21]The two black sevens have been added to the deck.")
+  pause(0.3)
+  print("[21AF21]The two black sevens have been added to the deck.[-]")
 end
 
 --Called to remove the blackSevens from a given deck
@@ -465,13 +452,13 @@ function removeBlackSevens(deck)
       if card.name == cardName then
         deck.takeObject({
           guid = card.guid,
-          position = deck.getPosition() + vector(2.75, 1, 0),
+          position = deck.getPosition() + Vector(2.75, 1, 0),
           smooth = false
         })
       end
     end
   end
-  print("[21AF21]The two black sevens have been removed from the deck.")
+  print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.25)
   local smallDeck = getDeck(tableZone, "small")
   hiddenBag.putObject(smallDeck)
@@ -481,16 +468,11 @@ end
 
 --Called when New Game Set Up event to deal chips to all seated players
 function spawnChips(rotationAngle, playerPos)
-  local originalOffsets =  {
-    vector(4.62, -2, 3),
-    vector(6.12, -2, 3.13),
-    vector(5.31, -2, 4.35)
-  }
   local rotatedOffset
   for c = 1, 15 do
     if c % 5 == 1 then
       local offsetIndex = math.floor((c - 1) / 5) + 1
-      rotatedOffset = originalOffsets[offsetIndex]:rotateOver('y', rotationAngle)
+      rotatedOffset = OFFSET.chips[offsetIndex]:copy():rotateOver('y', rotationAngle)
     end
     local customCoin = spawnObject({
       type = "Custom_Model",
@@ -515,28 +497,28 @@ function setUpGameEvent(player)
     gameSetUpPlayer = player
     startLuaCoroutine(self, 'setUpGameCoroutine')
   else
-    broadcastToColor("[DC0000]You do not have permission to access this feature.", player.color)
+    broadcastToColor("[DC0000]You do not have permission to access this feature.", player.color, "[-]")
   end
 end
 
 --start of order of opperations for setUpGame
 function setUpGameCoroutine()
   if gameSetUpRan and #sortedSeatedPlayers < 3 then
-    print("[DC0000]Sheepshead requires 3 to 6 players.")
+    print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
     gameSetUpInProgress = false
     return 1
   elseif gameSetUpRan then
-    Player[gameSetUpPlayer.color].broadcast("You are trying to set up a new game for "
+    Player[gameSetUpPlayer.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
     .. #sortedSeatedPlayers .. " players.")
     pause(1.5)
-    Player[gameSetUpPlayer.color].broadcast("Are you sure you want to continue? (y/n)")
+    Player[gameSetUpPlayer.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
     lookForPlayerText = true
     pause(6)
     if continue then
       lookForPlayerText, continue = false, false
       resetBoard()
     else
-      print("[21AF21]New game was not selected.")
+      print("[21AF21]New game was not selected.[-]")
       lookForPlayerText, continue = false, false
       gameSetUpInProgress = false
       return 1
@@ -593,8 +575,10 @@ function setUpVar()
   if sixHandedToFive and #sortedSeatedPlayers == 6 then
     playerCount = 5
     dealSettings = "dealerSitsOut"
-    print("[21AF21]Dealer will sit out every hand.")
+    print("[21AF21]Dealer will sit out every hand.[-]")
     return
+  elseif not sixHandedToFive and dealSettings == "dealerSitsOut" then
+    print("[21AF21]Dealer will no longer sit out.[-]")
   end
   dealSettings = "normal"
   playerCount = #sortedSeatedPlayers
@@ -651,12 +635,12 @@ end
 --Order of opperations for dealing
 function dealCardsCoroutine()
   if gameSetUpInProgress then
-    print("[21AF21]Setup Is Currently In Progress.")
+    print("[21AF21]Setup Is Currently In Progress.[-]")
     passInProgress = false
     return 1
   end
   if not gameSetUpRan then
-    print("[21AF21]Press Set Up Game First.")
+    print("[21AF21]Press Set Up Game First.[-]")
     passInProgress = false
     return 1
   end
@@ -676,12 +660,9 @@ function dealCardsCoroutine()
       dealerColorVal = 1
     end
 
-    local rotationAngle, playerPos = retrieveItemMoveData(sortedSeatedPlayers[dealerColorVal])
-    pause(0.1)
-    moveDealerChipInFrontOfPlayer(sortedSeatedPlayers[dealerColorVal], rotationAngle, playerPos)
     rebuildDeck()
     pause(0.20)
-    moveDeckInFrontOfPlayer(sortedSeatedPlayers[dealerColorVal], rotationAngle, playerPos)
+    moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
     pause(0.75)
     calculateDealOrder(dealSettings)
     pause(0.15)
@@ -770,8 +751,8 @@ end
 --Calculates the rotation of blinds and deals blinds
 function dealToBlinds(deck, rotationVal)
   local rotatedPos = {
-    vector(-0.7, 1, 0):rotateOver('y', rotationVal.y),
-    vector(0.8, 1, 0):rotateOver('y', rotationVal.y)
+    Vector(-0.7, 1, 0):rotateOver('y', rotationVal.y),
+    Vector(0.8, 1, 0):rotateOver('y', rotationVal.y)
   }
   deck.takeObject({
     position = rotatedPos[1],
@@ -790,7 +771,7 @@ end
 function passEvent(player)
   if sixHandedToFive and playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
-      broadcastToColor("[DC0000]You can not pass while sitting out.", player.color)
+      broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
       return
     end
   end
@@ -801,9 +782,9 @@ function passEvent(player)
   if not passInProgress  and checkCardCount(centerZone, 2) then
     if player.color == dealerColor then
       if not DEBUG then
-        broadcastToColor("[DC0000]Dealer can not pass. Pick your own!", dealerColor)
+        broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", dealerColor)
       else
-        print("[DC0000]Dealer can not pass. " .. dealerColor .. " pick your own!")
+        print("[DC0000]Dealer can not pass. " .. dealerColor .. " pick your own![-]")
       end
     else
       broadcastToAll(player.steam_name .. " passed")
@@ -816,7 +797,7 @@ end
 function pickBlindsEvent(player)
   if sixHandedToFive and playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
-      broadcastToColor("[DC0000]You can not pick while sitting out.", player.color)
+      broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
       return
     end
   end
@@ -901,7 +882,7 @@ function takeTrickEvent(player)
   end
   if sixHandedToFive and playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
-      broadcastToColor("[DC0000]You can not take tricks while sitting out.", player.color)
+      broadcastToColor("[DC0000]You can not take tricks while sitting out.[-]", player.color)
       return
     end
   end
@@ -910,7 +891,7 @@ function takeTrickEvent(player)
   end
   if not takeTrickInProgress then
     takeTrickInProgress = true
-    local playerTrickZone = findZoneObject(player.color, trickZones)
+    local playerTrickZone = trickZones[player.color]
     group(getLooseCards(centerZone))
     Wait.time(function() flipDeck(centerZone) end, 0.6)
     Wait.time(
@@ -941,14 +922,7 @@ end
 
 --Returns the rotation value for the invisible block that holds up the counters
 function getBlockRotation(color)
-  local colorToRotation = {
-    Pink = 30,
-    Yellow = 30,
-    White = 270,
-    Green = 270,
-    Red = 330,
-    Blue = 330
-  }
+  
   return colorToRotation[color]
 end
 
@@ -957,15 +931,13 @@ end
 --Flips over pickers tricks to see score of hand
 function toggleCounterVisibility(color)
   if not counterVisible then
-    local tableBlockSpawnPos = vector(0, 3.96, 0)
-    local pickerCounterSpawnPos = vector(0, 1.83, -4.04)
-    local tableCounterSpawnPos = vector(0, 1.83, 4.04)
-    local pickerRotation = getColorRotation(color)
-    local blockRotation = getBlockRotation(color)
-    local tCounterPos = tableCounterSpawnPos:rotateOver('y', pickerRotation)
-    local pCounterPos = pickerCounterSpawnPos:rotateOver('y', pickerRotation)
+    local pickerRotation = ROTATION.color[color]
+    local blockRotation = ROTATION.block[color]
+    local tCounterPos = SPAWN_POS.tableCounter:copy():rotateOver('y', pickerRotation)
+    local pCounterPos = SPAWN_POS.pickerCounter:copy():rotateOver('y', pickerRotation)
+    local blockPos = SPAWN_POS.tableBlock:copy():rotateOver('y', blockRotation)
     local block = hiddenBag.takeObject({
-      position = tableBlockSpawnPos,
+      position = blockPos,
       rotation = {0, blockRotation, 0},
       smooth = false,
       guid = GUID.TABLE_BLOCK
@@ -999,7 +971,7 @@ function toggleCounterVisibility(color)
       end,
       20
     )
-    local pickerZone = findZoneObject(pickingPlayer.color, trickZones)
+    local pickerZone = trickZones[pickingPlayer.color]
     local pickerCards = getLooseCards(pickerZone)
     if pickerCards then
       group(pickerCards)
@@ -1036,7 +1008,7 @@ function onObjectEnterScriptingZone(zone, object)
   --makes sure cards are face down and shows to all players
   if cardsToBeBuried then
     local pickerZone = trickZones[pickingPlayer.color]
-    if zone == pickerZone and object.tag == 'Card' then
+    if zone == pickerZone and object.type == 'Card' then
       local hideFrom = removeColorFromList(pickingPlayer.color, sortedSeatedPlayers)
       object.setInvisibleTo(hideFrom)
       Wait.time(
@@ -1097,9 +1069,9 @@ end
 --Creates two tables, of the entity of each zone and counter, of each zoneObject
 --and its associated counterObject, then starts the loop
 function setupGuidTable()
-  local pickerZoneGuid = findZoneObject(pickingPlayer.color, trickZones).guid
+  local pickerZoneGuid = trickZones[pickingPlayer.color].guid
   local colorAcrossFromPicker = findColorAcrossTable(pickingPlayer.color)
-  local tableZoneGuid = findZoneObject(colorAcrossFromPicker, trickZones).guid
+  local tableZoneGuid = trickZones[colorAcrossFromPicker].guid
 
   guidTable = {
     [pickerZoneGuid] = GUID.CARD_COUNTER_PICKER,
@@ -1140,9 +1112,9 @@ function countTricks()
         values[i] = {}
         local objectsInZone = set.z.getObjects()
         for j, object in ipairs(objectsInZone) do
-            if object.tag == "Card" then
+            if object.type == "Card" then
                 obtainCardValue(i, object)
-            elseif object.tag == "Deck" then
+            elseif object.type == "Deck" then
                 local z = object.getRotation().z
                 if z > 345 or z < 15 then
                     obtainDeckValue(i, object)
@@ -1241,8 +1213,8 @@ callSettings = {
 currentRules = {
   "\n\n\n\n\n\n\n",
   "[21AF21]Welcome to Scripted Sheepshead!\n",
-  "By: WardLordRuby           \n",
-  "[b415ff]Features:                   \n",
+  "By: WardLordRuby           [-]\n",
+  "[b415ff]Features:                   [-]\n",
   "[FFFFFF]Will Auto Adjust for 3-6 Players\n",
   "Scripted Dealing, Picking,     \n",
   "Taking Tricks, Burying        \n",
@@ -1251,7 +1223,7 @@ currentRules = {
   "Custom Schrute Silver Coins   \n",
   "Gameplay Rules and Tips    \n",
   "Use (.help) for Commands    \n\n",
-  "[b415ff]Current Sheepshead Rules:   \n",
+  "[b415ff]Current Sheepshead Rules:   [-]\n",
   "[-]Jack of Diamonds Partner    \n",
   "Dealer Pick your Own       \n",
   "Can Call if Forced to Pick    \n",
