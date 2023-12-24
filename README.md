@@ -1,5 +1,5 @@
 # scriptedSheepshead-TTS  
-## Scripted version of the Midwest (U.S) card game Sheepshead built for Table Top Simulator  
+### Scripted version of the Midwest (U.S) card game Sheepshead built for Table Top Simulator  
 
 This is my first large coding project, feedback is always appreciated.  
 Work in progress next features to be added  
