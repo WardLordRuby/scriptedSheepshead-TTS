@@ -8,7 +8,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Add Partner:Call Ace Variant to settings window  
 
 ### Current features:  
-* Game automatically adjusts game settings for 3 to 6 players  
+* Automatically adjusts game settings for 3 to 6 players  
 * Scripted Game Set Up, Dealing, Picking, Taking Tricks, and Burying  
 * Card counter for both teams  
 * Game settings window to adjust rules to your liking  
