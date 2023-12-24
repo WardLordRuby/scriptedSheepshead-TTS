@@ -18,4 +18,4 @@ This is my first large coding project, feedback is always appreciated. Work in p
 *(.help) - in chat will list commands:*  
 *(.rules) - Displays Rule and Gameplay Tip Booklet*  
 *(.hiderules) - Hides Rule and Gameplay Tip Booklet*  
-*(.settings) - Opens Window to Change Game Settings - admins only*  
+*(.settings) - Opens Window to Change Game Settings* **_admins only_**  
