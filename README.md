@@ -8,9 +8,9 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Add Partner:Call Ace Variant to settings window  
 
 ### Current features:  
-* Scripted Dealing, Picking, Taking Tricks, and Burying  
-* Card counter for both teams  
 * Game automatically adjusts game settings for 3 to 6 players  
+* Scripted Game Set Up, Dealing, Picking, Taking Tricks, and Burying  
+* Card counter for both teams  
 * Game settings window to adjust rules to your liking  
 * Custom model "Schrute Silver" coins  
 * Custom Gameplay rules and tips booklet  
