@@ -920,12 +920,6 @@ function takeTrickEvent(player)
   end
 end
 
---Returns the rotation value for the invisible block that holds up the counters
-function getBlockRotation(color)
-  
-  return colorToRotation[color]
-end
-
 --Toggles the visibility of the counters, on counter spawn will spawn
 --the counter in front of the given color (pickerColor)
 --Flips over pickers tricks to see score of hand
