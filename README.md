@@ -1,12 +1,12 @@
 # scriptedSheepshead-TTS  
-##Scripted version of the Midwest (U.S) card game Sheepshead built for Table Top Simulator  
+## Scripted version of the Midwest (U.S) card game Sheepshead built for Table Top Simulator  
 
 This is my first large coding project, feedback is always appreciated.  
 Work in progress next features to be added  
   Automate take trick event  
   Add Partner:Call Ace Variant to settings window  
 
-###Current features:  
+### Current features:  
 Scripted Dealing, Picking, Taking Tricks, and Burying  
 Card counter for both teams  
 Game automatically adjusts game settings for 3 to 6 players  
