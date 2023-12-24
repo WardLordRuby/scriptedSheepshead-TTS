@@ -70,7 +70,7 @@ function getDeck(zone, size)
   local decks = {}
   for _, obj in ipairs(zone.getObjects()) do
     if obj.tag == 'Deck' then
-      decks[#decks + 1] = obj
+      table.insert(decks, obj)
     end
   end
   if #decks == 0 then
@@ -1239,13 +1239,14 @@ callSettings = {
   crackAroundCall = false
 }
 currentRules = {
-  "\n\n\n\n\n\n\n\n",
+  "\n\n\n\n\n\n\n",
   "[21AF21]Welcome to Scripted Sheepshead!\n",
   "By: WardLordRuby           \n",
   "[b415ff]Features:                   \n",
-  "[FFFFFF]Scripted Dealing, Picking,     \n",
+  "[FFFFFF]Will Auto Adjust for 3-6 Players\n",
+  "Scripted Dealing, Picking,     \n",
   "Taking Tricks, Burying        \n",
-  "Will Auto Adjust for 3-6 Players\n",
+  "Card Counters for Each Team \n",
   "Custom Game Settings       \n",
   "Custom Schrute Silver Coins   \n",
   "Gameplay Rules and Tips    \n",
@@ -1285,7 +1286,7 @@ function dealerSitsOut()
   UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "true")
   sixHandedToFive = true
   varSetup = false
-  currentRules[16] = "6 Handed - Dealer Sits Out   \n"
+  currentRules[17] = "6 Handed - Dealer Sits Out   \n"
   displayRules()
 end
 
@@ -1297,7 +1298,7 @@ function dealerSitsOutOff()
   UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "false")
   sixHandedToFive = false
   varSetup = false
-  currentRules[16] = "6 Handed - Normal        \n"
+  currentRules[17] = "6 Handed - Normal        \n"
   displayRules()
 end
 
@@ -1306,7 +1307,7 @@ function enableCalls()
   UI.setAttribute("settingsButtonCallsOn", "active", "true")
   UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
   toBuildCallsPanel = true
-  currentRules[17] = "Call Menu Enabled        "
+  currentRules[18] = "Call Menu Enabled        "
   displayRules()
 end
 
@@ -1314,7 +1315,7 @@ function disableCalls()
   UI.setAttribute("settingsButtonCallsOff", "active", "true")
   UI.setAttribute("settingsButtonCallsOn", "active", "false")
   resetCalls()
-  currentRules[17] = "Call Menu Disabled       "
+  currentRules[18] = "Call Menu Disabled       "
   displayRules()
 end
 
