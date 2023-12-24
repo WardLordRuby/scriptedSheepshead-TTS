@@ -6,6 +6,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 ### Next features to be added:  
 * Automate take trick event  
 * Add Partner:Call Ace Variant to settings window  
+* Create UI and code a call panel
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
