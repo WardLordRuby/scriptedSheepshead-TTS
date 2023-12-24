@@ -1,0 +1,517 @@
+<!-- Xml UI. Scripted Version of Sheepshead for Table Top Simulator
+ 		 UI elements: Main functions panel for gameplay functions. Dealing ect 
+ 		 Settings window to change what rules user wants enabled, Set Up Game button
+		 for starting a new game, and a sub panel for callouts (coming soon) 
+		 Written by: WardLordRuby -->
+<button
+  onClick="setUpGameEvent"
+  position="610 513 0"
+  width="175"
+  height="52"
+  fontsize="24"
+>Set Up Game
+</button>
+
+<button id="playerUp"
+  onClick="playerCountDebugUp"
+  position="880 380 0"
+  width="175"
+  height="52"
+  fontsize="24"
+	active="false"
+>Player up
+</button>
+
+<button id="playerDown"
+  onClick="playerCountDebugDown"
+  position="880 320 0"
+  width="175"
+  height="52"
+	fontsize="24"
+	active="false"
+>Player down
+</button>
+
+<button id="test"
+  onClick="test"
+  position="880 260 0"
+  width="175"
+  height="52"
+  fontsize="24"
+	active="false"
+>test
+</button>
+
+<Panel id="Toolbox"
+  width="165" height="505"
+  rectAlignment="LowerRight"
+  offsetXY="-250 2"
+  allowDragging="true"
+  showAnimation="FadeIn"
+  showAnimationDelay="2"
+  visibility="White|Red|Yellow|Green|Blue|Pink"
+  returnToOriginalPositionWhenReleased="false"
+  onMouseDown="toolboxAnimateDown"
+  onMouseUp="toolboxAnimateUp"
+  image="toolboxMain"
+>
+  <Button id="TakeTrick"
+  	width="113" height="113"
+  	offsetXY="00 -145"
+  	onClick="takeTrickEvent"
+  	onMouseEnter="takeTrickButtonAnimateEnter"
+  	onMouseExit="takeTrickButtonAnimateExit"
+  	onMouseDown="takeTrickButtonAnimateDown"
+  	onMouseUp="takeTrickButtonAnimateUp"
+  	image="http://cloud-3.steamusercontent.com/ugc/2233283965353731772/C51F655BEE5CBF3E2F8202CFEAE85450948C392E/"
+	>
+	</Button>
+
+  <Button id="Pass"
+    width="113" height="113"
+    offsetXY="00 -42"
+    onClick="passEvent"
+    onMouseEnter="passButtonAnimateEnter"
+    onMouseExit="passButtonAnimateExit"
+    onMouseDown="passButtonAnimateDown"
+    onMouseUp="passButtonAnimateUp"
+    image="http://cloud-3.steamusercontent.com/ugc/2233283965353731501/13B7D22788C1142BFC7852C48DFED46A5897C757/"
+	>
+	</Button>
+
+  <Button id="Pick"
+    width="113" height="113"
+    offsetXY="00 60"
+    onClick="pickBlindsEvent"
+    onMouseEnter="pickButtonAnimateEnter"
+    onMouseExit="pickButtonAnimateExit"
+    onMouseDown="pickButtonAnimateDown"
+    onMouseUp="pickButtonAnimateUp"
+    image="http://cloud-3.steamusercontent.com/ugc/2233283965353731650/2C7000D4525A18ADB4A361D6B1EC61EC38E02C91/"
+	>
+	</Button>
+
+  <Button id="Deal"
+    width="113" height="113"
+    offsetXY="00 160"
+    onClick="setUpHandEvent"
+    onMouseEnter="dealButtonAnimateEnter"
+    onMouseExit="dealButtonAnimateExit"
+    onMouseDown="dealButtonAnimateDown"
+    onMouseUp="dealButtonAnimateUp"
+    image="http://cloud-3.steamusercontent.com/ugc/2233283965353654571/82CC6E88D206B72B2E0AE8DEF90887FFD6D20BB6/"
+		>
+		</Button>
+</Panel>
+
+<Panel
+id="settingsWindow"
+width="372"
+height="570"
+offsetXY="400 -100"
+color="rgba(0,0,0,0)"
+rectAlignment="UpperLeft"
+allowDragging="true"
+returnToOriginalPositionWhenReleased="false"
+visibility="Admin"
+showAnimationDelay="0"
+showAnimation="Grow"
+hideAnimation="Shrink"
+active="false"
+>
+	<Image
+	id="settingsWindowBackground"
+	image="settingsWindow"
+	preserveAspect="false"
+	width="372"
+	height="570"
+	rectAlignment="UpperLeft"
+	>
+		<!-- Close Button -->
+		<Image
+		id="settingsWindowExitButton"
+		image="closeButton"
+		width="26"
+		height="26"
+		offsetXY="340 -5"
+		rectAlignment="UpperLeft"
+		>
+			<Button
+			rectAlignment="UpperLeft"
+			width="26"
+			color="rgba(0,0,0,0)"
+			onMouseEnter="closeSettingsButtonAnimateEnter"
+      onMouseExit="closeSettingsButtonAnimateExit"
+      onMouseDown="closeSettingsButtonAnimateDown"
+      onMouseUp="closeSettingsWindow"
+			>
+			</Button>
+		</Image>
+		
+		<Image
+		id="gameSettingsBackground"
+		image="gameSettings"
+		width="365"
+		height="96"
+		offsetXY="3 -158"
+		rectAlignment="UpperLeft"
+		>
+			<!-- DealerSitsOut Off -->
+			<Image
+			id="settingsButtonDealerSitsOutOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -55"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				color="rgba(0,0,0,0)"
+				onClick="dealerSitsOut"
+				>
+				</Button>
+			</Image>
+
+			<!-- DealerSitsOut On -->
+			<Image
+			id="settingsButtonDealerSitsOutOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -55"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				color="rgba(0,0,0,0)"
+				onClick="dealerSitsOutOff"
+				>
+				</Button>
+			</Image>
+		</Image>
+		
+		<Image
+		id="callSettingsBackground"
+		image="callsDisabled"
+		width="365"
+		height="307"
+		offsetXY="3 -259"
+		rectAlignment="UpperLeft"
+		>
+			<!-- Calls Off -->
+			<Image
+			id="settingsButtonCallsOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -12"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="335"
+				offsetXY="-305 0"
+				color="rgba(0,0,0,0)"
+				onClick="enableCalls"
+				>
+				</Button>
+			</Image>
+
+			<!-- Calls On -->
+			<Image
+			id="settingsButtonCallsOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -12"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="335"
+				offsetXY="-305 0"
+				color="rgba(0,0,0,0)"
+				onClick="disableCalls"
+				>
+				</Button>
+			</Image>
+			
+			<!-- Sheepshead Call Off -->
+			<Image
+			id="settingsButtonSheepsheadOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -55"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="If picker believes they can pull off winning a trickless hand. 2x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="enableSheepshead"
+				>
+				</Button>
+			</Image>
+
+			<!-- Sheepshead Call On -->
+			<Image
+			id="settingsButtonSheepsheadOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -55"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="If picker believes they can pull off winning a trickless hand. 2x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="disableSheepshead"
+				>
+				</Button>
+			</Image>
+			
+			<!-- Blitz Call Off -->
+			<Image
+			id="settingsButtonBlitzOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -97"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="Player reveals they have 2 red or 2 black Queens. 2x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="enableBlitz"
+				>
+				</Button>
+			</Image>
+
+			<!-- Blitz Call On -->
+			<Image
+			id="settingsButtonBlitzOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -97"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="Player reveals they have 2 red or 2 black Queens. 2x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="disableBlitz"
+				>
+				</Button>
+			</Image>
+			
+			<!-- Leaster Call Off -->
+			<Image
+			id="settingsButtonLeasterOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -140"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="Can call if forced to pick. No teams. Player with least points get +1 from all!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="enableLeaster"
+				>
+				</Button>
+			</Image>
+
+			<!-- Leaster Call On -->
+			<Image
+			id="settingsButtonLeasterOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -140"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="Can call if forced to pick. No teams. Player with least points get +1 from all!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="disableLeaster"
+				>
+				</Button>
+			</Image>
+			
+			<!-- Crack Call Off -->
+			<Image
+			id="settingsButtonCrackOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -182"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="Any player who did not get a chance to pick can crack and 2x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="enableCrack"
+				>
+				</Button>
+			</Image>
+
+			<!-- Crack Call On -->
+			<Image
+			id="settingsButtonCrackOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -182"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="310"
+				offsetXY="-280 0"
+				tooltipPosition="Below"
+				tooltip="Any player who did not get a chance to pick can crack and 2x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="disableCrack"
+				>
+				</Button>
+			</Image>
+			
+			<!-- Crack Back Call Off -->
+			<Image
+			id="settingsButtonCrackBackOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -224"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="288"
+				offsetXY="-261 0"
+				tooltipPosition="Below"
+				tooltip="Picker can crack-back resulting in 4x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="enableCrackBack"
+				>
+				</Button>
+			</Image>
+
+			<!-- Crack Back Call On -->
+			<Image
+			id="settingsButtonCrackBackOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -224"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="288"
+				offsetXY="-261 0"
+				tooltipPosition="Below"
+				tooltip="Picker can crack-back resulting in 4x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="disableCrackBack"
+				>
+				</Button>
+			</Image>
+			
+			<!-- Crack Around Call Off -->
+			<Image
+			id="settingsButtonCrackAroundOff"
+			image="unchecked"
+			width="28"
+			height="28"
+			offsetXY="322 -267"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="288"
+				offsetXY="-261 0"
+				tooltipPosition="Below"
+				tooltip="Partner can also crack-back, outting themself as partner. resulting in 4x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="enableCrackAround"
+				>
+				</Button>
+			</Image>
+
+			<!-- Crack Around Call On -->
+			<Image
+			id="settingsButtonCrackAroundOn"
+			image="checked"
+			width="28"
+			height="28"
+			offsetXY="322 -267"
+			rectAlignment="UpperLeft"
+			active="false"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="288"
+				offsetXY="-261 0"
+				tooltipPosition="Below"
+				tooltip="Partner can also crack-back, outting themself as partner. resulting in 4x scoring!"
+				tooltipBorderColor="7B797C"
+				color="rgba(0,0,0,0)"
+				onClick="disableCrackAround"
+				>
+				</Button>
+			</Image>
+		</Image>	
+	</Image>
+</Panel>
