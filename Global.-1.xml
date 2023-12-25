@@ -1,8 +1,9 @@
 <!-- Xml UI. Scripted Version of Sheepshead for Tabletop Simulator
-     UI elements: Main functions panel for gameplay functions. Dealing ect 
-     Settings window to change what rules user wants enabled, Set Up Game button
-     for starting a new game, and a sub panel for callouts (coming soon) 
-     Written by: WardLordRuby -->
+ UI elements: Main functions panel for gameplay functions. Dealing ect 
+ Settings window to change what rules user wants enabled, Set Up Game button
+ for starting a new game, and a sub panel for callouts (coming soon) 
+ Written by: WardLordRuby -->
+
 <button
   onClick="setUpGameEvent"
   position="610 513 0"
@@ -18,7 +19,7 @@
   width="175"
   height="52"
   fontsize="24"
-	active="false"
+  active="false"
 >Player up
 </button>
 
@@ -27,8 +28,8 @@
   position="880 320 0"
   width="175"
   height="52"
-	fontsize="24"
-	active="false"
+  fontsize="24"
+  active="false"
 >Player down
 </button>
 
@@ -38,7 +39,7 @@
   width="175"
   height="52"
   fontsize="24"
-	active="false"
+  active="false"
 >test
 </button>
 
@@ -88,8 +89,8 @@
     onMouseDown="pickButtonAnimateDown"
     onMouseUp="pickButtonAnimateUp"
     image="http://cloud-3.steamusercontent.com/ugc/2233283965353731650/2C7000D4525A18ADB4A361D6B1EC61EC38E02C91/"
-	>
-	</Button>
+  >
+  </Button>
 
   <Button id="Deal"
     width="113" height="113"
@@ -100,14 +101,14 @@
     onMouseDown="dealButtonAnimateDown"
     onMouseUp="dealButtonAnimateUp"
     image="http://cloud-3.steamusercontent.com/ugc/2233283965353654571/82CC6E88D206B72B2E0AE8DEF90887FFD6D20BB6/"
-		>
-		</Button>
+  >
+  </Button>
 </Panel>
 
 <Panel
 id="settingsWindow"
 width="372"
-height="570"
+height="563"
 offsetXY="400 -100"
 color="rgba(0,0,0,0)"
 rectAlignment="UpperLeft"
@@ -117,7 +118,7 @@ visibility="Admin"
 showAnimationDelay="0"
 showAnimation="Grow"
 hideAnimation="Shrink"
-active="false"
+active="true"
 >
 	<Image
 	id="settingsWindowBackground"
@@ -152,8 +153,8 @@ active="false"
 		id="gameSettingsBackground"
 		image="gameSettings"
 		width="365"
-		height="96"
-		offsetXY="3 -158"
+		height="139"
+		offsetXY="3 -115"
 		rectAlignment="UpperLeft"
 		>
 			<!-- DealerSitsOut Off -->
@@ -194,6 +195,45 @@ active="false"
 				>
 				</Button>
 			</Image>
+
+      			<!-- JD Partner Button -->
+			<Image
+			id="settingsButtonJDPartner"
+			image="jdPartner"
+			width="304"
+			height="32"
+			offsetXY="47 -97"
+			rectAlignment="UpperLeft"
+			>
+				<Button
+				rectAlignment="UpperLeft"
+				width="152"
+				offsetXY="0 0"
+				color="rgba(0,0,0,0)"
+				onClick="callAnAceOn"
+				>
+				</Button>
+			</Image>
+
+      			<!-- Call an Ace Button -->
+      			<Image
+			id="settingsButtonCallAnAce"
+			image="callAce"
+			width="304"
+			height="32"
+			offsetXY="47 -97"
+			rectAlignment="UpperLeft"
+      			active="false"
+			>
+        			<Button
+				rectAlignment="UpperLeft"
+				width="152"
+				offsetXY="150 0"
+				color="rgba(0,0,0,0)"
+				onClick="jdPartnerOn"
+				>
+				</Button>
+      			</Image>
 		</Image>
 		
 		<Image
