@@ -4,8 +4,7 @@
 This is my first large coding project, feedback is always appreciated. Work in progress  
 
 ### Next features to be added:  
-* Automate take trick event  
-* Add Partner:Call Ace Variant to settings window  
+* Automate take trick event   
 * Create UI and code a call panel
 * Implement onSave to save players custom settings 
 
@@ -13,7 +12,9 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Automatically adjusts game settings for 3 to 6 players  
 * Scripted Game Set Up, Dealing, Picking, Taking Tricks, and Burying  
 * Card counter for both teams  
-* Game settings window to adjust rules to your liking  
+* Game settings window to adjust rules to your liking
+* Choose your preferred partner rules
+* Choose what calls you want to enable to modify scoring
 * Custom model "Schrute Silver" coins  
 * Custom Gameplay rules and tips booklet  
 * Custom chat commands relevant to the game  
