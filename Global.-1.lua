@@ -206,24 +206,25 @@ function rebuildDeck()
     local faceRotation = moreFaceUpOrDown(tableZone)
     if obj.type == 'Card' then
       obj.setRotation({0,math.random(0,360),faceRotation})
-      obj.setPosition({math.random(-5.75,5.75),3,math.random(-5.75,5.75)})
+      obj.setPosition({math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)})
       pause(0.01)
     else
       for _, card in pairs(obj.getObjects()) do
         obj.takeObject({
           rotation = {0,math.random(0,360),faceRotation},
-          position = {math.random(-5.75,5.75),3,math.random(-5.75,5.75)},
+          position = {math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)},
           guid = card.guid
         })
         pause(0.01)
       end
     end
   end
-  pause(0.4)
-  local looseCards = getLooseCards(tableZone)
-  flipCards(looseCards)
+  pause(0.25)
+  flipCards(getLooseCards(tableZone))
   pause(0.5)
-  group(looseCards)
+  group(getLooseCards(tableZone))
+  pause(0.5)
+  group(getLooseCards(tableZone))
   pause(0.5)
 end
 
@@ -662,9 +663,9 @@ function dealCardsCoroutine()
     end
 
     rebuildDeck()
-    pause(0.55)
+    pause(0.3)
     moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
-    pause(0.75)
+    pause(0.15)
   else
     firstDealOfGame = false
   end
