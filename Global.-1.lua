@@ -211,21 +211,18 @@ function rebuildDeck()
     else
       for _, card in pairs(obj.getObjects()) do
         obj.takeObject({
-          position = {math.random(-5.75,5.75),3,math.random(-5.75,5.75)},
           rotation = {0,math.random(0,360),faceRotation},
+          position = {math.random(-5.75,5.75),3,math.random(-5.75,5.75)},
           guid = card.guid
         })
         pause(0.01)
       end
     end
   end
-  pause(0.25)
+  pause(0.4)
   local looseCards = getLooseCards(tableZone)
   flipCards(looseCards)
   pause(0.5)
-  group(looseCards)
-  pause(0.5)
-  looseCards = getLooseCards(tableZone)
   group(looseCards)
   pause(0.5)
 end
@@ -316,10 +313,7 @@ function onChat(message, player)
   if string.sub(message, 1, 1) == "." then
     local command = string.lower(string.sub(message, 2))
     if command == "help" then
-      print("[b415ff]Sheepshead Console Help[-]")
-      print("[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]")
-      print("[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]")
-      print("[21AF21].settings[-] [Opens Window to Change Game Settings][-]")
+      print(table.concat(CHAT_COMMANDS, ""))
     end
     if command == "rules" then
       getRuleBook(player.color)
@@ -372,7 +366,10 @@ end
 --Moves the rule book back to hiddenBag
 function hideRuleBook()
   for _, tableObject in pairs(tableZone.getObjects()) do
-    if tableObject.guid == GUID.RULE_BOOK then
+    if tableObject.type == 'Tile' then
+      if tableObject.guid ~= GUID.RULE_BOOK then
+        GUID.RULE_BOOK = tableObject.guid
+      end
       tableObject.setInvisibleTo(ALL_PLAYERS)
       hiddenBag.putObject(tableObject)
       break
@@ -665,15 +662,14 @@ function dealCardsCoroutine()
     end
 
     rebuildDeck()
-    pause(0.20)
+    pause(0.55)
     moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
     pause(0.75)
-    calculateDealOrder(dealSettings)
-    pause(0.15)
   else
-    calculateDealOrder(dealSettings)
     firstDealOfGame = false
   end
+
+  calculateDealOrder(dealSettings)
 
   flipDeck(tableZone)
   pause(0.35)
@@ -683,14 +679,14 @@ function dealCardsCoroutine()
   local round = 1
   local target = dealOrder[count]
 
-  flipDeck(tableZone)
-  pause(0.15)
-  getDeck(tableZone).randomize()
-  pause(0.35)
-
   local deck = getDeck(tableZone)
   local rotationVal = deck.getRotation()
-  
+
+  flipDeck(tableZone)
+  pause(0.15)
+  deck.randomize()
+  pause(0.35)
+
   while deckExists() do
     if count > #dealOrder then
       count = 1
@@ -832,11 +828,11 @@ function getNextColorValInList(index, list)
   for i, colors in ipairs(list) do
     if i == index then
       local nextColorVal = i + 1
-      if nextColorVal > #list then
-        nextColorVal = 1
-      end
       if list[nextColorVal] == "Blinds" then
         nextColorVal = nextColorVal + 1
+      end
+      if nextColorVal > #list then
+        nextColorVal = 1
       end
       return nextColorVal
     end
@@ -1209,7 +1205,7 @@ currentRules = {
   "[21AF21]Welcome to Scripted Sheepshead!\n",
   "By: WardLordRuby           [-]\n",
   "[b415ff]Features:                   [-]\n",
-  "[FFFFFF]Will Auto Adjust for 3-6 Players\n",
+  "Will Auto Adjust for 3-6 Players\n",
   "Scripted Dealing, Picking,     \n",
   "Taking Tricks, Burying        \n",
   "Card Counters for Each Team \n",
@@ -1218,11 +1214,18 @@ currentRules = {
   "Gameplay Rules and Tips    \n",
   "Use (.help) for Commands    \n\n",
   "[b415ff]Current Sheepshead Rules:   [-]\n",
-  "[-]Jack of Diamonds Partner    \n",
+  "Jack of Diamonds Partner    \n",
   "Dealer Pick your Own       \n",
   "Can Call if Forced to Pick    \n",
   "6 Handed - Normal        \n",
   "Call Menu Disabled       "
+}
+
+CHAT_COMMANDS = {
+  "[b415ff]Sheepshead Console Help[-]\n",
+  "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]\n",
+  "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]\n",
+  "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
 }
 
 --Prints currentRules to the screen
@@ -1265,6 +1268,20 @@ function dealerSitsOutOff()
   sixHandedToFive = false
   varSetup = false
   currentRules[17] = "6 Handed - Normal        \n"
+  displayRules()
+end
+
+function callAnAceOn()
+  UI.setAttribute("settingsButtonJDPartner", "active", "false")
+  UI.setAttribute("settingsButtonCallAnAce", "active", "true")
+  currentRules[14] = "Call an Ace                \n"
+  displayRules()
+end
+
+function jdPartnerOn()
+  UI.setAttribute("settingsButtonCallAnAce", "active", "false")
+  UI.setAttribute("settingsButtonJDPartner", "active", "true")
+  currentRules[14] = "Jack of Diamonds Partner    \n"
   displayRules()
 end
 
