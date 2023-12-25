@@ -118,7 +118,7 @@ visibility="Admin"
 showAnimationDelay="0"
 showAnimation="Grow"
 hideAnimation="Shrink"
-active="true"
+active="false"
 >
 	<Image
 	id="settingsWindowBackground"
