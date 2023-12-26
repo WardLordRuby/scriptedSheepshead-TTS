@@ -5,7 +5,6 @@
 DEBUG = true
 
 GUID = {
-  DEALER_CHIP = "e18594",
   TRICK_ZONE_WHITE = "70f1a5",
   TRICK_ZONE_RED = "b14dc7",
   TRICK_ZONE_YELLOW = "db8133",
@@ -14,11 +13,10 @@ GUID = {
   TRICK_ZONE_PINK = "de62ee",
   CENTER_ZONE = "548811",
   TABLE_ZONE = "3c99b3",
+  DROP_ZONE = "ba398c",
   HIDDEN_BAG = "b3d3a5",
-  CARD_COUNTER_TABLE = "59655f",
-  CARD_COUNTER_PICKER = "7d4cf1",
   TABLE_BLOCK = "8e445a",
-  RULE_BOOK = "a243b6"
+  DEALER_CHIP = "e18594"
 }
 
 ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
@@ -72,7 +70,6 @@ COIN_PRAM = {
 }
 
 function onLoad()
-  dealerChip = getObjectFromGUID(GUID.DEALER_CHIP)
   trickZones = {
     White = getObjectFromGUID(GUID.TRICK_ZONE_WHITE),
     Red = getObjectFromGUID(GUID.TRICK_ZONE_RED),
@@ -83,7 +80,10 @@ function onLoad()
   }
   centerZone = getObjectFromGUID(GUID.CENTER_ZONE)
   tableZone = getObjectFromGUID(GUID.TABLE_ZONE)
+  dropZone = getObjectFromGUID(GUID.DROP_ZONE)
   hiddenBag = getObjectFromGUID(GUID.HIDDEN_BAG)
+  dealerChip = getObjectFromGUID(GUID.DEALER_CHIP)
+  dealerChip.interactable = false
   hiddenBag.setInvisibleTo(ALL_PLAYERS)
   gameSetUpInProgress = false
   gameSetUpRan = false
@@ -165,11 +165,12 @@ end
 
 --Called to move the deck and dealer chip in front of a given color
 function moveDeckAndDealerChipToColor(color)
-  local deck = getDeck(tableZone)
   local rotationAngle, playerPos = retrieveItemMoveData(color)
   local rotatedChipOffset = OFFSET.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = OFFSET.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = dealerChip.getRotation()
+  repeat coroutine.yield(0) until getDeck(tableZone) ~= nil
+  local deck = getDeck(tableZone)
   dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
   dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
   deck.setRotationSmooth({deck.getRotation().x, rotationAngle, 180})
@@ -179,15 +180,17 @@ end
 --Returns a table with the color removed from the given color 
 function removeColorFromList(color, list)
   local currentIndex
-  for i, colors in ipairs(list) do
+  local json = JSON.encode(list)
+  local modifiedList = JSON.decode(json)
+  for i, colors in ipairs(modifiedList) do
     if colors == color then
       currentIndex = i
       break
     end
   end
   if currentIndex then
-    table.remove(list, currentIndex)
-    return list
+    table.remove(modifiedList, currentIndex)
+    return modifiedList
   end
   return list
 end
@@ -333,47 +336,64 @@ function onChat(message, player)
   end
 end
 
---Moves the rule book in front of player color from either the hiddenBag or tableZone
+--Spawns a rule book in front of player color
 function getRuleBook(color)
   local playerRotation = ROTATION.color[color]
   local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
-  for _, containedObject in pairs(hiddenBag.getObjects()) do
-    if containedObject.guid == GUID.RULE_BOOK then
-      hiddenBag.takeObject({
-        position = ruleBookPos,
-        rotation = {0, playerRotation -180 , 0},
-        smooth = false,
-        guid = GUID.RULE_BOOK
-      })
-      Wait.frames(
-      function()
-        local ruleBook = getObjectFromGUID(GUID.RULE_BOOK)
-        ruleBook.setInvisibleTo()
-      end,
-      20
-    )
-    return
-    end
-  end
-  for _, tableObject in pairs(tableZone.getObjects()) do
-    if tableObject.guid == GUID.RULE_BOOK then
-      tableObject.setPositionSmooth(ruleBookPos)
-      tableObject.setRotationSmooth({0, playerRotation -180 , 0})
-      break
-    end
-  end
+  local myjson = [[{
+    "Name": "Custom_PDF",
+    "Transform": {
+      "posX": 0.0,
+      "posY": 0.0,
+      "posZ": 0.0,
+      "rotX": 0.0,
+      "rotY": 0.0,
+      "rotZ": 0.0,
+      "scaleX": 1.0,
+      "scaleY": 1.0,
+      "scaleZ": 1.0
+    },
+    "Nickname": "Rules and Tips",
+    "Description": "",
+    "GMNotes": "",
+    "ColorDiffuse": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0
+    },
+    "Locked": false,
+    "Grid": true,
+    "Snap": true,
+    "IgnoreFoW": false,
+    "Autoraise": true,
+    "Sticky": true,
+    "Tooltip": true,
+    "GridProjection": false,
+    "HideWhenFaceDown": false,
+    "Hands": false,
+    "CustomPDF": {
+      "PDFUrl": "]]..'http://cloud-3.steamusercontent.com/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/'..[[",
+      "PDFPassword": "",
+      "PDFPage": 0,
+      "PDFPageOffset": 0
+    },
+    "XmlUI": "<!-- -->",
+    "LuaScript": "--foo",
+    "LuaScriptState": "",
+    "GUID": "pdf001"
+  }]]
+spawnObjectJSON({
+  json = myjson,
+  position = {ruleBookPos.x, 1.5, ruleBookPos.z},
+  rotation = {0, playerRotation -180 , 0}
+})
 end
 
---Moves the rule book back to hiddenBag
+--Deletes all rulebooks from table
 function hideRuleBook()
   for _, tableObject in pairs(tableZone.getObjects()) do
     if tableObject.type == 'Tile' then
-      if tableObject.guid ~= GUID.RULE_BOOK then
-        GUID.RULE_BOOK = tableObject.guid
-      end
-      tableObject.setInvisibleTo(ALL_PLAYERS)
-      hiddenBag.putObject(tableObject)
-      break
+      tableObject.destruct()
     end
   end
 end
@@ -426,7 +446,7 @@ function printGameSettings()
     end
   end
   moveDeckAndDealerChipToColor(gameSetUpPlayer.color)
-  print("[21AF21]Sheepshead set up for ",#sortedSeatedPlayers, " players![-]")
+  print("[21AF21]Sheepshead set up for [-]",#sortedSeatedPlayers, " players!")
 end
 
 --Called to add the blackSevens to a given deck
@@ -570,7 +590,7 @@ end
 
 --Sets up variables needed to deal cards for New Hand event
 function setUpVar()
-  if firstDealOfGame then
+  if not dealerColorVal then
     dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
   end
   varSetup = true
@@ -665,7 +685,7 @@ function dealCardsCoroutine()
     rebuildDeck()
     pause(0.3)
     moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
-    pause(0.15)
+    pause(0.4)
   else
     firstDealOfGame = false
   end
@@ -766,7 +786,7 @@ end
 
 --Prints a message if player passes or is forced to pick
 function passEvent(player)
-  if sixHandedToFive and playerCount == 5 and #sortedSeatedPlayers == 6 then
+  if playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
       broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
       return
@@ -792,7 +812,7 @@ end
 --Moves the blinds into the pickers hand, sets player to pickingPlayer
 --Sets flag cardsToBeBuried to trigger buryCards logic
 function pickBlindsEvent(player)
-  if sixHandedToFive and playerCount == 5 and #sortedSeatedPlayers == 6 then
+  if playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
       broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
       return
@@ -857,7 +877,11 @@ function doubleCheckBuriedCards()
       function()
         if firstCheck == secondCheck then
           cardsToBeBuried = false
-          local leadOutPlayer = getPlayerObject(dealerColorVal + 1, sortedSeatedPlayers)
+          local leadOutVal = dealerColorVal + 1
+          if leadOutVal > #sortedSeatedPlayers then
+            leadOutVal = 1
+          end
+          local leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
           group(getLooseCards(trickZones[pickingPlayer.color]))
           if not DEBUG then
             broadcastToAll(leadOutPlayer.steam_name .. " leads out.")
@@ -877,7 +901,7 @@ function takeTrickEvent(player)
   if not checkCardCount(centerZone, playerCount) then
     return
   end
-  if sixHandedToFive and playerCount == 5 and #sortedSeatedPlayers == 6 then
+  if playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
       broadcastToColor("[DC0000]You can not take tricks while sitting out.[-]", player.color)
       return
@@ -924,6 +948,7 @@ function toggleCounterVisibility(color)
   if not counterVisible then
     local pickerRotation = ROTATION.color[color]
     local blockRotation = ROTATION.block[color]
+    local tCounter, pCounter
     local tCounterPos = SPAWN_POS.tableCounter:copy():rotateOver('y', pickerRotation)
     local pCounterPos = SPAWN_POS.pickerCounter:copy():rotateOver('y', pickerRotation)
     local blockPos = SPAWN_POS.tableBlock:copy():rotateOver('y', blockRotation)
@@ -937,30 +962,19 @@ function toggleCounterVisibility(color)
     block.setInvisibleTo(ALL_PLAYERS)
     Wait.frames(
       function()
-        hiddenBag.takeObject({
+        tCounter = spawnObject({
+          type = 'Counter',
           position = tCounterPos,
           rotation = {295, pickerRotation - 180, 0},
-          smooth = false,
-          guid = GUID.CARD_COUNTER_TABLE
         })
-        hiddenBag.takeObject({
+        pCounter = spawnObject({
+          type = 'Counter',
           position = pCounterPos,
           rotation = {295, pickerRotation, 0},
-          smooth = false,
-          guid = GUID.CARD_COUNTER_PICKER
         })
-      end,
-      3
-    )
-    Wait.frames(
-      function()
-        local tCounter = getObjectFromGUID(GUID.CARD_COUNTER_TABLE)
-        local pCounter = getObjectFromGUID(GUID.CARD_COUNTER_PICKER)
-        tCounter.setInvisibleTo()
-        pCounter.setInvisibleTo()
         counterVisible = true
       end,
-      20
+      3
     )
     local pickerZone = trickZones[pickingPlayer.color]
     local pickerCards = getLooseCards(pickerZone)
@@ -976,23 +990,21 @@ function toggleCounterVisibility(color)
       )
     end
     --Card counter Loop starts here with setupGuidTable()
-    Wait.frames(function() setupGuidTable() end, 22)
+    Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
   else
-    local tCounter = getObjectFromGUID(GUID.CARD_COUNTER_TABLE)
-    local pCounter = getObjectFromGUID(GUID.CARD_COUNTER_PICKER)
-    local triangle = getObjectFromGUID(GUID.TABLE_BLOCK)
-    tCounter.setInvisibleTo(ALL_PLAYERS)
-    pCounter.setInvisibleTo(ALL_PLAYERS)
-    hiddenBag.putObject(tCounter)
-    hiddenBag.putObject(pCounter)
-    hiddenBag.putObject(triangle)
+    for _, tableObject in pairs(tableZone.getObjects()) do
+      if tableObject.type == 'Counter' then
+        tableObject.destruct()
+      end
+    end
+    hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
     counterVisible = false
     trickCountStop()
   end
 end
 
 --Handles the event of when an object enters a scritping zone
-function onObjectEnterScriptingZone(zone, object)
+function onObjectEnterZone(zone, object)
   --Setting cardsToBeBuried to true will trigger the following code
   --Looks for pickingPlayer trickZone then looks for cards and temporarily
   --hides from all other players but pickingPlayer waits 2 seconds,
@@ -1019,6 +1031,9 @@ function onObjectEnterScriptingZone(zone, object)
     if zone == pickerZone then
       doubleCheckBuriedCards()
     end
+  end
+  if zone == dropZone then
+    object.setPosition({0, 3, 0})
   end
   --More functions to run inside of onObjectEnterScriptingZone go here
 end
@@ -1059,14 +1074,14 @@ end
 
 --Creates two tables, of the entity of each zone and counter, of each zoneObject
 --and its associated counterObject, then starts the loop
-function setupGuidTable()
+function setupGuidTable(tCounterGUID, pCounterGUID)
   local pickerZoneGuid = trickZones[pickingPlayer.color].guid
   local colorAcrossFromPicker = findColorAcrossTable(pickingPlayer.color)
   local tableZoneGuid = trickZones[colorAcrossFromPicker].guid
 
   guidTable = {
-    [pickerZoneGuid] = GUID.CARD_COUNTER_PICKER,
-    [tableZoneGuid] = GUID.CARD_COUNTER_TABLE
+    [pickerZoneGuid] = pCounterGUID,
+    [tableZoneGuid] = tCounterGUID
   }
 
   objectSets = {}
@@ -1547,5 +1562,5 @@ function playerCountDebugDown()
 end
 
 function test()
-  
+
 end
