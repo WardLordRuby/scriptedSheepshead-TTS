@@ -989,7 +989,7 @@ function setBuriedEvent(player)
   setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
 
---Handles the event of when an object enters a scritping zone
+--Gaurd clauses don't work in onEvents() otherwise I would use them here
 function onObjectEnterZone(zone, object)
   --Setting cardsToBeBuried to true will trigger the following code
   --Looks for pickingPlayer trickZone then looks for cards and
@@ -1004,58 +1004,71 @@ function onObjectEnterZone(zone, object)
   if zone == dropZone then
     object.setPosition({0, 3, 0})
   end
+  if not cardsToBeBuried then
+    if zone ~= centerZone then
+      if object.type == 'Card' then
+        if tableLength(currentTrick) > 1 then
+          for i, cardEntry in ipairs(currentTrick) do
+            if object.getName() == cardEntry.cardName then
+              table.remove(currentTrick, i)
+              print(cardEntry.cardName .. " removed from trick")
+            end
+          end
+        end
+      end
+    end
+  end
   --More functions to run inside of onObjectEnterZone go here
 end
 
 --Handles the event of when an object leaves a scritping zone
 function onObjectLeaveZone(zone, object)
-  if not cardsToBeBuried then
-    if object.type ~= 'Card' then
-      return
+
+end
+
+function tableLength(tbl)
+    local count = 0
+    if tbl == {} or tbl == nil then
+      return 0
     end
-    if zone ~= centerZone then
-      return
+    for _ in pairs(tbl) do
+        count = count + 1
     end
-    if not currentTrick then
-      return
-    end
-    for i, cardEntry in ipairs(currentTrick) do
-      if object.getName() == cardEntry.cardName then
-        --Bug here, if cards group this code will trigger when it is not supposed to
-        table.remove(currentTrick, i)
-        print(cardEntry.cardName .. " removed")
-        return
-      end
-    end
-  end
-  --More functions to run inside of onObjectLeaveZone go here
+    return count
 end
 
 --This builds the table currentTrick to keep track of cardNames and player color who laid them in the centerZone
+--Gaurd clauses don't work in onEvents() otherwise I would use them here
 function onObjectDrop(playerColor, object)
-  if object.type ~= 'Card' then
-    return
-  end
-  if not isInZone(object, centerZone) then
-    return
-  end
-  if cardsToBeBuried then
-    return
-  end
-  if not DEBUG and currentTrick == nil and playerColor ~= leadOutPlayer.color then
-    print(leadOutPlayer.steam_name .. " leads out.")
-    return
-  end
-
-  local trickData = {
-    playerColor = playerColor,
-    cardName = object.getName()
-  }
-
-  currentTrick[#currentTrick + 1] = trickData
-
-  if #currentTrick == playerCount then
-    calculateTrickWinner()
+  if not cardsToBeBuried then
+    if object.type == 'Card' then
+      if isInZone(object, centerZone) then
+        if not DEBUG and tableLength(currentTrick) == 0 and playerColor ~= leadOutPlayer.color then
+          print(leadOutPlayer.steam_name .. " leads out.")
+        else
+          local trickData = {
+          playerColor = playerColor,
+          cardName = object.getName()
+          }
+          local playedCardString = ""
+          if tableLength(currentTrick) > 0 then
+            local playedCardList = {}
+            for _, cardEntry in ipairs(currentTrick) do
+              playedCardList[#playedCardList + 1] = cardEntry.cardName
+            end
+            playedCardString = table.concat(playedCardList, " ")
+          end
+          if string.find(playedCardString, trickData.cardName) then
+            --Do nothing
+          else
+            currentTrick[#currentTrick + 1] = trickData
+            if #currentTrick == playerCount then
+              calculateTrickWinner()
+            end
+          end
+        end
+      end
+    end
   end
 end
 
