@@ -1,0 +1,9 @@
+<button
+  id="setUpBuriedButton"
+  width="1200"
+  height="350"
+  fontSize="220"
+  onClick="setBuriedPress"
+  active="false"
+  >Set Buried 
+</button>
