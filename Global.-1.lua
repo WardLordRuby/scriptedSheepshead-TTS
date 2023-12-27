@@ -1011,7 +1011,7 @@ function onObjectEnterZone(zone, object)
           for i, cardEntry in ipairs(currentTrick) do
             if object.getName() == cardEntry.cardName then
               table.remove(currentTrick, i)
-              print(cardEntry.cardName .. " removed from trick")
+              print("[21AF21]" .. cardEntry.cardName .. " removed from trick[-]")
             end
           end
         end
@@ -1110,7 +1110,7 @@ function calculateTrickWinner()
   end
   if highTrump > 0 then
     local trickWinner = getPlayerObject(currentTrick[highTrump].playerColor, sortedSeatedPlayers)
-    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " wins trick with the " .. currentTrick[highTrump].cardName .. "[-]")
+    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[highTrump].cardName .. "[-]")
     Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
   else
     ledSuit = getLastWord(ledCard)
@@ -1123,7 +1123,7 @@ function calculateTrickWinner()
       end
     end
     local trickWinner = getPlayerObject(currentTrick[highFail].playerColor, sortedSeatedPlayers)
-    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " wins trick with the " .. currentTrick[highFail].cardName .. "[-]")
+    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[highFail].cardName .. "[-]")
     Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
   end
   currentTrick = {}
@@ -1255,7 +1255,7 @@ function obtainDeckValue(i, deck)
         for name, val in pairs(cardNameTable) do
             if string.find(card.nickname, name) then
                 table.insert(values[i], val)
-	    end
+            end
         end
     end
 end
