@@ -4,13 +4,13 @@
 This is my first large coding project, feedback is always appreciated. Work in progress  
 
 ### Next features to be added:  
-* Automate take trick event   
 * Create UI and code a call panel
 * Implement onSave to save players custom settings 
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
-* Scripted Game Set Up, Dealing, Picking, Taking Tricks, and Burying  
+* Scripted Game Set Up, Dealing, Picking, Taking Tricks, and Burying
+* Automated take trick event  
 * Card counter for both teams  
 * Game settings window to adjust rules to your liking
 * Choose your preferred partner rules
