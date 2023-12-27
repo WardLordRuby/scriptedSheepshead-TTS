@@ -19,7 +19,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Custom Gameplay rules and tips booklet  
 * Custom chat commands relevant to the game
 ```
-(.help) - Displays Commands and their Function*  
+(.help) - Displays Commands and their Function
 (.rules) - Spawns Rule and Gameplay Tip Booklet
 (.hiderules) - Hides Rule and Gameplay Tip Booklet
 (.settings) **admin only** - Opens Window to Change Game Settings
