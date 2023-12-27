@@ -21,5 +21,5 @@ This is my first large coding project, feedback is always appreciated. Work in p
 `.help` - Displays Commands and their Function  
 `.rules` - Spawns Rule and Gameplay Tip Booklet  
 `.hiderules` - Hides Rule and Gameplay Tip Booklet  
-`.settings` **admin only** - Opens Window to Change Game Settings  
+`.settings` - Opens Window to Change Game Settings **admin only** 
 
