@@ -16,29 +16,28 @@ GUID = {
   DROP_ZONE = "ba398c",
   HIDDEN_BAG = "b3d3a5",
   TABLE_BLOCK = "8e445a",
-  DEALER_CHIP = "e18594"
+  DEALER_CHIP = "e18594",
+  SET_BURIED_BUTTON = "37d199"
 }
 
 ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
-
-OFFSET = {
-  dealerChip = Vector(4, -2.58, 7),
-  deck = Vector(2, -2.5, 5),
-  chips =  {
-    Vector(4.62, -2, 3),
-    Vector(6.12, -2, 3.13),
-    Vector(5.31, -2, 4.35)
-  }
-}
 
 SPAWN_POS = {
   tableBlock = Vector(0, 3.96, 0),
   pickerCounter = Vector(0, 1.83, -4.04),
   tableCounter = Vector(0, 1.83, 4.04),
   ruleBook = Vector(0, 0.96, -9.5),
+  dealerChip = Vector(4, -2.58, 7),
+  deck = Vector(2, -2.5, 5),
+  setBuriedButton = Vector(0, 0.96, -8),
   blinds = {
     Vector(-0.7, 1, 0),
     Vector(0.8, 1, 0)
+  },
+  chips =  {
+    Vector(4.62, -2, 3),
+    Vector(6.12, -2, 3.13),
+    Vector(5.31, -2, 4.35)
   }
 }
 
@@ -83,8 +82,11 @@ function onLoad()
   dropZone = getObjectFromGUID(GUID.DROP_ZONE)
   hiddenBag = getObjectFromGUID(GUID.HIDDEN_BAG)
   dealerChip = getObjectFromGUID(GUID.DEALER_CHIP)
+  setBuriedButton = getObjectFromGUID(GUID.SET_BURIED_BUTTON)
   dealerChip.interactable = false
+  setBuriedButton.interactable = false
   hiddenBag.setInvisibleTo(ALL_PLAYERS)
+  setBuriedButton.setInvisibleTo(ALL_PLAYERS)
   gameSetUpInProgress = false
   gameSetUpRan = false
   stopCoroutine = false
@@ -166,8 +168,8 @@ end
 --Called to move the deck and dealer chip in front of a given color
 function moveDeckAndDealerChipToColor(color)
   local rotationAngle, playerPos = retrieveItemMoveData(color)
-  local rotatedChipOffset = OFFSET.dealerChip:copy():rotateOver('y', rotationAngle)
-  local rotatedDeckOffset = OFFSET.deck:copy():rotateOver('y', rotationAngle)
+  local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
+  local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = dealerChip.getRotation()
   repeat coroutine.yield(0) until getDeck(tableZone) ~= nil
   local deck = getDeck(tableZone)
@@ -372,7 +374,7 @@ function getRuleBook(color)
     "HideWhenFaceDown": false,
     "Hands": false,
     "CustomPDF": {
-      "PDFUrl": "]]..'http://cloud-3.steamusercontent.com/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/'..[[",
+      "PDFUrl": "http://cloud-3.steamusercontent.com/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/",
       "PDFPassword": "",
       "PDFPage": 0,
       "PDFPageOffset": 0
@@ -494,7 +496,7 @@ function spawnChips(rotationAngle, playerPos)
   for c = 1, 15 do
     if c % 5 == 1 then
       local offsetIndex = math.floor((c - 1) / 5) + 1
-      rotatedOffset = OFFSET.chips[offsetIndex]:copy():rotateOver('y', rotationAngle)
+      rotatedOffset = SPAWN_POS.chips[offsetIndex]:copy():rotateOver('y', rotationAngle)
     end
     local customCoin = spawnObject({
       type = "Custom_Model",
@@ -675,6 +677,7 @@ function dealCardsCoroutine()
   end
 
   cardsToBeBuried = false
+  currentTrick = {}
 
   if not firstDealOfGame then
     dealerColorVal = dealerColorVal + 1
@@ -842,6 +845,11 @@ function pickBlindsEvent(player)
     end,
     0.35
   )
+  local pickerRotation = ROTATION.color[player.color]
+  local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
+  setBuriedButton.setPosition(setBuriedButtonPos)
+  setBuriedButton.setRotation({0, pickerRotation, 0})
+  setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 end
 
 --Returns the color of the next seated player clockwise from given color
@@ -857,41 +865,6 @@ function getNextColorValInList(index, list)
       end
       return nextColorVal
     end
-  end
-end
-
---Checks the pickers trickZone for 2 cards, waits 4.5 seconds and
---checks again. If still 2 cards executes logic to end cardsToBeBuried
---Finds the player to lead out and prints a message
-function doubleCheckBuriedCards()
-  local firstCheck = checkCardCount(trickZones[pickingPlayer.color], 2)
-  local secondCheck = false
-  if firstCheck then
-    doubleCheckBuriedID = Wait.time(
-      function()
-        secondCheck = checkCardCount(trickZones[pickingPlayer.color], 2)
-      end,
-      3
-    )
-    doubleCheckBuriedPartTwoID = Wait.time(
-      function()
-        if firstCheck == secondCheck then
-          cardsToBeBuried = false
-          local leadOutVal = dealerColorVal + 1
-          if leadOutVal > #sortedSeatedPlayers then
-            leadOutVal = 1
-          end
-          local leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
-          group(getLooseCards(trickZones[pickingPlayer.color]))
-          if not DEBUG then
-            broadcastToAll(leadOutPlayer.steam_name .. " leads out.")
-          else
-            print(leadOutPlayer.color .. " leads out.")
-          end
-        end
-      end,
-      3.1
-    )
   end
 end
 
@@ -911,33 +884,7 @@ function takeTrickEvent(player)
     return
   end
   if not takeTrickInProgress then
-    takeTrickInProgress = true
-    local playerTrickZone = trickZones[player.color]
-    group(getLooseCards(centerZone))
-    Wait.time(function() flipDeck(centerZone) end, 0.6)
-    Wait.time(
-      function()
-        local trick = getDeck(centerZone)
-        local oldTricks = getDeck(playerTrickZone, "big")
-        if oldTricks then
-          local oldTricksPos = oldTricks.getPosition()
-          local oldTricksRot = oldTricks.getRotation()
-          trick.setPositionSmooth({oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z})
-          trick.setRotationSmooth({oldTricksRot.x, oldTricksRot.y, 180})
-        else
-          local zoneRotation = playerTrickZone.getRotation()
-          local zonePos = playerTrickZone.getPosition()
-          trick.setPositionSmooth({zonePos.x, zonePos.y - 2.7, zonePos.z})
-          trick.setRotationSmooth({zoneRotation.x, zoneRotation.y + 180, 180})
-        end
-      end,
-      1.5
-    )
-    Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
-    if #player.getHandObjects() == 0 then
-      Wait.time(function() toggleCounterVisibility(pickingPlayer.color) end, 2)
-    end
-    Wait.time(function() takeTrickInProgress = false end, 2.5)
+    giveTrickToWinner(player.color)
   end
 end
 
@@ -1003,57 +950,200 @@ function toggleCounterVisibility(color)
   end
 end
 
+--Makes sure buried cards are face down and reveals them to all players
+--Calculates leadOutPlayer, hides Set Buried button
+function setBuriedEvent(player)
+  if player.color ~= pickingPlayer.color then
+    return
+  end
+  if not checkCardCount(trickZones[pickingPlayer.color], 2) then
+    return
+  end
+  local buriedCards = getLooseCards(trickZones[pickingPlayer.color])
+  for _, card in pairs(buriedCards) do
+    if not card.is_face_down then
+      card.flip()
+    end
+  end
+  Wait.time(function() group(buriedCards) end, 0.8)
+  Wait.time(
+    function() 
+      getDeck(trickZones[pickingPlayer.color]).setInvisibleTo()
+      for _, card in pairs(Player[pickingPlayer.color].getHandObjects()) do
+        card.setInvisibleTo()
+      end
+    end, 
+    1.6
+  )
+  cardsToBeBuried = false
+  local leadOutVal = dealerColorVal + 1
+  if leadOutVal > #sortedSeatedPlayers then
+    leadOutVal = 1
+  end
+  leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
+  if not DEBUG then
+    broadcastToAll(leadOutPlayer.steam_name .. " leads out.")
+  else
+    print(leadOutPlayer.color .. " leads out.")
+  end
+  setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+end
+
 --Handles the event of when an object enters a scritping zone
 function onObjectEnterZone(zone, object)
   --Setting cardsToBeBuried to true will trigger the following code
-  --Looks for pickingPlayer trickZone then looks for cards and temporarily
-  --hides from all other players but pickingPlayer waits 2 seconds,
-  --makes sure cards are face down and shows to all players
+  --Looks for pickingPlayer trickZone then looks for cards and
+  --hides from all other players but pickingPlayer
   if cardsToBeBuried then
     local pickerZone = trickZones[pickingPlayer.color]
     if zone == pickerZone and object.type == 'Card' then
       local hideFrom = removeColorFromList(pickingPlayer.color, sortedSeatedPlayers)
       object.setInvisibleTo(hideFrom)
-      Wait.time(
-        function()
-          local objListUpdate = getLooseCards(pickerZone)
-          for _, obj in pairs(objListUpdate) do
-            if not obj.is_face_down then
-              obj.flip()
-            end
-            obj.setInvisibleTo()
-          end
-        end,
-        2
-      )
-    end
-    --Where doubleCheckBuriedCards executes from
-    if zone == pickerZone then
-      doubleCheckBuriedCards()
     end
   end
   if zone == dropZone then
     object.setPosition({0, 3, 0})
   end
-  --More functions to run inside of onObjectEnterScriptingZone go here
+  --More functions to run inside of onObjectEnterZone go here
 end
 
 --Handles the event of when an object leaves a scritping zone
 function onObjectLeaveZone(zone, object)
-  --Stops doubleCheckBuriedCards from running if the second of two
-  --cards leaves the pickers trickZone
-  if cardsToBeBuried then
-    local pickerZone = trickZones[pickingPlayer.color]
-    if zone == pickerZone then
-      local checkBuried = checkCardCount(pickerZone, 1)
-      if checkBuried and doubleCheckBuriedID then
-        Wait.stop(doubleCheckBuriedID)
-        Wait.stop(doubleCheckBuriedPartTwoID)
-      elseif not doubleCheckBuriedID and countCards(pickerZone) > 1 then
-        doubleCheckBuriedCards()
+  if not cardsToBeBuried then
+    if object.type ~= 'Card' then
+      return
+    end
+    if zone ~= centerZone then
+      return
+    end
+    if not currentTrick then
+      return
+    end
+    for i, cardEntry in ipairs(currentTrick) do
+      if object.getName() == cardEntry.cardName then
+        --Bug here, if cards group this code will trigger when it is not supposed to
+        table.remove(currentTrick, i)
+        print(cardEntry.cardName .. " removed")
+        return
       end
     end
   end
+  --More functions to run inside of onObjectLeaveZone go here
+end
+
+--This builds the table currentTrick to keep track of cardNames and player color who laid them in the centerZone
+function onObjectDrop(playerColor, object)
+  if object.type ~= 'Card' then
+    return
+  end
+  if not isInZone(object, centerZone) then
+    return
+  end
+  if cardsToBeBuried then
+    return
+  end
+  if not DEBUG and currentTrick == nil and playerColor ~= leadOutPlayer.color then
+    print(leadOutPlayer.steam_name .. " leads out.")
+    return
+  end
+
+  local trickData = {
+    playerColor = playerColor,
+    cardName = object.getName()
+  }
+
+  currentTrick[#currentTrick + 1] = trickData
+
+  if #currentTrick == playerCount then
+    calculateTrickWinner()
+  end
+end
+
+function isInZone(object, zone)
+  local zoneItems = zone.getObjects()
+  for _, zoneObject in pairs(zoneItems) do
+    if zoneObject == object then
+      return true
+    end
+  end
+  return false
+end
+
+function getLastWord(str)
+  local words = {}
+  for word in str:gmatch("%S+") do
+    table.insert(words, word)
+  end
+  return words[#words]
+end
+
+function calculateTrickWinner()
+  local TRUMP_STRENGTH = {"Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
+  "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs", "Queen of Diamonds",
+  "Queen of Hearts", "Queen of Spades", "Queen of Clubs"}
+  local FAIL_STRENGTH = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+  local ledCard, ledSuit
+  local highTrump, trumpStrength = 0, 0
+  local highFail, failStrength = 0, 0
+
+  ledCard = currentTrick[1].cardName
+  for i, cardEntry in ipairs(currentTrick) do
+    local cardName = cardEntry.cardName
+    for j, trumpName in ipairs(TRUMP_STRENGTH) do
+      if cardName == trumpName and j > trumpStrength then
+        highTrump, trumpStrength = i, j
+      end
+    end
+  end
+  if highTrump > 0 then
+    local trickWinner = getPlayerObject(currentTrick[highTrump].playerColor, sortedSeatedPlayers)
+    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " wins trick with the " .. currentTrick[highTrump].cardName .. "[-]")
+    Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
+  else
+    ledSuit = getLastWord(ledCard)
+    for i, cardEntry in ipairs(currentTrick) do
+      local cardName = cardEntry.cardName
+      for j, failName in ipairs(FAIL_STRENGTH) do
+        if string.find(cardName, failName) and string.find(cardName, ledSuit) and j > failStrength then
+          highFail, failStrength = i, j
+        end
+      end
+    end
+    local trickWinner = getPlayerObject(currentTrick[highFail].playerColor, sortedSeatedPlayers)
+    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " wins trick with the " .. currentTrick[highFail].cardName .. "[-]")
+    Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
+  end
+  currentTrick = {}
+end
+
+function giveTrickToWinner(player)
+  takeTrickInProgress = true
+  local playerTrickZone = trickZones[player.color]
+  group(getLooseCards(centerZone))
+  Wait.time(function() flipDeck(centerZone) end, 0.6)
+  Wait.time(
+    function()
+      local trick = getDeck(centerZone)
+      local oldTricks = getDeck(playerTrickZone, "big")
+      if oldTricks then
+        local oldTricksPos = oldTricks.getPosition()
+        local oldTricksRot = oldTricks.getRotation()
+        trick.setPositionSmooth({oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z})
+        trick.setRotationSmooth({oldTricksRot.x, oldTricksRot.y, 180})
+      else
+        local zoneRotation = playerTrickZone.getRotation()
+        local zonePos = playerTrickZone.getPosition()
+        trick.setPositionSmooth({zonePos.x, zonePos.y - 2.7, zonePos.z})
+        trick.setRotationSmooth({zoneRotation.x, zoneRotation.y + 180, 180})
+      end
+    end,
+    1.5
+  )
+  Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
+  if #player.getHandObjects() == 0 then
+    Wait.time(function() toggleCounterVisibility(pickingPlayer.color) end, 2)
+  end
+  Wait.time(function() takeTrickInProgress = false end, 2.5)
 end
 
 --New functions to adapt Blackjack Card Counter
@@ -1152,7 +1242,7 @@ function obtainDeckValue(i, deck)
         for name, val in pairs(cardNameTable) do
             if string.find(card.nickname, name) then
                 table.insert(values[i], val)
-			end
+	    end
         end
     end
 end
