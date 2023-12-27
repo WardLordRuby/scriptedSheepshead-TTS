@@ -9,7 +9,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
-* Scripted Game Set Up, Dealing, Picking, Taking Tricks, and Burying
+* Scripted: Game Set Up, Dealing, Picking, Taking Tricks, and Burying
 * Automated take trick event  
 * Card counter for both teams  
 * Game settings window to adjust rules to your liking
@@ -17,8 +17,10 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Choose what calls you want to enable to modify scoring
 * Custom model "Schrute Silver" coins  
 * Custom Gameplay rules and tips booklet  
-* Custom chat commands relevant to the game  
-*(.help) - in chat will list commands:*  
-*(.rules) - Displays Rule and Gameplay Tip Booklet*  
-*(.hiderules) - Hides Rule and Gameplay Tip Booklet*  
-*(.settings)* **admins only** - *Opens Window to Change Game Settings*  
+* Custom chat commands relevant to the game
+```
+(.help) - Displays Commands and their Function*  
+(.rules) - Spawns Rule and Gameplay Tip Booklet
+(.hiderules) - Hides Rule and Gameplay Tip Booklet
+(.settings)* **admins only** - *Opens Window to Change Game Settings
+```
