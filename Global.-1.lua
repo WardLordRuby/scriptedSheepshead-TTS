@@ -220,6 +220,15 @@ function flipDeck(zone)
   end
 end
 
+--Flips given card table face down
+function flipCards(cards)
+  for _, card in pairs(cards) do
+    if not card.is_face_down then
+      card.flip()
+    end
+  end
+end
+
 --Called to combine all cards on the table into a deck
 function rebuildDeck()
   for _, obj in pairs(getLooseCards(tableZone)) do
@@ -637,15 +646,6 @@ function deckExists()
   return getDeck(tableZone) ~= nil
 end
 
---Called to flip over a table of cards
-function flipCards(cards)
-  for _, card in pairs(cards) do
-    if not card.is_face_down then
-      card.flip()
-    end
-  end
-end
-
 --Called to build dealOrder correctly
 --Adds "Blinds" to the dealOrder table in the position directly after the current dealer
 --If dealer sits out replaces dealer with blinds
@@ -846,7 +846,7 @@ function pickBlindsEvent(player)
   end
   pickingPlayer = player
   cardsToBeBuried = true
-  broadcastToAll(player.steam_name .. " Picks!")
+  broadcastToAll("[21AF21]"..player.steam_name .. " Picks![-]")
   for _, card in pairs(blinds) do
     card.setPositionSmooth(Player[player.color].getHandTransform().position)
     card.setRotationSmooth(Player[player.color].getHandTransform().rotation)
@@ -999,9 +999,9 @@ function setBuriedEvent(player)
   end
   leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
   if not DEBUG then
-    broadcastToAll(leadOutPlayer.steam_name .. " leads out.")
+    broadcastToAll("[21AF21]"..leadOutPlayer.steam_name .. " leads out.[-]")
   else
-    print(leadOutPlayer.color .. " leads out.")
+    print("[21AF21]"..leadOutPlayer.color .. " leads out.[-]")
   end
   setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
@@ -1052,8 +1052,7 @@ function onObjectEnterZone(zone, object)
   --Looks for pickingPlayer trickZone then looks for cards and
   --hides from all other players but pickingPlayer
   if cardsToBeBuried then
-    local pickerZone = trickZones[pickingPlayer.color]
-    if zone == pickerZone and object.type == 'Card' then
+    if zone == trickZones[pickingPlayer.color] and object.type == 'Card' then
       local hideFrom = removeColorFromList(pickingPlayer.color, sortedSeatedPlayers)
       object.setInvisibleTo(hideFrom)
     end
@@ -1079,14 +1078,15 @@ end
 --and needs to remove a card from the currentTrick
 function onObjectPickUp(playerColor, object)
   if trickInProgress then
-    if object.type == 'Card' then
-      if isInZone(object, centerZone) then
-        if tableLength(currentTrick) > 1 then
-          for i, cardEntry in ipairs(currentTrick) do
-            if object.getName() == cardEntry.cardName then
-              table.remove(currentTrick, i)
+    if object.type == 'Card' and isInZone(object, centerZone) then
+      if tableLength(currentTrick) > 0 then
+        for i, cardEntry in ipairs(currentTrick) do
+          if object.getName() == cardEntry.cardName and playerColor == cardEntry.playedByColor then
+            table.remove(currentTrick, i)
+            if DEBUG then
               print("[21AF21]" .. cardEntry.cardName .. " removed from trick[-]")
             end
+            break
           end
         end
       end
@@ -1119,6 +1119,9 @@ function onObjectDrop(playerColor, object)
             --Do nothing
           else
             table.insert(currentTrick, trickData)
+            if DEBUG then
+              print("[21AF21]" .. trickData.cardName .. " added to trick[-]")
+            end
             if #currentTrick == playerCount then
               calculateTrickWinner()
             end
