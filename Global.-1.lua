@@ -11,6 +11,12 @@ GUID = {
   TRICK_ZONE_GREEN = "85fad3",
   TRICK_ZONE_BLUE = "69cfb0",
   TRICK_ZONE_PINK = "de62ee",
+  HAND_ZONE_WHITE = "f01eb8",
+  HAND_ZONE_RED = "c57287",
+  HAND_ZONE_YELLOW = "bfea25",
+  HAND_ZONE_GREEN = "98ae00",
+  HAND_ZONE_BLUE = "1222be",
+  HAND_ZONE_PINK = "166a59",
   CENTER_ZONE = "548811",
   TABLE_ZONE = "3c99b3",
   DROP_ZONE = "ba398c",
@@ -77,6 +83,14 @@ function onLoad()
     Blue = getObjectFromGUID(GUID.TRICK_ZONE_BLUE),
     Pink = getObjectFromGUID(GUID.TRICK_ZONE_PINK)
   }
+  handZones = {
+    White = getObjectFromGUID(GUID.HAND_ZONE_WHITE),
+    Red = getObjectFromGUID(GUID.HAND_ZONE_RED),
+    Yellow = getObjectFromGUID(GUID.HAND_ZONE_YELLOW),
+    Green = getObjectFromGUID(GUID.HAND_ZONE_GREEN),
+    Blue = getObjectFromGUID(GUID.HAND_ZONE_BLUE),
+    Pink = getObjectFromGUID(GUID.HAND_ZONE_PINK)
+  }
   centerZone = getObjectFromGUID(GUID.CENTER_ZONE)
   tableZone = getObjectFromGUID(GUID.TABLE_ZONE)
   dropZone = getObjectFromGUID(GUID.DROP_ZONE)
@@ -92,6 +106,7 @@ function onLoad()
   stopCoroutine = false
   passInProgress = false
   takeTrickInProgress = false
+  trickInProgress = false
   varSetup = false
   continue = false
   cardsToBeBuried = false
@@ -592,7 +607,7 @@ end
 
 --Sets up variables needed to deal cards for New Hand event
 function setUpVar()
-  if not dealerColorVal then
+  if firstDealOfGame then
     dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
   end
   varSetup = true
@@ -625,7 +640,9 @@ end
 --Called to flip over a table of cards
 function flipCards(cards)
   for _, card in pairs(cards) do
-    card.flip()
+    if not card.is_face_down then
+      card.flip()
+    end
   end
 end
 
@@ -652,6 +669,8 @@ end
 function setUpHandEvent()
   if not passInProgress then
     passInProgress = true
+    cardsToBeBuried, trickInProgress = false, false
+    currentTrick = {}
     startLuaCoroutine(self, 'dealCardsCoroutine')
   end
 end
@@ -668,16 +687,13 @@ function dealCardsCoroutine()
     passInProgress = false
     return 1
   end
-  if not varSetup then
+  if not varSetup or firstDealOfGame then
     setUpVar()
   end
 
   if counterVisible then
     toggleCounterVisibility()
   end
-
-  cardsToBeBuried = false
-  currentTrick = {}
 
   if not firstDealOfGame then
     dealerColorVal = dealerColorVal + 1
@@ -976,6 +992,7 @@ function setBuriedEvent(player)
     1.6
   )
   cardsToBeBuried = false
+  trickInProgress = true
   local leadOutVal = dealerColorVal + 1
   if leadOutVal > #sortedSeatedPlayers then
     leadOutVal = 1
@@ -987,6 +1004,46 @@ function setBuriedEvent(player)
     print(leadOutPlayer.color .. " leads out.")
   end
   setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+end
+
+--Just used to ensure 0 is returned if table empty
+function tableLength(tbl)
+    local count = 0
+    if tbl == {} or tbl == nil then
+      return 0
+    end
+    for _ in pairs(tbl) do
+      count = count + 1
+    end
+    return count
+end
+
+function isInZone(object, zone)
+  local occupiedZones = object.getZones()
+  for _, zoneObject in pairs(occupiedZones) do
+    if zoneObject == zone then
+      return true
+    end
+  end
+  return false
+end
+
+function getLastWord(str)
+  local words = {}
+  for word in str:gmatch("%S+") do
+    table.insert(words, word)
+  end
+  return words[#words]
+end
+
+--Don't allow card grouping during trickInProgress
+function tryObjectEnterContainer(container, object)
+  if trickInProgress then
+    if isInZone(object, centerZone) then
+      return false
+    end
+  end
+  return true
 end
 
 --Gaurd clauses don't work in onEvents() otherwise I would use them here
@@ -1004,9 +1061,26 @@ function onObjectEnterZone(zone, object)
   if zone == dropZone then
     object.setPosition({0, 3, 0})
   end
-  if not cardsToBeBuried then
-    if zone ~= centerZone then
-      if object.type == 'Card' then
+  --More functions to run inside of onObjectEnterZone go here
+end
+
+--Starts next trick
+function onObjectLeaveZone(zone, object)
+  if not trickInProgress and not passInProgress then
+    if trickWinner then
+      if zone == handZones[trickWinner.color] then
+        trickInProgress = true
+      end
+    end
+  end
+end
+
+--If someone plays the wrong card, ex didn't see they have to follow suit
+--and needs to remove a card from the currentTrick
+function onObjectPickUp(playerColor, object)
+  if trickInProgress then
+    if object.type == 'Card' then
+      if isInZone(object, centerZone) then
         if tableLength(currentTrick) > 1 then
           for i, cardEntry in ipairs(currentTrick) do
             if object.getName() == cardEntry.cardName then
@@ -1018,50 +1092,33 @@ function onObjectEnterZone(zone, object)
       end
     end
   end
-  --More functions to run inside of onObjectEnterZone go here
-end
-
---Handles the event of when an object leaves a scritping zone
-function onObjectLeaveZone(zone, object)
-
-end
-
-function tableLength(tbl)
-    local count = 0
-    if tbl == {} or tbl == nil then
-      return 0
-    end
-    for _ in pairs(tbl) do
-        count = count + 1
-    end
-    return count
 end
 
 --This builds the table currentTrick to keep track of cardNames and player color who laid them in the centerZone
 --Gaurd clauses don't work in onEvents() otherwise I would use them here
 function onObjectDrop(playerColor, object)
-  if not cardsToBeBuried then
+  if trickInProgress then
     if object.type == 'Card' then
       if isInZone(object, centerZone) then
         if not DEBUG and tableLength(currentTrick) == 0 and playerColor ~= leadOutPlayer.color then
           print(leadOutPlayer.steam_name .. " leads out.")
         else
           local trickData = {
-          playerColor = playerColor,
+          playedByColor = playerColor,
           cardName = object.getName()
           }
           local playedCardString = ""
           if tableLength(currentTrick) > 0 then
             local playedCardList = {}
             for _, cardEntry in ipairs(currentTrick) do
-              playedCardList[#playedCardList + 1] = cardEntry.cardName
+              table.insert(playedCardList, cardEntry.cardName)
             end
             playedCardString = table.concat(playedCardList, " ")
           end
           if string.find(playedCardString, trickData.cardName) then
             --Do nothing
           else
-            currentTrick[#currentTrick + 1] = trickData
+            table.insert(currentTrick, trickData)
             if #currentTrick == playerCount then
               calculateTrickWinner()
             end
@@ -1072,24 +1129,8 @@ function onObjectDrop(playerColor, object)
   end
 end
 
-function isInZone(object, zone)
-  local zoneItems = zone.getObjects()
-  for _, zoneObject in pairs(zoneItems) do
-    if zoneObject == object then
-      return true
-    end
-  end
-  return false
-end
-
-function getLastWord(str)
-  local words = {}
-  for word in str:gmatch("%S+") do
-    table.insert(words, word)
-  end
-  return words[#words]
-end
-
+--Looks for any trump in currentTrick, if trump found awards trick to playerColor who played highTrump
+--If no trump found, finds ledSuit, then finds highFail of the ledSuit and awards to playerColor who played highFail
 function calculateTrickWinner()
   local TRUMP_STRENGTH = {"Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
   "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs", "Queen of Diamonds",
@@ -1099,7 +1140,6 @@ function calculateTrickWinner()
   local highTrump, trumpStrength = 0, 0
   local highFail, failStrength = 0, 0
 
-  ledCard = currentTrick[1].cardName
   for i, cardEntry in ipairs(currentTrick) do
     local cardName = cardEntry.cardName
     for j, trumpName in ipairs(TRUMP_STRENGTH) do
@@ -1109,10 +1149,11 @@ function calculateTrickWinner()
     end
   end
   if highTrump > 0 then
-    local trickWinner = getPlayerObject(currentTrick[highTrump].playerColor, sortedSeatedPlayers)
+    trickWinner = getPlayerObject(currentTrick[highTrump].playedByColor, sortedSeatedPlayers)
     broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[highTrump].cardName .. "[-]")
     Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
   else
+    ledCard = currentTrick[1].cardName
     ledSuit = getLastWord(ledCard)
     for i, cardEntry in ipairs(currentTrick) do
       local cardName = cardEntry.cardName
@@ -1122,15 +1163,18 @@ function calculateTrickWinner()
         end
       end
     end
-    local trickWinner = getPlayerObject(currentTrick[highFail].playerColor, sortedSeatedPlayers)
+    trickWinner = getPlayerObject(currentTrick[highFail].playedByColor, sortedSeatedPlayers)
     broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[highFail].cardName .. "[-]")
     Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
   end
-  currentTrick = {}
 end
 
+--Resets trick flag and data then moves Trick to trickZone of trickWinner
+--Shows card counters if hand is over
 function giveTrickToWinner(player)
   takeTrickInProgress = true
+  trickInProgress = false
+  currentTrick = {}
   local playerTrickZone = trickZones[player.color]
   group(getLooseCards(centerZone))
   Wait.time(function() flipDeck(centerZone) end, 0.6)
@@ -1154,7 +1198,12 @@ function giveTrickToWinner(player)
   )
   Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
   if #player.getHandObjects() == 0 then
-    Wait.time(function() toggleCounterVisibility(pickingPlayer.color) end, 2)
+    Wait.time(function() 
+      toggleCounterVisibility(pickingPlayer.color) 
+      trickInProgress = false
+    end,
+    2
+  )
   end
   Wait.time(function() takeTrickInProgress = false end, 2.5)
 end
