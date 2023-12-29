@@ -1144,9 +1144,8 @@ function calculateTrickWinner()
   local highFail, failStrength = 0, 0
 
   for i, cardEntry in ipairs(currentTrick) do
-    local cardName = cardEntry.cardName
     for j, trumpName in ipairs(TRUMP_STRENGTH) do
-      if cardName == trumpName and j > trumpStrength then
+      if cardEntry.cardName == trumpName and j > trumpStrength then
         highTrump, trumpStrength = i, j
       end
     end
