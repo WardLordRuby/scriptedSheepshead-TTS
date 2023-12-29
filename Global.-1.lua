@@ -1079,13 +1079,11 @@ end
 function onObjectPickUp(playerColor, object)
   if trickInProgress then
     if object.type == 'Card' and isInZone(object, centerZone) then
-      if tableLength(currentTrick) > 0 then
-        for i, cardEntry in ipairs(currentTrick) do
-          if object.getName() == cardEntry.cardName and playerColor == cardEntry.playedByColor then
-            table.remove(currentTrick, i)
-            if DEBUG then
-              print("[21AF21]" .. cardEntry.cardName .. " removed from trick[-]")
-            end
+      if tableLength(currentTrick) > 1 then
+        for i = 2, #currentTrick do
+          if object.getName() == currentTrick[i].cardName and playerColor == currentTrick[i].playedByColor then
+            local timerStart
+            reCalculateCurrentTrick(currentTrick[i].index)
             break
           end
         end
@@ -1098,77 +1096,176 @@ end
 --Gaurd clauses don't work in onEvents() otherwise I would use them here
 function onObjectDrop(playerColor, object)
   if trickInProgress then
-    if object.type == 'Card' then
-      if isInZone(object, centerZone) then
-        if not DEBUG and tableLength(currentTrick) == 0 and playerColor ~= leadOutPlayer.color then
-          print(leadOutPlayer.steam_name .. " leads out.")
-        else
-          local trickData = {
-          playedByColor = playerColor,
-          cardName = object.getName()
-          }
-          local playedCardString = ""
-          if tableLength(currentTrick) > 0 then
-            local playedCardList = {}
-            for _, cardEntry in ipairs(currentTrick) do
-              table.insert(playedCardList, cardEntry.cardName)
-            end
-            playedCardString = table.concat(playedCardList, " ")
-          end
-          if string.find(playedCardString, trickData.cardName) then
-            --Do nothing
-          else
-            table.insert(currentTrick, trickData)
-            if DEBUG then
-              print("[21AF21]" .. trickData.cardName .. " added to trick[-]")
-            end
-            if #currentTrick == playerCount then
-              calculateTrickWinner()
-            end
-          end
+    if object.type == 'Card' and isInZone(object, centerZone) then
+      if not DEBUG and tableLength(currentTrick) == 0 and playerColor ~= leadOutPlayer.color then
+        print(leadOutPlayer.steam_name .. " leads out.")
+      else
+        addCardDataToCurrentTrick(playerColor, object.getName())
+        if #currentTrick == playerCount + 1 then
+          calculateTrickWinner()
         end
       end
     end
   end
 end
 
---Looks for any trump in currentTrick, if trump found awards trick to playerColor who played highTrump
---If no trump found, finds ledSuit, then finds highFail of the ledSuit and awards to playerColor who played highFail
-function calculateTrickWinner()
-  local TRUMP_STRENGTH = {"Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
-  "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs", "Queen of Diamonds",
-  "Queen of Hearts", "Queen of Spades", "Queen of Clubs"}
-  local FAIL_STRENGTH = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
-  local ledCard, ledSuit
-  local highTrump, trumpStrength = 0, 0
-  local highFail, failStrength = 0, 0
+function removeCardFromTrick(indexToRemove, indexToUpdate)
+  local highCardName
+  if indexToUpdate then
+    highCardName = currentTrick[indexToUpdate].cardName
+  end
+  if DEBUG then
+    print("[21AF21]" .. currentTrick[indexToRemove].cardName .. " removed from trick[-]")
+  end
+  table.remove(currentTrick, indexToRemove)
+  for i = 2, #currentTrick do
+    if indexToUpdate then
+      if highCardName == currentTrick[i].cardName then
+        currentTrick[1].highStrengthIndex = i
+      end
+    end
+    currentTrick[i].index = i
+  end
+end
 
-  for i, cardEntry in ipairs(currentTrick) do
-    for j, trumpName in ipairs(TRUMP_STRENGTH) do
-      if cardEntry.cardName == trumpName and j > trumpStrength then
-        highTrump, trumpStrength = i, j
-      end
+function reCalculateCurrentTrick(indexToRemove)
+  --Remove card from trick and update location of current high card
+  if indexToRemove ~= currentTrick[1].highStrengthIndex then
+    removeCardFromTrick(indexToRemove, currentTrick[1].highStrengthIndex)
+    return
+  end
+  --Remove card from trick and find the high card in remaining cards
+  removeCardFromTrick(indexToRemove)
+  if #currentTrick > 1 then
+    setLeadOutCardProperties(currentTrick[2].cardName, isTrump(currentTrick[2].cardName))
+    for i = 2, #currentTrick do
+      calculateCardData(i, isTrump(currentTrick[i].cardName))
     end
   end
-  if highTrump > 0 then
-    trickWinner = getPlayerObject(currentTrick[highTrump].playedByColor, sortedSeatedPlayers)
-    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[highTrump].cardName .. "[-]")
-    Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
+end
+
+function addCardDataToCurrentTrick(playerColor, objectName)
+  --Check if object is trump
+  local objectIsTrump = isTrump(objectName)
+  if tableLength(currentTrick) < 2 then
+    --Creates currentTrick properties stored at index 1
+    initializeCurrentTrick(objectName, objectIsTrump)
+  end
+  local cardData = {
+    playedByColor = playerColor,
+    cardName = objectName,
+    index = #currentTrick + 1
+  }
+  table.insert(currentTrick, cardData)
+  if DEBUG then
+    print("[21AF21]" .. currentTrick[#currentTrick].cardName .. " added to trick[-]")
+  end
+  calculateCardData(#currentTrick, objectIsTrump)
+end
+
+--Function will only compare card strength if necessary
+function calculateCardData(cardIndex, objectIsTrump)
+  --Route 1: Checks if trump is already inside the currentTrick
+  if currentTrick[1].trump then
+    --Checks if object is trump
+    if objectIsTrump then
+      local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
+      if strengthVal > currentTrick[1].currentHighStrength then
+        updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
+      end
+    end
+  --Route 2: If no previous trump and current object is trump
+  elseif objectIsTrump then
+    local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
+    updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
+  --Route 3: No trump and current object is same suit as ledSuit
+  elseif getLastWord(currentTrick[cardIndex].cardName) == currentTrick[1].ledSuit then
+    local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
+    if strengthVal > currentTrick[1].currentHighStrength then
+      updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
+    end
+  end
+  if DEBUG then
+    print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
+  end
+end
+
+function initializeCurrentTrick(objectName, isTrump)
+  currentTrick = {}
+  setLeadOutCardProperties(objectName, isTrump)
+end
+
+--currentTrick[1] is where currentTrick properties is initalized and updated
+function setLeadOutCardProperties(objectName, isTrump)
+  local trickProperties = {
+    ledSuit = getLastWord(objectName),
+    trump = isTrump,
+    currentHighStrength = quickSearch(objectName, isTrump),
+    highStrengthIndex = 2
+  }
+  if tableLength(currentTrick) == 0 then
+    table.insert(currentTrick, trickProperties)
   else
-    ledCard = currentTrick[1].cardName
-    ledSuit = getLastWord(ledCard)
-    for i, cardEntry in ipairs(currentTrick) do
-      local cardName = cardEntry.cardName
-      for j, failName in ipairs(FAIL_STRENGTH) do
-        if string.find(cardName, failName) and string.find(cardName, ledSuit) and j > failStrength then
-          highFail, failStrength = i, j
-        end
+    currentTrick[1].ledSuit = trickProperties.ledSuit
+    currentTrick[1].trump = isTrump
+    currentTrick[1].currentHighStrength = trickProperties.currentHighStrength
+    currentTrick[1].highStrengthIndex = 2
+  end
+end
+
+function updateCurrentTrickProperties(isTrump, strengthVal, index)
+  if isTrump then
+    currentTrick[1].trump = true
+  end
+  currentTrick[1].currentHighStrength = strengthVal
+  currentTrick[1].highStrengthIndex = index
+end
+
+function isTrump(objectName)
+  local stringToSearch = "Diamonds Jack Queen"
+  for word in stringToSearch:gmatch("%S+") do
+    if string.find(objectName, word) then
+      return true
+    end
+  end
+  return false
+end
+
+function quickSearch(objectName, isTrump)
+  local strengthList
+  if isTrump then
+    strengthList = {"Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
+    "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs", "Queen of Diamonds",
+    "Queen of Hearts", "Queen of Spades", "Queen of Clubs"}
+  else
+    strengthList = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+  end
+  
+  local startIndex
+  --Only search for strengths higher than currentStrength
+  if currentTrick[1] then
+    startIndex = currentTrick[1].currentHighStrength
+  else
+    startIndex = 1
+  end
+  for i = startIndex, #strengthList do
+    if isTrump then
+      if objectName == strengthList[i] then
+        return i
+      end
+    else
+      if string.find(objectName, strengthList[i]) then
+        return i
       end
     end
-    trickWinner = getPlayerObject(currentTrick[highFail].playedByColor, sortedSeatedPlayers)
-    broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[highFail].cardName .. "[-]")
-    Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
   end
+  return 1
+end
+
+function calculateTrickWinner()
+  trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
+  broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
+  Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
 end
 
 --Resets trick flag and data then moves Trick to trickZone of trickWinner
