@@ -3,7 +3,7 @@
   width="1200"
   height="350"
   fontSize="220"
-  onClick="setBuriedPress"
+  onClick="Global/setBuriedEvent"
   active="false"
   >Set Buried 
 </button>
