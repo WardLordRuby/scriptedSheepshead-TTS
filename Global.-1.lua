@@ -1121,8 +1121,7 @@ function removeCardFromTrick(indexToRemove)
 end
 
 function reCalculateCurrentTrick(index)
-  local removedItemStrength = quickSearch(currentTrick[index].cardName, isTrump(currentTrick[index].cardName))
-  if removedItemStrength ~= currentTrick[1].currentHighStrength then
+  if index ~= currentTrick[1].highStrengthIndex then
     removeCardFromTrick(index)
     return
   end
