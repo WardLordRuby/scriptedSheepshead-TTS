@@ -1080,7 +1080,7 @@ end
 function onObjectLeaveZone(zone, object)
   if not trickInProgress and not passInProgress then
     if trickWinner then
-      if zone == handZones[trickWinner.color] then
+      if zone == handZones[leadOutPlayer.color] then
         trickInProgress = true
       end
     end
@@ -1110,7 +1110,7 @@ end
 function onObjectDrop(playerColor, object)
   if trickInProgress then
     if object.type == 'Card' and isInZone(object, centerZone) then
-      if not DEBUG and tableLength(currentTrick) == 0 and playerColor ~= leadOutPlayer.color then
+      if not DEBUG and playerColor ~= leadOutPlayer.color then
         print(leadOutPlayer.steam_name .. " leads out.")
       else
         addCardDataToCurrentTrick(playerColor, object.getName())
@@ -1278,6 +1278,7 @@ end
 function calculateTrickWinner()
   takeTrickInProgress = true
   trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
+  leadOutPlayer = trickWinner
   broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
   Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
 end
