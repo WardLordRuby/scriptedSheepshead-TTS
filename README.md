@@ -7,6 +7,9 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Create UI and code a call panel
 * Implement onSave to save players custom settings
 * Display number of chips won or lost to Picker at end of hand
+* Admin command for respawning a deck
+* New icons for deal, pick, and pass
+* Scripted event for leaster call
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
