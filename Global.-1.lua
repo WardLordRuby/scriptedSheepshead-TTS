@@ -1149,9 +1149,12 @@ function reCalculateCurrentTrick(indexToRemove)
   --Remove card from trick and find the high card in remaining cards
   removeCardFromTrick(indexToRemove)
   if #currentTrick > 1 then
+    currentTrick[1].currentHighStrength = 1
     setLeadOutCardProperties(currentTrick[2].cardName, isTrump(currentTrick[2].cardName))
-    for i = 2, #currentTrick do
-      calculateCardData(i, isTrump(currentTrick[i].cardName))
+    if #currentTrick > 2 then
+      for i = 3, #currentTrick do
+        calculateCardData(i, isTrump(currentTrick[i].cardName))
+      end
     end
   end
 end
@@ -1170,35 +1173,31 @@ function addCardDataToCurrentTrick(playerColor, objectName)
   }
   table.insert(currentTrick, cardData)
   if DEBUG then
-    print("[21AF21]" .. currentTrick[#currentTrick].cardName .. " added to trick[-]")
+    if #currentTrick == 2 then
+      print("[21AF21]Card led out is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
+    else
+      print("[21AF21]" .. currentTrick[#currentTrick].cardName .. " added to trick[-]")
+    end
   end
   calculateCardData(#currentTrick, objectIsTrump)
 end
 
---Function will only compare card strength if necessary
+--Function will return early if card does not need to be compared to currentHighStrength
 function calculateCardData(cardIndex, objectIsTrump)
-  --Route 1: Checks if trump is already inside the currentTrick
-  if currentTrick[1].trump then
-    --Checks if object is trump
-    if objectIsTrump then
-      local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
-      if strengthVal > currentTrick[1].currentHighStrength then
-        updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
+  if not currentTrick[1].trump then --No trump in currentTrick
+    if not objectIsTrump then --Not trump and not suit led out
+      if getLastWord(currentTrick[cardIndex].cardName) ~= currentTrick[1].ledSuit then
+        return
       end
     end
-  --Route 2: If no previous trump and current object is trump
-  elseif objectIsTrump then
-    local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
-    updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
-  --Route 3: No trump and current object is same suit as ledSuit
-  elseif getLastWord(currentTrick[cardIndex].cardName) == currentTrick[1].ledSuit then
-    local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
-    if strengthVal > currentTrick[1].currentHighStrength then
-      updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
+  else --Trump is in the currentTrick
+    if not objectIsTrump then
+      return
     end
   end
-  if DEBUG then
-    print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
+  local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
+  if strengthVal > currentTrick[1].currentHighStrength then
+    updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
   end
 end
 
@@ -1231,6 +1230,9 @@ function updateCurrentTrickProperties(isTrump, strengthVal, index)
   end
   currentTrick[1].currentHighStrength = strengthVal
   currentTrick[1].highStrengthIndex = index
+  if DEBUG then
+    print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
+  end
 end
 
 function isTrump(objectName)
