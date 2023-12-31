@@ -221,7 +221,8 @@ function flipDeck(zone)
 end
 
 --Flips given card table face down
-function flipCards(cards)
+function flipCards(zone)
+  local cards = getLooseCards(zone)
   for _, card in pairs(cards) do
     if not card.is_face_down then
       card.flip()
@@ -249,7 +250,7 @@ function rebuildDeck()
     end
   end
   pause(0.25)
-  flipCards(getLooseCards(tableZone))
+  flipCards(tableZone)
   pause(0.5)
   group(getLooseCards(tableZone))
   pause(0.5)
@@ -886,6 +887,8 @@ end
 
 --Moves the trick to the players trickZone who triggered the event
 --Checks if hand is over by counting cards in playerHand if so triggers counterVisibility
+
+--Depreciated function phased out by the automated system starting on Ln 1082
 function takeTrickEvent(player)
   if not checkCardCount(centerZone, playerCount) then
     return
