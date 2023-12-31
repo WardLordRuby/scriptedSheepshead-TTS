@@ -151,8 +151,9 @@ function getDeck(zone, size)
     end
     return bigDeck
   else
-    print("[DC0000]Deck size not defined[-]")
-    return nil
+    group(decks)
+    pause(1)
+    return getDeck(zone)
   end
 end
 
@@ -232,13 +233,9 @@ end
 
 --Called to combine all cards on the table into a deck
 function rebuildDeck()
+  local faceRotation = moreFaceUpOrDown(tableZone)
   for _, obj in pairs(getLooseCards(tableZone)) do
-    local faceRotation = moreFaceUpOrDown(tableZone)
-    if obj.type == 'Card' then
-      obj.setRotation({0,math.random(0,360),faceRotation})
-      obj.setPosition({math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)})
-      pause(0.01)
-    else
+    if obj.type == 'Deck' then
       for _, card in pairs(obj.getObjects()) do
         obj.takeObject({
           rotation = {0,math.random(0,360),faceRotation},
@@ -247,6 +244,10 @@ function rebuildDeck()
         })
         pause(0.01)
       end
+    else
+      obj.setRotation({0,math.random(0,360),faceRotation})
+      obj.setPosition({math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)})
+      pause(0.01)
     end
   end
   pause(0.25)
@@ -668,9 +669,13 @@ end
 
 --Start of New Hand event
 function setUpHandEvent()
-  if not passInProgress then
+  if not passInProgress and not takeTrickInProgress then
     passInProgress = true
-    cardsToBeBuried, trickInProgress = false, false
+    if cardsToBeBuried then
+      setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+      cardsToBeBuried = false
+    end
+    trickInProgress = false
     currentTrick = {}
     startLuaCoroutine(self, 'dealCardsCoroutine')
   end
@@ -1039,8 +1044,13 @@ function getLastWord(str)
   return words[#words]
 end
 
---Don't allow card grouping during trickInProgress
+--Don't allow card grouping during trickInProgress or cardsToBeBuried
 function tryObjectEnterContainer(container, object)
+  if cardsToBeBuried then
+    if isInZone(object, trickZones[pickingPlayer.color]) then
+      return false
+    end
+  end
   if trickInProgress then
     if isInZone(object, centerZone) then
       return false
@@ -1266,6 +1276,7 @@ function quickSearch(objectName, isTrump)
 end
 
 function calculateTrickWinner()
+  takeTrickInProgress = true
   trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
   broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
   Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
@@ -1274,7 +1285,6 @@ end
 --Resets trick flag and data then moves Trick to trickZone of trickWinner
 --Shows card counters if hand is over
 function giveTrickToWinner(player)
-  takeTrickInProgress = true
   trickInProgress = false
   currentTrick = {}
   local playerTrickZone = trickZones[player.color]
