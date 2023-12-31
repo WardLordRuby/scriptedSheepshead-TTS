@@ -742,9 +742,9 @@ function dealCardsCoroutine()
       roundTrigger = 1
       round = round + 1
     end
-    if DEBUG then
-      print(playerCount .. " " .. count .. " " .. target .. " " .. round)
-    end
+
+    if DEBUG then print(playerCount .. " " .. count .. " " .. target .. " " .. round) end
+
     dealLogic(playerCount, target, round, deck, rotationVal)
     pause(0.25)
     count = count + 1
@@ -851,7 +851,6 @@ function pickBlindsEvent(player)
     return
   end
   pickingPlayer = player
-  cardsToBeBuried = true
   broadcastToAll("[21AF21]"..player.steam_name .. " Picks![-]")
   for _, card in pairs(blinds) do
     card.setPositionSmooth(Player[player.color].getHandTransform().position)
@@ -863,6 +862,7 @@ function pickBlindsEvent(player)
         if card.is_face_down then
           card.flip()
         end
+        cardsToBeBuried = true
       end
     end,
     0.35
@@ -1058,26 +1058,23 @@ function tryObjectEnterContainer(container, object)
   return true
 end
 
---Gaurd clauses don't work in onEvents() otherwise I would use them here
 function onObjectEnterZone(zone, object)
-  --Setting cardsToBeBuried to true will trigger the following code
-  --Looks for pickingPlayer trickZone then looks for cards and
-  --hides from all other players but pickingPlayer
+  --Makes sure items stay on the table if dropped
+  if zone == dropZone then
+    object.setPosition({0, 3, 0})
+  end
+  --Makes sure other players can not see what cards the picker is burying
   if cardsToBeBuried then
     if zone == trickZones[pickingPlayer.color] and object.type == 'Card' then
       local hideFrom = removeColorFromList(pickingPlayer.color, sortedSeatedPlayers)
       object.setInvisibleTo(hideFrom)
     end
   end
-  if zone == dropZone then
-    object.setPosition({0, 3, 0})
-  end
-  --More functions to run inside of onObjectEnterZone go here
 end
 
---Starts trick
 function onObjectLeaveZone(zone, object)
-  if not trickInProgress and not passInProgress then
+  --Starts trick
+  if not trickInProgress and not passInProgress and not cardsToBeBuried then
     if leadOutPlayer then
       if zone == handZones[leadOutPlayer.color] then
         trickInProgress = true
@@ -1126,9 +1123,9 @@ function removeCardFromTrick(indexToRemove, indexToUpdate)
   if indexToUpdate then
     highCardName = currentTrick[indexToUpdate].cardName
   end
-  if DEBUG then
-    print("[21AF21]" .. currentTrick[indexToRemove].cardName .. " removed from trick[-]")
-  end
+
+  if DEBUG then print("[21AF21]" .. currentTrick[indexToRemove].cardName .. " removed from trick[-]") end
+
   table.remove(currentTrick, indexToRemove)
   for i = 2, #currentTrick do
     if indexToUpdate then
@@ -1230,9 +1227,8 @@ function updateCurrentTrickProperties(isTrump, strengthVal, index)
   end
   currentTrick[1].currentHighStrength = strengthVal
   currentTrick[1].highStrengthIndex = index
-  if DEBUG then
-    print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
-  end
+  
+  if DEBUG then print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]") end
 end
 
 function isTrump(objectName)
@@ -1278,7 +1274,7 @@ end
 
 function calculateTrickWinner()
   takeTrickInProgress = true
-  trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
+  local trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
   leadOutPlayer = trickWinner
   broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
   Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
