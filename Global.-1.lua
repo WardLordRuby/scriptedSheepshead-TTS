@@ -1000,16 +1000,15 @@ function setBuriedEvent(player)
     1.6
   )
   cardsToBeBuried = false
-  trickInProgress = true
   local leadOutVal = dealerColorVal + 1
   if leadOutVal > #sortedSeatedPlayers then
     leadOutVal = 1
   end
   leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
   if not DEBUG then
-    broadcastToAll("[21AF21]"..leadOutPlayer.steam_name .. " leads out.[-]")
+    broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
   else
-    print("[21AF21]"..leadOutPlayer.color .. " leads out.[-]")
+    print("[21AF21]" .. leadOutPlayer.color .. " leads out.[-]")
   end
   setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
@@ -1076,10 +1075,10 @@ function onObjectEnterZone(zone, object)
   --More functions to run inside of onObjectEnterZone go here
 end
 
---Starts next trick
+--Starts trick
 function onObjectLeaveZone(zone, object)
   if not trickInProgress and not passInProgress then
-    if trickWinner then
+    if leadOutPlayer then
       if zone == handZones[leadOutPlayer.color] then
         trickInProgress = true
       end
@@ -1111,7 +1110,7 @@ function onObjectDrop(playerColor, object)
   if trickInProgress then
     if object.type == 'Card' and isInZone(object, centerZone) then
       if not DEBUG and playerColor ~= leadOutPlayer.color then
-        print(leadOutPlayer.steam_name .. " leads out.")
+        broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
       else
         addCardDataToCurrentTrick(playerColor, object.getName())
         if #currentTrick == playerCount + 1 then
