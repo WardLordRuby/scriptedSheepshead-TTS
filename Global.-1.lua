@@ -1186,6 +1186,8 @@ function calculateCardData(cardIndex, objectIsTrump)
       if getLastWord(currentTrick[cardIndex].cardName) ~= currentTrick[1].ledSuit then
         return
       end
+    else --No trump in currentTrick but objectIsTrump make sure trumpStrength is greater
+      currentTrick[1].currentHighStrength = 0
     end
   else --Trump is in the currentTrick
     if not objectIsTrump then
@@ -1253,10 +1255,10 @@ function quickSearch(objectName, isTrump)
   
   local startIndex
   --Only search for strengths higher than currentStrength
-  if currentTrick[1] then
-    startIndex = currentTrick[1].currentHighStrength
-  else
+  if not currentTrick[1] or currentTrick[1].currentHighStrength == 0 then
     startIndex = 1
+  else
+    startIndex = currentTrick[1].currentHighStrength
   end
   for i = startIndex, #strengthList do
     if isTrump then
