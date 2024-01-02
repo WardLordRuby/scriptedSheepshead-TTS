@@ -119,10 +119,12 @@ function onLoad()
   displayRules()
 end
 
---Returns the deck from given zone
---If you are aware of more than one deck in a given zone
---getDeck() can return the smaller or larger of the decks found
---pass getDeck() the string "small" or "big" to compare
+---Returns the deck from given zone
+---If you are aware of more than one deck in a given zone
+---getDeck() can return the smaller or larger of the decks found
+---@param zone object
+---@param size optional <string_big | string_small>
+---@return object_deck
 function getDeck(zone, size)
   local decks = {}
   for _, obj in ipairs(zone.getObjects()) do
@@ -157,7 +159,8 @@ function getDeck(zone, size)
   end
 end
 
---Returns a table of cards or decks in a given zone
+---@param zone object
+---@return table_card_objects
 function getLooseCards(zone)
   local looseCards = {}
     for _, obj in pairs(zone.getObjects()) do
@@ -168,20 +171,23 @@ function getLooseCards(zone)
   return looseCards
 end
 
---called to wait seconds
+---Pauses script, must be called from within a coroutine
+---@param time integer_seconds
 function pause(time)
   local start = os.time()
   repeat coroutine.yield(0) until os.time() > start + time
 end
 
---Called to retrieve rotationAngle and playerPos of a given color
+---@param color string
+---@return integer_rotationAngle, vector_playerPosition
 function retrieveItemMoveData(color)
   local rotationAngle = ROTATION.color[color]
   local playerPos = Player[color].getHandTransform().position
   return rotationAngle, playerPos
 end
 
---Called to move the deck and dealer chip in front of a given color
+---Moves deck and dealer chip in front of a given color
+---@param color string
 function moveDeckAndDealerChipToColor(color)
   local rotationAngle, playerPos = retrieveItemMoveData(color)
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
@@ -195,7 +201,10 @@ function moveDeckAndDealerChipToColor(color)
   deck.setPositionSmooth(playerPos + rotatedDeckOffset)
 end
 
---Returns a table with the color removed from the given color 
+---Copys input table and removes input color, if color not found returns original table
+---@param color string
+---@param list table_colors
+---@return table
 function removeColorFromList(color, list)
   local currentIndex
   local json = JSON.encode(list)
@@ -213,7 +222,8 @@ function removeColorFromList(color, list)
   return list
 end
 
---Checks if a deck in the given zone is face up, if so it flips the deck
+---Checks if a deck in the given zone is face up, if so it flips the deck
+---@param zone object
 function flipDeck(zone)
   local deck = getDeck(zone)
   if not deck.is_face_down then
@@ -221,7 +231,8 @@ function flipDeck(zone)
   end
 end
 
---Flips given card table face down
+---Checks if cards in the given zone are face up, if so it flips cards
+---@param zone object
 function flipCards(zone)
   local cards = getLooseCards(zone)
   for _, card in pairs(cards) do
@@ -231,7 +242,7 @@ function flipCards(zone)
   end
 end
 
---Called to combine all cards on the table into a deck
+---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
 function rebuildDeck()
   local faceRotation = moreFaceUpOrDown(tableZone)
   for _, obj in pairs(getLooseCards(tableZone)) do
@@ -259,8 +270,9 @@ function rebuildDeck()
   pause(0.5)
 end
 
---Returns the rotationValue associated for if more cards are face up or
---face down in a given zone
+---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
+---@param zone object
+---@return integer_0 | integer_180
 function moreFaceUpOrDown(zone)
   local faceUpCount, faceDownCount = 0, 0
   local objectsInZone = zone.getObjects()
@@ -286,7 +298,9 @@ function moreFaceUpOrDown(zone)
   end
 end
 
---Returns the number of cards in a given zone
+---Returns the number of cards in a given zone
+---@param zone object
+---@return integer
 function countCards(zone)
   local objects = zone.getObjects()
   local cardCount = 0
@@ -300,7 +314,9 @@ function countCards(zone)
   return cardCount
 end
 
---Checks the given card count of a given zone, returns true or false
+---Checks the given card count of a given zone, returns true or false
+---@param zone object
+---@param count integer
 function checkCardCount(zone, count)
   local cardCount = countCards(zone)
   if cardCount == count then
@@ -309,7 +325,9 @@ function checkCardCount(zone, count)
   return false
 end
 
---Returns player object from a given color or number
+---@param colorOrVar string_color | integer_index
+---@param list table_colors
+---@return object_player
 function getPlayerObject(colorOrVar, list)
   if colorOrVar == 0 then
     return Player[list[#list]]
@@ -322,10 +340,12 @@ function getPlayerObject(colorOrVar, list)
   end
 end
 
---start of functions used by Set Up Game event
+--[[Start of functions used by Set Up Game event]]--
 
---Runs everytime a chat occurs
---Sets flags for determining if to reset gameboard
+---Runs everytime a chat occurs, Sets flags for determining if to reset gameboard. 
+---<br>Return: true, hides player msg | false, shows player msg
+---@param message string_from_player
+---@param player object_of_player
 function onChat(message, player)
   if lookForPlayerText then
     local lowerMessage = string.lower(message)
@@ -364,7 +384,8 @@ function onChat(message, player)
   end
 end
 
---Spawns a rule book in front of player color
+---Spawns a rule book in front of player color
+---@param color string
 function getRuleBook(color)
   local playerRotation = ROTATION.color[color]
   local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
@@ -417,7 +438,7 @@ spawnObjectJSON({
 })
 end
 
---Deletes all rulebooks from table
+---Deletes all rulebooks from table
 function hideRuleBook()
   for _, tableObject in pairs(tableZone.getObjects()) do
     if tableObject.type == 'Tile' then
@@ -426,8 +447,8 @@ function hideRuleBook()
   end
 end
 
---Called to reset the game space
---Removes all chips and sets varSetup to false
+---Called to reset the game space<br>
+---Removes all chips and sets varSetup to false
 function resetBoard()
   for _, obj in pairs(tableZone.getObjects()) do
     if obj.type == "Chip" then
@@ -438,7 +459,7 @@ function resetBoard()
   varSetup = false
 end
 
---Builds a table of all seated players [sortedSeatedPlayers]
+---Builds a global table of all seated players [sortedSeatedPlayers]
 function populatePlayers()
   sortedSeatedPlayers = {}
   for _, color in ipairs(ALL_PLAYERS) do
@@ -448,9 +469,9 @@ function populatePlayers()
   end
 end
 
---Prints the current game settings
---Gets the correct deck for the number of seated players
---Will stop setUpGameCoroutine if there is less than 3 seated players
+---Prints the current game settings<br>
+---Gets the correct deck for the number of seated players<br>
+---Will stop setUpGameCoroutine if there is less than 3 seated players
 function printGameSettings()
   local deck = getDeck(tableZone)
   if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
@@ -477,10 +498,10 @@ function printGameSettings()
   print("[21AF21]Sheepshead set up for [-]",#sortedSeatedPlayers, " players!")
 end
 
---Called to add the blackSevens to a given deck
---Uses the guid provided by removeBlackSevens() to locate the deck
---the blackSevens are located in, then moves them from hiddenBag
---to the current deck position
+---Called to add the blackSevens to a given deck<br>
+---Function uses global string blackSevens provided by removeBlackSevens() to locate<br>
+---blackSevens.guid within hiddenBag, then moves them to the current deck position
+---@param deck object
 function returnDecktoPiquet(deck)
   hiddenBag.takeObject({
     guid = blackSevens,
@@ -492,9 +513,11 @@ function returnDecktoPiquet(deck)
   print("[21AF21]The two black sevens have been added to the deck.[-]")
 end
 
---Called to remove the blackSevens from a given deck
---Finds the blackSevens inside the given deck and moves them into hiddenBag
---Returns the guid of a deck the blackSevens are located in inside hiddenBag
+---Called to remove the blackSevens from a given deck<br>
+---Finds the blackSevens inside the given deck and moves them into hiddenBag<br>
+---Returns the guid of a deck the blackSevens are located in inside hiddenBag
+---@param deck object
+---@return string_guid
 function removeBlackSevens(deck)
   local cardsToRemove = {'Seven of Clubs', 'Seven of Spades'}
   for _, card in ipairs(deck.getObjects()) do
@@ -516,7 +539,9 @@ function removeBlackSevens(deck)
   return smallDeck.guid
 end
 
---Called when New Game Set Up event to deal chips to all seated players
+---Called during New Game Set Up event to deal chips to all seated players
+---@param rotationAngle integer
+---@param playerPos vector
 function spawnChips(rotationAngle, playerPos)
   local rotatedOffset
   for c = 1, 15 do
@@ -537,7 +562,7 @@ function spawnChips(rotationAngle, playerPos)
   end
 end
 
---Start of game setup event
+---Start of game setup event
 function setUpGameEvent(player)
   if gameSetUpInProgress then
     return
@@ -551,7 +576,7 @@ function setUpGameEvent(player)
   end
 end
 
---start of order of opperations for setUpGame
+---Start of order of opperations for setUpGame
 function setUpGameCoroutine()
   if gameSetUpRan and #sortedSeatedPlayers < 3 then
     print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
@@ -610,13 +635,13 @@ function setUpGameCoroutine()
   gameSetUpRan, firstDealOfGame = true, true
   return 1
 end
---end of order of opperations for setUpGame
---end of functions used by Set Up Game event
+--[[End of order of opperations for setUpGame]]--
+--[[End of functions used by Set Up Game event]]--
 
 
---start of functions used by New Hand event
+--[[Start of functions used by New Hand event]]--
 
---Sets up variables needed to deal cards for New Hand event
+---Sets up variables needed to deal cards for New Hand event
 function setUpVar()
   if firstDealOfGame then
     dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
@@ -634,7 +659,9 @@ function setUpVar()
   playerCount = #sortedSeatedPlayers
 end
 
---Gets the index location of a color in a list
+---Returns the index location of a color in a list
+---@param color string
+---@param list table_colors
 function getColorVal(color, list)
   for i, colors in ipairs(list) do
     if colors == color then
@@ -643,14 +670,15 @@ function getColorVal(color, list)
   end
 end
 
---Checks if a deck exists on the table
+---Checks if a deck exists on the table
 function deckExists()
   return getDeck(tableZone) ~= nil
 end
 
---Called to build dealOrder correctly
---Adds "Blinds" to the dealOrder table in the position directly after the current dealer
---If dealer sits out replaces dealer with blinds
+---Called to build dealOrder correctly<br>
+---Adds "Blinds" to the dealOrder table in the position directly after the current dealer<br>
+---If dealer sits out replaces dealer with blinds
+---@param arg string_normal | string_dealerSitsOut
 function calculateDealOrder(arg)
   local json = JSON.encode(sortedSeatedPlayers)
   dealOrder = JSON.decode(json)
@@ -667,7 +695,7 @@ function calculateDealOrder(arg)
   end
 end
 
---Start of New Hand event
+---Start of New Hand event
 function setUpHandEvent()
   if not passInProgress and not takeTrickInProgress then
     passInProgress = true
@@ -681,7 +709,7 @@ function setUpHandEvent()
   end
 end
 
---Order of opperations for dealing
+---Order of opperations for dealing
 function dealCardsCoroutine()
   if gameSetUpInProgress then
     print("[21AF21]Setup Is Currently In Progress.[-]")
@@ -757,9 +785,13 @@ function dealCardsCoroutine()
 end
 --end of order of opperations for dealing
 
---Contains the logic to deal correctly based on the number of
---players seated and the number of times players have recieved cards
---Number of Players, target color, round number
+---Contains the logic to deal correctly based on the number of
+---players seated and the number of times players have recieved cards
+---@param p integer_number_of_players
+---@param t string_target_color
+---@param r integer_round_number
+---@param deck object
+---@param rotationVal integer
 function dealLogic(p, t, r, deck, rotationVal)
   if p == 3 then
     if t ~= "Blinds" and (r == 2 or r == 3) then
@@ -794,22 +826,23 @@ function dealLogic(p, t, r, deck, rotationVal)
   end
 end
 
---Calculates the rotation of blinds and deals blinds
+---Deals 2 cards to the blinds
+---@param deck object
+---@param rotationVal integer
 function dealToBlinds(deck, rotationVal)
-  deck.takeObject({
-    position = SPAWN_POS.blinds[1]:copy():rotateOver('y', rotationVal.y),
-    rotation = {rotationVal.x, rotationVal.y, 180}
-  })
-  pause(0.15)
-  deck.takeObject({
-    position = SPAWN_POS.blinds[2]:copy():rotateOver('y', rotationVal.y),
-    rotation = {rotationVal.x, rotationVal.y, 180}
-  })
+  for i = 1, 2 do
+    deck.takeObject({
+      position = SPAWN_POS.blinds[i]:copy():rotateOver('y', rotationVal.y),
+      rotation = { rotationVal.x, rotationVal.y, 180 }
+    })
+    pause(0.15)
+  end
 end
 
---end of functions used by New Hand event
+--[[End of functions used by New Hand event]]--
 
---Prints a message if player passes or is forced to pick
+---Prints a message if player passes or is forced to pick
+---@param player object_player_event_trigger
 function passEvent(player)
   if playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
@@ -834,8 +867,9 @@ function passEvent(player)
   end
 end
 
---Moves the blinds into the pickers hand, sets player to pickingPlayer
---Sets flag cardsToBeBuried to trigger buryCards logic
+---Moves the blinds into the pickers hand, sets player to pickingPlayer
+---Sets flag cardsToBeBuried to trigger buryCards logic
+---@param player object_player_event_trigger
 function pickBlindsEvent(player)
   if playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
@@ -874,7 +908,10 @@ function pickBlindsEvent(player)
   setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 end
 
---Returns the color of the next seated player clockwise from given color
+---Returns the color of the next seated player clockwise from given color
+---@param index integer
+---@param list table_colors
+---@return integer_index
 function getNextColorValInList(index, list)
   for i, colors in ipairs(list) do
     if i == index then
@@ -890,31 +927,10 @@ function getNextColorValInList(index, list)
   end
 end
 
---Moves the trick to the players trickZone who triggered the event
---Checks if hand is over by counting cards in playerHand if so triggers counterVisibility
-
---Depreciated function phased out by the automated system starting on Ln 1082
-function takeTrickEvent(player)
-  if not checkCardCount(centerZone, playerCount) then
-    return
-  end
-  if playerCount == 5 and #sortedSeatedPlayers == 6 then
-    if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
-      broadcastToColor("[DC0000]You can not take tricks while sitting out.[-]", player.color)
-      return
-    end
-  end
-  if sortedSeatedPlayers == nil then
-    return
-  end
-  if not takeTrickInProgress then
-    giveTrickToWinner(player.color)
-  end
-end
-
---Toggles the visibility of the counters, on counter spawn will spawn
---the counter in front of the given color (pickerColor)
---Flips over pickers tricks to see score of hand
+---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
+---a counter in front of the given color (pickerColor)<br> and player accross from color.
+---Flips over pickers tricks to see score of hand
+---@param color string
 function toggleCounterVisibility(color)
   if not counterVisible then
     local pickerRotation = ROTATION.color[color]
@@ -974,8 +990,9 @@ function toggleCounterVisibility(color)
   end
 end
 
---Makes sure buried cards are face down and reveals them to all players
---Calculates leadOutPlayer, hides Set Buried button
+---Makes sure buried cards are face down and unhides blinds and pickingPlayers<br>
+---hand objects. Calculates global leadOutPlayer, hides Set Buried button
+---@param player object_player_event_trigger
 function setBuriedEvent(player)
   if player.color ~= pickingPlayer.color then
     return
@@ -1013,18 +1030,20 @@ function setBuriedEvent(player)
   setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
 
---Just used to ensure 0 is returned if table empty
-function tableLength(tbl)
+---Just used to ensure 0 is returned if table empty or nil
+function tableLength(table)
     local count = 0
-    if tbl == {} or tbl == nil then
+  if table == {} or table == nil then
       return 0
     end
-    for _ in pairs(tbl) do
+  for _ in pairs(table) do
       count = count + 1
     end
     return count
 end
 
+---@param object object_item
+---@param zone object
 function isInZone(object, zone)
   local occupiedZones = object.getZones()
   for _, zoneObject in pairs(occupiedZones) do
@@ -1035,15 +1054,20 @@ function isInZone(object, zone)
   return false
 end
 
-function getLastWord(str)
+---@return string_last_word
+function getLastWord(string)
   local words = {}
-  for word in str:gmatch("%S+") do
+  for word in string:gmatch("%S+") do
     table.insert(words, word)
   end
   return words[#words]
 end
 
---Don't allow card grouping during trickInProgress or cardsToBeBuried
+---Runs when an object tries to enter a container<br>
+---Doesn't allow card grouping during trickInProgress or cardsToBeBuried<br>
+---Return: true, allows object to enter | false, does not allow object to enter
+---@param container type_object
+---@param object object_item
 function tryObjectEnterContainer(container, object)
   if cardsToBeBuried then
     if isInZone(object, trickZones[pickingPlayer.color]) then
@@ -1058,6 +1082,9 @@ function tryObjectEnterContainer(container, object)
   return true
 end
 
+---Runs when an object enters a zone
+---@param zone object
+---@param object object_item
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
   if zone == dropZone then
@@ -1072,6 +1099,9 @@ function onObjectEnterZone(zone, object)
   end
 end
 
+---Runs when an object leaves a zone
+---@param zone object
+---@param object object_item
 function onObjectLeaveZone(zone, object)
   --Starts trick
   if not trickInProgress and not passInProgress and not cardsToBeBuried then
@@ -1083,8 +1113,11 @@ function onObjectLeaveZone(zone, object)
   end
 end
 
---If someone plays the wrong card, ex didn't see they have to follow suit
---and needs to remove a card from the currentTrick
+---Runs when a player pickes up an object<br>
+---If someone plays the wrong card, Ex. Player didn't see they have to follow suit
+---and needs to remove a card from the currentTrick
+---@param playerColor string
+---@param object object_item
 function onObjectPickUp(playerColor, object)
   if trickInProgress then
     if object.type == 'Card' and isInZone(object, centerZone) then
@@ -1101,8 +1134,11 @@ function onObjectPickUp(playerColor, object)
   end
 end
 
---This builds the table currentTrick to keep track of cardNames and player color who laid them in the centerZone
---Gaurd clauses don't work in onEvents() otherwise I would use them here
+---Runs when a player drops an object<br>
+---Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
+---Builds the table currentTrick to keep track of cardNames and player color who laid them in the centerZone 
+---@param playerColor string
+---@param object object_item
 function onObjectDrop(playerColor, object)
   if trickInProgress then
     if object.type == 'Card' and isInZone(object, centerZone) then
@@ -1118,6 +1154,8 @@ function onObjectDrop(playerColor, object)
   end
 end
 
+---@param indexToRemove integer
+---@param indexToUpdate optional <integer>
 function removeCardFromTrick(indexToRemove, indexToUpdate)
   local highCardName
   if indexToUpdate then
@@ -1137,6 +1175,7 @@ function removeCardFromTrick(indexToRemove, indexToUpdate)
   end
 end
 
+---@param indexToRemove integer
 function reCalculateCurrentTrick(indexToRemove)
   --Remove card from trick and update location of current high card
   if indexToRemove ~= currentTrick[1].highStrengthIndex then
@@ -1156,6 +1195,8 @@ function reCalculateCurrentTrick(indexToRemove)
   end
 end
 
+---@param playerColor string
+---@param objectName string
 function addCardDataToCurrentTrick(playerColor, objectName)
   --Check if object is trump
   local objectIsTrump = isTrump(objectName)
@@ -1179,7 +1220,9 @@ function addCardDataToCurrentTrick(playerColor, objectName)
   calculateCardData(#currentTrick, objectIsTrump)
 end
 
---Function will return early if card does not need to be compared to currentHighStrength
+---Function will return early if card does not need to be compared to currentHighStrength
+---@param cardIndex integer
+---@param objectIsTrump boolean
 function calculateCardData(cardIndex, objectIsTrump)
   if not currentTrick[1].trump then --No trump in currentTrick
     if not objectIsTrump then --Not trump and not suit led out
@@ -1200,12 +1243,16 @@ function calculateCardData(cardIndex, objectIsTrump)
   end
 end
 
+---@param objectName string
+---@param isTrump boolean
 function initializeCurrentTrick(objectName, isTrump)
   currentTrick = {}
   setLeadOutCardProperties(objectName, isTrump)
 end
 
---currentTrick[1] is where currentTrick properties is initalized and updated
+---Trick properties stored in currentTrick[1]
+---@param objectName string
+---@param isTrump boolean
 function setLeadOutCardProperties(objectName, isTrump)
   local trickProperties = {
     ledSuit = getLastWord(objectName),
@@ -1223,6 +1270,10 @@ function setLeadOutCardProperties(objectName, isTrump)
   end
 end
 
+---Trick properties stored in currentTrick[1]
+---@param isTrump boolean
+---@param strengthVal integer
+---@param index integer
 function updateCurrentTrickProperties(isTrump, strengthVal, index)
   if isTrump then
     currentTrick[1].trump = true
@@ -1233,6 +1284,7 @@ function updateCurrentTrickProperties(isTrump, strengthVal, index)
   if DEBUG then print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]") end
 end
 
+---@param objectName string
 function isTrump(objectName)
   local stringToSearch = "Diamonds Jack Queen"
   for word in stringToSearch:gmatch("%S+") do
@@ -1243,6 +1295,9 @@ function isTrump(objectName)
   return false
 end
 
+---Only search for strengths higher than currentHighStrength
+---@param objectName string
+---@param isTrump boolean
 function quickSearch(objectName, isTrump)
   local strengthList
   if isTrump then
@@ -1254,7 +1309,6 @@ function quickSearch(objectName, isTrump)
   end
   
   local startIndex
-  --Only search for strengths higher than currentStrength
   if not currentTrick[1] or currentTrick[1].currentHighStrength == 0 then
     startIndex = 1
   else
@@ -1274,6 +1328,7 @@ function quickSearch(objectName, isTrump)
   return 1
 end
 
+---Calculates player to give trick to. Sets global leadOutPlayer
 function calculateTrickWinner()
   takeTrickInProgress = true
   local trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
@@ -1282,8 +1337,9 @@ function calculateTrickWinner()
   Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
 end
 
---Resets trick flag and data then moves Trick to trickZone of trickWinner
---Shows card counters if hand is over
+---Resets trick flag and data then moves Trick to trickZone of trickWinner
+---Shows card counters if hand is over
+---@param player object
 function giveTrickToWinner(player)
   trickInProgress = false
   currentTrick = {}
@@ -1310,18 +1366,22 @@ function giveTrickToWinner(player)
   )
   Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
   if #player.getHandObjects() == 0 then
-    Wait.time(function() 
-      toggleCounterVisibility(pickingPlayer.color) 
-      trickInProgress = false
-    end,
-    2
-  )
+    Wait.time(
+      function() 
+        toggleCounterVisibility(pickingPlayer.color) 
+        trickInProgress = false
+      end,
+      2
+    )
   end
   Wait.time(function() takeTrickInProgress = false end, 2.5)
 end
 
---New functions to adapt Blackjack Card Counter
---Returns the color of the handposition located across the table from given color (pickingPlayer)
+--[[New functions to adapt Blackjack Card Counter]]--
+
+---Returns the color of the handposition located across the table from given color (pickingPlayer)
+---@param color string
+---@return string_color
 function findColorAcrossTable(color)
   for i, colors in ipairs(ALL_PLAYERS) do
     local acrossVal = 0
@@ -1336,8 +1396,10 @@ function findColorAcrossTable(color)
   end
 end
 
---Creates two tables, of the entity of each zone and counter, of each zoneObject
---and its associated counterObject, then starts the loop
+---Creates two global tables.<br> 1: of the entity of each zone and counter. 2: of each zoneObject
+---and its associated counterObject, then starts the loop
+---@param tCounterGUID string
+---@param pCounterGUID string
 function setupGuidTable(tCounterGUID, pCounterGUID)
   local pickerZoneGuid = trickZones[pickingPlayer.color].guid
   local colorAcrossFromPicker = findColorAcrossTable(pickingPlayer.color)
