@@ -75,7 +75,7 @@ COIN_PRAM = {
 }
 
 function onLoad()
-  trickZones = {
+  trickZone = {
     White = getObjectFromGUID(GUID.TRICK_ZONE_WHITE),
     Red = getObjectFromGUID(GUID.TRICK_ZONE_RED),
     Yellow = getObjectFromGUID(GUID.TRICK_ZONE_YELLOW),
@@ -83,7 +83,7 @@ function onLoad()
     Blue = getObjectFromGUID(GUID.TRICK_ZONE_BLUE),
     Pink = getObjectFromGUID(GUID.TRICK_ZONE_PINK)
   }
-  handZones = {
+  handZone = {
     White = getObjectFromGUID(GUID.HAND_ZONE_WHITE),
     Red = getObjectFromGUID(GUID.HAND_ZONE_RED),
     Yellow = getObjectFromGUID(GUID.HAND_ZONE_YELLOW),
@@ -91,31 +91,47 @@ function onLoad()
     Blue = getObjectFromGUID(GUID.HAND_ZONE_BLUE),
     Pink = getObjectFromGUID(GUID.HAND_ZONE_PINK)
   }
-  centerZone = getObjectFromGUID(GUID.CENTER_ZONE)
-  tableZone = getObjectFromGUID(GUID.TABLE_ZONE)
-  dropZone = getObjectFromGUID(GUID.DROP_ZONE)
-  hiddenBag = getObjectFromGUID(GUID.HIDDEN_BAG)
-  dealerChip = getObjectFromGUID(GUID.DEALER_CHIP)
-  setBuriedButton = getObjectFromGUID(GUID.SET_BURIED_BUTTON)
-  dealerChip.interactable = false
-  setBuriedButton.interactable = false
-  hiddenBag.setInvisibleTo(ALL_PLAYERS)
-  setBuriedButton.setInvisibleTo(ALL_PLAYERS)
-  gameSetUpInProgress = false
-  gameSetUpRan = false
-  stopCoroutine = false
-  passInProgress = false
-  takeTrickInProgress = false
-  trickInProgress = false
-  varSetup = false
-  continue = false
-  cardsToBeBuried = false
-  counterVisible = false
+  zone = {
+    center = getObjectFromGUID(GUID.CENTER_ZONE),
+    table = getObjectFromGUID(GUID.TABLE_ZONE),
+    drop = getObjectFromGUID(GUID.DROP_ZONE)
+  }
+  staticObject = {
+    hiddenBag = getObjectFromGUID(GUID.HIDDEN_BAG),
+    dealerChip = getObjectFromGUID(GUID.DEALER_CHIP),
+    setBuriedButton = getObjectFromGUID(GUID.SET_BURIED_BUTTON)
+  }
+  staticObject.hiddenBag.interactable = false
+  staticObject.dealerChip.interactable = false
+  staticObject.setBuriedButton.interactable = false
+  staticObject.hiddenBag.setInvisibleTo(ALL_PLAYERS)
+  staticObject.setBuriedButton.setInvisibleTo(ALL_PLAYERS)
+
+  flag = {
+    gameSetUp = {
+      inProgress = false,
+      ran = false
+    },
+    trick = {
+      inProgress = false,
+      handOut = false
+    },
+    stopCoroutine = false,
+    dealInProgress = false,
+    varSetup = false,
+    lookForPlayerText = false,
+    continue = false,
+    cardsToBeBuried = false,
+    counterVisible = false,
+    firstDealOfGame = false
+  }
+
   if DEBUG then
     UI.show("playerUp")
     UI.show("playerDown")
     UI.show("test")
   end
+
   displayRules()
 end
 
@@ -192,11 +208,11 @@ function moveDeckAndDealerChipToColor(color)
   local rotationAngle, playerPos = retrieveItemMoveData(color)
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
-  local chipRotation = dealerChip.getRotation()
-  repeat coroutine.yield(0) until getDeck(tableZone) ~= nil
-  local deck = getDeck(tableZone)
-  dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
-  dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
+  local chipRotation = staticObject.dealerChip.getRotation()
+  repeat coroutine.yield(0) until getDeck(zone.table) ~= nil
+  local deck = getDeck(zone.table)
+  staticObject.dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
+  staticObject.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
   deck.setRotationSmooth({deck.getRotation().x, rotationAngle, 180})
   deck.setPositionSmooth(playerPos + rotatedDeckOffset)
 end
@@ -244,8 +260,8 @@ end
 
 ---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
 function rebuildDeck()
-  local faceRotation = moreFaceUpOrDown(tableZone)
-  for _, obj in pairs(getLooseCards(tableZone)) do
+  local faceRotation = moreFaceUpOrDown(zone.table)
+  for _, obj in pairs(getLooseCards(zone.table)) do
     if obj.type == 'Deck' then
       for _, card in pairs(obj.getObjects()) do
         obj.takeObject({
@@ -262,11 +278,11 @@ function rebuildDeck()
     end
   end
   pause(0.25)
-  flipCards(tableZone)
+  flipCards(zone.table)
   pause(0.5)
-  group(getLooseCards(tableZone))
+  group(getLooseCards(zone.table))
   pause(0.5)
-  group(getLooseCards(tableZone))
+  group(getLooseCards(zone.table))
   pause(0.5)
 end
 
@@ -342,18 +358,19 @@ end
 
 --[[Start of functions used by Set Up Game event]]--
 
----Runs everytime a chat occurs, Sets flags for determining if to reset gameboard. 
+---Runs everytime a chat occurs. 
 ---<br>Return: true, hides player msg | false, shows player msg
 ---@param message string_from_player
 ---@param player object_of_player
 function onChat(message, player)
-  if lookForPlayerText then
+  --Sets flags for determining if to reset gameboard
+  if flag.lookForPlayerText then
     local lowerMessage = string.lower(message)
     if lowerMessage == "y" then
       if player.steam_name == gameSetUpPlayer.steam_name then
         print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
         print("[21AF21]New game is being set up.[-]")
-        continue = true
+        flag.continue = true
         return false
       end
     else
@@ -440,7 +457,7 @@ end
 
 ---Deletes all rulebooks from table
 function hideRuleBook()
-  for _, tableObject in pairs(tableZone.getObjects()) do
+  for _, tableObject in pairs(zone.table.getObjects()) do
     if tableObject.type == 'Tile' then
       tableObject.destruct()
     end
@@ -450,13 +467,13 @@ end
 ---Called to reset the game space<br>
 ---Removes all chips and sets varSetup to false
 function resetBoard()
-  for _, obj in pairs(tableZone.getObjects()) do
+  for _, obj in pairs(zone.table.getObjects()) do
     if obj.type == "Chip" then
       obj.destruct()
       pause(0.06)
     end
   end
-  varSetup = false
+  flag.varSetup = false
 end
 
 ---Builds a global table of all seated players [sortedSeatedPlayers]
@@ -473,17 +490,17 @@ end
 ---Gets the correct deck for the number of seated players<br>
 ---Will stop setUpGameCoroutine if there is less than 3 seated players
 function printGameSettings()
-  local deck = getDeck(tableZone)
+  local deck = getDeck(zone.table)
   if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
     rebuildDeck()
     pause(0.5)
-    deck = getDeck(tableZone)
+    deck = getDeck(zone.table)
   end
 
   if #sortedSeatedPlayers < 3 then
     print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    gameSetUpInProgress = false
-    stopCoroutine = true
+    flag.gameSetUp.inProgress = false
+    flag.stopCoroutine = true
     return
   elseif #sortedSeatedPlayers == 4 then
     if deck.getQuantity() == 32 then
@@ -500,10 +517,10 @@ end
 
 ---Called to add the blackSevens to a given deck<br>
 ---Function uses global string blackSevens provided by removeBlackSevens() to locate<br>
----blackSevens.guid within hiddenBag, then moves them to the current deck position
+---blackSevens.guid within staticObject.hiddenBag, then moves them to the current deck position
 ---@param deck object
 function returnDecktoPiquet(deck)
-  hiddenBag.takeObject({
+  staticObject.hiddenBag.takeObject({
     guid = blackSevens,
     position = deck.getPosition(),
     rotation = deck.getRotation(),
@@ -514,8 +531,8 @@ function returnDecktoPiquet(deck)
 end
 
 ---Called to remove the blackSevens from a given deck<br>
----Finds the blackSevens inside the given deck and moves them into hiddenBag<br>
----Returns the guid of a deck the blackSevens are located in inside hiddenBag
+---Finds the blackSevens inside the given deck and moves them into staticObject.hiddenBag<br>
+---Returns the guid of a deck the blackSevens are located in inside staticObject.hiddenBag
 ---@param deck object
 ---@return string_guid
 function removeBlackSevens(deck)
@@ -533,8 +550,8 @@ function removeBlackSevens(deck)
   end
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.25)
-  local smallDeck = getDeck(tableZone, "small")
-  hiddenBag.putObject(smallDeck)
+  local smallDeck = getDeck(zone.table, "small")
+  staticObject.hiddenBag.putObject(smallDeck)
   pause(0.25)
   return smallDeck.guid
 end
@@ -563,12 +580,13 @@ function spawnChips(rotationAngle, playerPos)
 end
 
 ---Start of game setup event
+---@param player object_player_event_trigger
 function setUpGameEvent(player)
-  if gameSetUpInProgress then
+  if flag.gameSetUp.inProgress then
     return
   end
   if player.admin then
-    gameSetUpInProgress = true
+    flag.gameSetUp.inProgress = true
     gameSetUpPlayer = player
     startLuaCoroutine(self, 'setUpGameCoroutine')
   else
@@ -578,29 +596,29 @@ end
 
 ---Start of order of opperations for setUpGame
 function setUpGameCoroutine()
-  if gameSetUpRan and #sortedSeatedPlayers < 3 then
+  if flag.gameSetUp.ran and #sortedSeatedPlayers < 3 then
     print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    gameSetUpInProgress = false
+    flag.gameSetUp.inProgress = false
     return 1
-  elseif gameSetUpRan then
+  elseif flag.gameSetUp.ran then
     Player[gameSetUpPlayer.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
     .. #sortedSeatedPlayers .. " players.")
     pause(1.5)
     Player[gameSetUpPlayer.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
-    lookForPlayerText = true
+    flag.lookForPlayerText = true
     pause(6)
-    if continue then
-      lookForPlayerText, continue = false, false
+    if flag.continue then
+      flag.lookForPlayerText, flag.continue = false, false
       resetBoard()
     else
       print("[21AF21]New game was not selected.[-]")
-      lookForPlayerText, continue = false, false
-      gameSetUpInProgress = false
+      flag.lookForPlayerText, flag.continue = false, false
+      flag.gameSetUp.inProgress = false
       return 1
     end
   end
 
-  if counterVisible then
+  if flag.counterVisible then
     toggleCounterVisibility()
   end
 
@@ -611,7 +629,7 @@ function setUpGameCoroutine()
     if sortedSeatedPlayers == nil then
       local json = JSON.encode(ALL_PLAYERS)
       sortedSeatedPlayers = JSON.decode(json)
-      gameSetUpInProgress = false
+      flag.gameSetUp.inProgress = false
       return 1
     end
   else
@@ -621,8 +639,8 @@ function setUpGameCoroutine()
 
   printGameSettings()
 
-  if stopCoroutine then
-    stopCoroutine = false
+  if flag.stopCoroutine then
+    flag.stopCoroutine = false
     return 1
   end
 
@@ -631,8 +649,8 @@ function setUpGameCoroutine()
     spawnChips(rotationAngle, playerPos)
   end
 
-  gameSetUpInProgress = false
-  gameSetUpRan, firstDealOfGame = true, true
+  flag.gameSetUp.inProgress = false
+  flag.gameSetUp.ran, flag.firstDealOfGame = true, true
   return 1
 end
 --[[End of order of opperations for setUpGame]]--
@@ -643,16 +661,16 @@ end
 
 ---Sets up variables needed to deal cards for New Hand event
 function setUpVar()
-  if firstDealOfGame then
+  if flag.firstDealOfGame then
     dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
   end
-  varSetup = true
-  if sixHandedToFive and #sortedSeatedPlayers == 6 then
+  flag.varSetup = true
+  if settings.sixHandedToFive and #sortedSeatedPlayers == 6 then
     playerCount = 5
     dealSettings = "dealerSitsOut"
     print("[21AF21]Dealer will sit out every hand.[-]")
     return
-  elseif not sixHandedToFive and dealSettings == "dealerSitsOut" then
+  elseif not settings.sixHandedToFive and dealSettings == "dealerSitsOut" then
     print("[21AF21]Dealer will no longer sit out.[-]")
   end
   dealSettings = "normal"
@@ -672,7 +690,7 @@ end
 
 ---Checks if a deck exists on the table
 function deckExists()
-  return getDeck(tableZone) ~= nil
+  return getDeck(zone.table) ~= nil
 end
 
 ---Called to build dealOrder correctly<br>
@@ -697,11 +715,11 @@ end
 
 ---Start of New Hand event
 function setUpHandEvent()
-  if not passInProgress and not takeTrickInProgress then
-    passInProgress = true
-    if cardsToBeBuried then
-      setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
-      cardsToBeBuried = false
+  if not flag.dealInProgress and not flag.trick.handOut then
+    flag.dealInProgress = true
+    if flag.cardsToBeBuried then
+      staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+      flag.cardsToBeBuried = false
     end
     trickInProgress = false
     currentTrick = {}
@@ -711,25 +729,25 @@ end
 
 ---Order of opperations for dealing
 function dealCardsCoroutine()
-  if gameSetUpInProgress then
+  if flag.gameSetUp.inProgress then
     print("[21AF21]Setup Is Currently In Progress.[-]")
-    passInProgress = false
+    flag.dealInProgress = false
     return 1
   end
-  if not gameSetUpRan then
+  if not flag.gameSetUp.ran then
     print("[21AF21]Press Set Up Game First.[-]")
-    passInProgress = false
+    flag.dealInProgress = false
     return 1
   end
-  if not varSetup or firstDealOfGame then
+  if not flag.varSetup or flag.firstDealOfGame then
     setUpVar()
   end
 
-  if counterVisible then
+  if flag.counterVisible then
     toggleCounterVisibility()
   end
 
-  if not firstDealOfGame then
+  if not flag.firstDealOfGame then
     dealerColorVal = dealerColorVal + 1
     if dealerColorVal > #sortedSeatedPlayers then
       dealerColorVal = 1
@@ -740,12 +758,12 @@ function dealCardsCoroutine()
     moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
     pause(0.4)
   else
-    firstDealOfGame = false
+    flag.firstDealOfGame = false
   end
 
   calculateDealOrder(dealSettings)
 
-  flipDeck(tableZone)
+  flipDeck(zone.table)
   pause(0.35)
 
   local count = getNextColorValInList(dealerColorVal, dealOrder)
@@ -753,10 +771,10 @@ function dealCardsCoroutine()
   local round = 1
   local target = dealOrder[count]
 
-  local deck = getDeck(tableZone)
+  local deck = getDeck(zone.table)
   local rotationVal = deck.getRotation()
 
-  flipDeck(tableZone)
+  flipDeck(zone.table)
   pause(0.15)
   deck.randomize()
   pause(0.35)
@@ -780,10 +798,10 @@ function dealCardsCoroutine()
     target = dealOrder[count]
   end
 
-  passInProgress = false
+  flag.dealInProgress = false
   return 1
 end
---end of order of opperations for dealing
+--End of order of opperations for dealing
 
 ---Contains the logic to deal correctly based on the number of
 ---players seated and the number of times players have recieved cards
@@ -854,7 +872,7 @@ function passEvent(player)
     return
   end
   local dealerColor = getPlayerObject(dealerColorVal, sortedSeatedPlayers).color
-  if not passInProgress  and checkCardCount(centerZone, 2) then
+  if not flag.dealInProgress  and checkCardCount(zone.center, 2) then
     if player.color == dealerColor then
       if not DEBUG then
         broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", dealerColor)
@@ -877,10 +895,10 @@ function pickBlindsEvent(player)
       return
     end
   end
-  if passInProgress then
+  if flag.dealInProgress then
     return
   end
-  local blinds = getLooseCards(centerZone)
+  local blinds = getLooseCards(zone.center)
   if #blinds ~= 2 then
     return
   end
@@ -896,16 +914,16 @@ function pickBlindsEvent(player)
         if card.is_face_down then
           card.flip()
         end
-        cardsToBeBuried = true
+        flag.cardsToBeBuried = true
       end
     end,
     0.35
   )
   local pickerRotation = ROTATION.color[player.color]
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
-  setBuriedButton.setPosition(setBuriedButtonPos)
-  setBuriedButton.setRotation({0, pickerRotation, 0})
-  setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
+  staticObject.setBuriedButton.setPosition(setBuriedButtonPos)
+  staticObject.setBuriedButton.setRotation({0, pickerRotation, 0})
+  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 end
 
 ---Returns the color of the next seated player clockwise from given color
@@ -932,14 +950,14 @@ end
 ---Flips over pickers tricks to see score of hand
 ---@param color string
 function toggleCounterVisibility(color)
-  if not counterVisible then
+  if not flag.counterVisible then
     local pickerRotation = ROTATION.color[color]
     local blockRotation = ROTATION.block[color]
     local tCounter, pCounter
     local tCounterPos = SPAWN_POS.tableCounter:copy():rotateOver('y', pickerRotation)
     local pCounterPos = SPAWN_POS.pickerCounter:copy():rotateOver('y', pickerRotation)
     local blockPos = SPAWN_POS.tableBlock:copy():rotateOver('y', blockRotation)
-    local block = hiddenBag.takeObject({
+    local block = staticObject.hiddenBag.takeObject({
       position = blockPos,
       rotation = {0, blockRotation, 0},
       smooth = false,
@@ -959,11 +977,11 @@ function toggleCounterVisibility(color)
           position = pCounterPos,
           rotation = {295, pickerRotation, 0},
         })
-        counterVisible = true
+        flag.counterVisible = true
       end,
       3
     )
-    local pickerZone = trickZones[pickingPlayer.color]
+    local pickerZone = trickZone[pickingPlayer.color]
     local pickerCards = getLooseCards(pickerZone)
     if pickerCards then
       group(pickerCards)
@@ -979,13 +997,13 @@ function toggleCounterVisibility(color)
     --Card counter Loop starts here with setupGuidTable()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
   else
-    for _, tableObject in pairs(tableZone.getObjects()) do
+    for _, tableObject in pairs(zone.table.getObjects()) do
       if tableObject.type == 'Counter' then
         tableObject.destruct()
       end
     end
-    hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
-    counterVisible = false
+    staticObject.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
+    flag.counterVisible = false
     trickCountStop()
   end
 end
@@ -997,10 +1015,10 @@ function setBuriedEvent(player)
   if player.color ~= pickingPlayer.color then
     return
   end
-  if not checkCardCount(trickZones[pickingPlayer.color], 2) then
+  if not checkCardCount(trickZone[pickingPlayer.color], 2) then
     return
   end
-  local buriedCards = getLooseCards(trickZones[pickingPlayer.color])
+  local buriedCards = getLooseCards(trickZone[pickingPlayer.color])
   for _, card in pairs(buriedCards) do
     if not card.is_face_down then
       card.flip()
@@ -1009,14 +1027,14 @@ function setBuriedEvent(player)
   Wait.time(function() group(buriedCards) end, 0.8)
   Wait.time(
     function() 
-      getDeck(trickZones[pickingPlayer.color]).setInvisibleTo()
+      getDeck(trickZone[pickingPlayer.color]).setInvisibleTo()
       for _, card in pairs(Player[pickingPlayer.color].getHandObjects()) do
         card.setInvisibleTo()
       end
     end, 
     1.6
   )
-  cardsToBeBuried = false
+  flag.cardsToBeBuried = false
   local leadOutVal = dealerColorVal + 1
   if leadOutVal > #sortedSeatedPlayers then
     leadOutVal = 1
@@ -1027,7 +1045,7 @@ function setBuriedEvent(player)
   else
     print("[21AF21]" .. leadOutPlayer.color .. " leads out.[-]")
   end
-  setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
 
 ---Just used to ensure 0 is returned if table empty or nil
@@ -1069,13 +1087,13 @@ end
 ---@param container type_object
 ---@param object object_item
 function tryObjectEnterContainer(container, object)
-  if cardsToBeBuried then
-    if isInZone(object, trickZones[pickingPlayer.color]) then
+  if flag.cardsToBeBuried then
+    if isInZone(object, trickZone[pickingPlayer.color]) then
       return false
     end
   end
-  if trickInProgress then
-    if isInZone(object, centerZone) then
+  if flag.trick.inProgress then
+    if isInZone(object, zone.center) then
       return false
     end
   end
@@ -1087,12 +1105,12 @@ end
 ---@param object object_item
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
-  if zone == dropZone then
+  if zone == zone.drop then
     object.setPosition({0, 3, 0})
   end
   --Makes sure other players can not see what cards the picker is burying
-  if cardsToBeBuried then
-    if zone == trickZones[pickingPlayer.color] and object.type == 'Card' then
+  if flag.cardsToBeBuried then
+    if zone == trickZone[pickingPlayer.color] and object.type == 'Card' then
       local hideFrom = removeColorFromList(pickingPlayer.color, sortedSeatedPlayers)
       object.setInvisibleTo(hideFrom)
     end
@@ -1104,10 +1122,10 @@ end
 ---@param object object_item
 function onObjectLeaveZone(zone, object)
   --Starts trick
-  if not trickInProgress and not passInProgress and not cardsToBeBuried then
+  if not flag.trick.inProgress and not flag.dealInProgress and not flag.cardsToBeBuried then
     if leadOutPlayer then
-      if zone == handZones[leadOutPlayer.color] then
-        trickInProgress = true
+      if zone == handZone[leadOutPlayer.color] then
+        flag.trick.inProgress = true
       end
     end
   end
@@ -1119,8 +1137,8 @@ end
 ---@param playerColor string
 ---@param object object_item
 function onObjectPickUp(playerColor, object)
-  if trickInProgress then
-    if object.type == 'Card' and isInZone(object, centerZone) then
+  if flag.trick.inProgress then
+    if object.type == 'Card' and isInZone(object, zone.center) then
       if tableLength(currentTrick) > 1 then
         for i = 2, #currentTrick do
           if object.getName() == currentTrick[i].cardName and playerColor == currentTrick[i].playedByColor then
@@ -1136,21 +1154,29 @@ end
 
 ---Runs when a player drops an object<br>
 ---Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
----Builds the table currentTrick to keep track of cardNames and player color who laid them in the centerZone 
+---Builds the table currentTrick to keep track of cardNames and player color who laid them in the zone.center 
 ---@param playerColor string
 ---@param object object_item
 function onObjectDrop(playerColor, object)
-  if trickInProgress then
-    if object.type == 'Card' and isInZone(object, centerZone) then
-      if not DEBUG and playerColor ~= leadOutPlayer.color then
-        broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
-      else
-        addCardDataToCurrentTrick(playerColor, object.getName())
-        if #currentTrick == playerCount + 1 then
-          calculateTrickWinner()
-        end
-      end
-    end
+  if flag.trick.inProgress then
+    if object.type == 'Card' then
+      --Wait function allows script to continue in the case of a player throwing a card into zone.center
+      Wait.time(
+        function()
+          if isInZone(object, zone.center) then
+            if not DEBUG and playerColor ~= leadOutPlayer.color then
+              broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
+            else
+              addCardDataToCurrentTrick(playerColor, object)
+              if #currentTrick == playerCount + 1 then
+                calculateTrickWinner()
+              end
+            end
+          end
+        end,
+        0.5
+      )
+    end 
   end
 end
 
@@ -1196,9 +1222,10 @@ function reCalculateCurrentTrick(indexToRemove)
 end
 
 ---@param playerColor string
----@param objectName string
-function addCardDataToCurrentTrick(playerColor, objectName)
+---@param object object
+function addCardDataToCurrentTrick(playerColor, object)
   --Check if object is trump
+  local objectName = object.getName()
   local objectIsTrump = isTrump(objectName)
   if tableLength(currentTrick) < 2 then
     --Creates currentTrick properties stored at index 1
@@ -1207,7 +1234,8 @@ function addCardDataToCurrentTrick(playerColor, objectName)
   local cardData = {
     playedByColor = playerColor,
     cardName = objectName,
-    index = #currentTrick + 1
+    index = #currentTrick + 1,
+    guid = object.guid
   }
   table.insert(currentTrick, cardData)
   if DEBUG then
@@ -1330,7 +1358,7 @@ end
 
 ---Calculates player to give trick to. Sets global leadOutPlayer
 function calculateTrickWinner()
-  takeTrickInProgress = true
+  flag.trick.handOut = true
   local trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
   leadOutPlayer = trickWinner
   broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
@@ -1341,14 +1369,17 @@ end
 ---Shows card counters if hand is over
 ---@param player object
 function giveTrickToWinner(player)
-  trickInProgress = false
+  flag.trick.inProgress = false
+  local trick = {}
+  for i = 2, #currentTrick do
+    table.insert(trick, getObjectFromGUID(currentTrick[i].guid))
+  end
   currentTrick = {}
-  local playerTrickZone = trickZones[player.color]
-  group(getLooseCards(centerZone))
-  Wait.time(function() flipDeck(centerZone) end, 0.6)
+  local playerTrickZone = trickZone[player.color]
+  trick = group(trick)[1]
+  Wait.time(function() trick.flip() end, 0.6)
   Wait.time(
     function()
-      local trick = getDeck(centerZone)
       local oldTricks = getDeck(playerTrickZone, "big")
       if oldTricks then
         local oldTricksPos = oldTricks.getPosition()
@@ -1364,17 +1395,16 @@ function giveTrickToWinner(player)
     end,
     1.5
   )
-  Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
+  Wait.time(
+    function() 
+      group(getLooseCards(playerTrickZone)) 
+      flag.trick.handOut = false
+    end, 
+    2
+  )
   if #player.getHandObjects() == 0 then
-    Wait.time(
-      function() 
-        toggleCounterVisibility(pickingPlayer.color) 
-        trickInProgress = false
-      end,
-      2
-    )
+    Wait.time(function() toggleCounterVisibility(pickingPlayer.color) end, 2.2)
   end
-  Wait.time(function() takeTrickInProgress = false end, 2.5)
 end
 
 --[[New functions to adapt Blackjack Card Counter]]--
@@ -1401,13 +1431,13 @@ end
 ---@param tCounterGUID string
 ---@param pCounterGUID string
 function setupGuidTable(tCounterGUID, pCounterGUID)
-  local pickerZoneGuid = trickZones[pickingPlayer.color].guid
+  local pickerZoneGuid = trickZone[pickingPlayer.color].guid
   local colorAcrossFromPicker = findColorAcrossTable(pickingPlayer.color)
-  local tableZoneGuid = trickZones[colorAcrossFromPicker].guid
+  local tableGuid = trickZone[colorAcrossFromPicker].guid
 
   guidTable = {
     [pickerZoneGuid] = pCounterGUID,
-    [tableZoneGuid] = tCounterGUID
+    [tableGuid] = tCounterGUID
   }
 
   objectSets = {}
@@ -1531,9 +1561,12 @@ end
 --END OF CARD SCORING
 
 --Settings
-sixHandedToFive = false
-showCallsWindow = false
-toBuildCallsPanel = false
+settings = {
+  sixHandedToFive = false,
+  showCallsWindow = false,
+  toBuildCallsPanel = false
+}
+
 callSettings = {
   sheepsheadCall = false,
   blitzCall = false,
@@ -1577,7 +1610,7 @@ end
 
 --Disables all calls
 function resetCalls()
-  toBuildCallsPanel = false
+  settings.toBuildCallsPanel = false
   UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
   --UI.hide("callsPanel")
   disableSheepshead()
@@ -1590,25 +1623,25 @@ end
 
 --Start of buttons inside of settings window
 function dealerSitsOut()
-  if gameSetupInProgress or passInProgress then
+  if flag.gameSetUp.inProgress or flag.dealInProgress then
     return
   end
   UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "false")
   UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "true")
-  sixHandedToFive = true
-  varSetup = false
+  settings.sixHandedToFive = true
+  flag.varSetup = false
   currentRules[17] = "6 Handed - Dealer Sits Out   \n"
   displayRules()
 end
 
 function dealerSitsOutOff()
-  if gameSetupInProgress or passInProgress then
+  if flag.gameSetUp.inProgress or flag.dealInProgress then
     return
   end
   UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "true")
   UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "false")
-  sixHandedToFive = false
-  varSetup = false
+  settings.sixHandedToFive = false
+  flag.varSetup = false
   currentRules[17] = "6 Handed - Normal        \n"
   displayRules()
 end
@@ -1631,7 +1664,7 @@ function enableCalls()
   UI.setAttribute("settingsButtonCallsOff", "active", "false")
   UI.setAttribute("settingsButtonCallsOn", "active", "true")
   UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
-  toBuildCallsPanel = true
+  settings.toBuildCallsPanel = true
   currentRules[18] = "Call Menu Enabled        "
   displayRules()
 end
@@ -1645,7 +1678,7 @@ function disableCalls()
 end
 
 function enableSheepshead()
-  if not toBuildCallsPanel then
+  if not settings.toBuildCallsPanel then
     return
   end
   UI.setAttribute("settingsButtonSheepsheadOff", "active", "false")
@@ -1660,7 +1693,7 @@ function disableSheepshead()
 end
 
 function enableBlitz()
-  if not toBuildCallsPanel then
+  if not settings.toBuildCallsPanel then
     return
   end
   UI.setAttribute("settingsButtonBlitzOff", "active", "false")
@@ -1675,7 +1708,7 @@ function disableBlitz()
 end
 
 function enableLeaster()
-  if not toBuildCallsPanel then
+  if not settings.toBuildCallsPanel then
     return
   end
   UI.setAttribute("settingsButtonLeasterOff", "active", "false")
@@ -1690,7 +1723,7 @@ function disableLeaster()
 end
 
 function enableCrack()
-  if not toBuildCallsPanel then
+  if not settings.toBuildCallsPanel then
     return
   end
   UI.setAttribute("settingsButtonCrackOff", "active", "false")
@@ -1702,7 +1735,7 @@ end
 function disableCrack()
   UI.setAttribute("settingsButtonCrackOff", "active", "true")
   UI.setAttribute("settingsButtonCrackOn", "active", "false")
-  if toBuildCallsPanel then
+  if settings.toBuildCallsPanel then
     UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
   end
   disableCrackBack()
