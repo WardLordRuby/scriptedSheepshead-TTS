@@ -24,6 +24,6 @@ This is my first large coding project, feedback is always appreciated. Work in p
 `.help` - Displays Commands and their Function  
 `.rules` - Spawns Rule and Gameplay Tip Booklet  
 `.hiderules` - Hides Rule and Gameplay Tip Booklet  
-`.respawndeck` - Removes all cards from table and spawns a fresh deck **admin only**
+`.respawndeck` - Removes all cards from table and spawns a fresh deck **admin only**  
 `.settings` - Opens Window to Change Game Settings **admin only** 
 
