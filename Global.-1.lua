@@ -23,7 +23,8 @@ GUID = {
   HIDDEN_BAG = "b3d3a5",
   TABLE_BLOCK = "8e445a",
   DEALER_CHIP = "e18594",
-  SET_BURIED_BUTTON = "37d199"
+  SET_BURIED_BUTTON = "37d199",
+  DECK_COPY = "f247a7"
 }
 
 ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
@@ -91,7 +92,7 @@ function onLoad()
     Blue = getObjectFromGUID(GUID.HAND_ZONE_BLUE),
     Pink = getObjectFromGUID(GUID.HAND_ZONE_PINK)
   }
-  zone = {
+  scriptZone = {
     center = getObjectFromGUID(GUID.CENTER_ZONE),
     table = getObjectFromGUID(GUID.TABLE_ZONE),
     drop = getObjectFromGUID(GUID.DROP_ZONE)
@@ -209,8 +210,8 @@ function moveDeckAndDealerChipToColor(color)
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = staticObject.dealerChip.getRotation()
-  repeat coroutine.yield(0) until getDeck(zone.table) ~= nil
-  local deck = getDeck(zone.table)
+  repeat coroutine.yield(0) until getDeck(scriptZone.table) ~= nil
+  local deck = getDeck(scriptZone.table)
   staticObject.dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
   staticObject.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
   deck.setRotationSmooth({deck.getRotation().x, rotationAngle, 180})
@@ -260,29 +261,29 @@ end
 
 ---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
 function rebuildDeck()
-  local faceRotation = moreFaceUpOrDown(zone.table)
-  for _, obj in pairs(getLooseCards(zone.table)) do
-    if obj.type == 'Deck' then
-      for _, card in pairs(obj.getObjects()) do
-        obj.takeObject({
-          rotation = {0,math.random(0,360),faceRotation},
-          position = {math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)},
-          guid = card.guid
-        })
-        pause(0.01)
+  local faceRotation = moreFaceUpOrDown(scriptZone.table)
+  for _, object in ipairs(getLooseCards(scriptZone.table)) do
+    if object.type == 'Deck' then
+      for _, card in ipairs(object.getObjects()) do
+          object.takeObject({
+            rotation = {0,math.random(0,360),faceRotation},
+            position = {math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)},
+            guid = card.guid
+          })
+        pause(0.02)
       end
     else
-      obj.setRotation({0,math.random(0,360),faceRotation})
-      obj.setPosition({math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)})
+      object.setRotation({0,math.random(0,360),faceRotation})
+      object.setPosition({math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)})
       pause(0.01)
     end
   end
   pause(0.25)
-  flipCards(zone.table)
+  flipCards(scriptZone.table)
   pause(0.5)
-  group(getLooseCards(zone.table))
+  group(getLooseCards(scriptZone.table))
   pause(0.5)
-  group(getLooseCards(zone.table))
+  group(getLooseCards(scriptZone.table))
   pause(0.5)
 end
 
@@ -358,7 +359,7 @@ end
 
 --[[Start of functions used by Set Up Game event]]--
 
----Runs everytime a chat occurs. 
+---Runs everytime a chat occurs.
 ---<br>Return: true, hides player msg | false, shows player msg
 ---@param message string_from_player
 ---@param player object_of_player
@@ -383,20 +384,30 @@ function onChat(message, player)
     local command = string.lower(string.sub(message, 2))
     if command == "help" then
       print(table.concat(CHAT_COMMANDS, ""))
-    end
-    if command == "rules" then
+    elseif command == "rules" then
       getRuleBook(player.color)
-    end
-    if command == "hiderules" then
+    elseif command == "hiderules" then
       hideRuleBook()
-    end
-    if command == "settings" then
-      if player.admin then
-        UI.show("settingsWindow")
-      else
-        print("[DC0000]You do not have permission to access this feature.[-]")
+    elseif command == "respawndeck" then
+      if adminCheck(player) then
+        respawnDeck()
       end
+    elseif command == "settings" then
+      if adminCheck(player) then
+        UI.show("settingsWindow")
+      end
+    else
+      print("[DC0000]Command not found.[-]")
     end
+    return false
+  end
+end
+
+function adminCheck(player)
+  if player.admin then
+    return true
+  else
+    print("[DC0000]You do not have permission to access this feature.[-]")
     return false
   end
 end
@@ -457,17 +468,56 @@ end
 
 ---Deletes all rulebooks from table
 function hideRuleBook()
-  for _, tableObject in pairs(zone.table.getObjects()) do
+  for _, tableObject in pairs(scriptZone.table.getObjects()) do
     if tableObject.type == 'Tile' then
       tableObject.destruct()
     end
   end
 end
 
+---Removes any cards on the table and respawns the deck
+function respawnDeck()
+  if flag.trick.handOut or flag.gameSetUp.inProgress or flag.dealInProgress then
+    print("[DC0000]Please wait till event is over and try again.[-]")
+    return
+  end
+  local remainingTableCards = getLooseCards(scriptZone.table)
+  if tableLength(remainingTableCards) > 0 then
+    for _, card in pairs(remainingTableCards) do
+      card.destruct()
+    end
+  end
+  staticObject.hiddenBag.takeObject({
+    guid = GUID.DECK_COPY,
+    position = {3, 2, 0},
+    rotation = {0, 0, 180},
+    smooth = false
+  })
+  local deckCopy = getObjectFromGUID(GUID.DECK_COPY)
+  deckCopy.setInvisibleTo(ALL_PLAYERS)
+  local newDeck = getObjectFromGUID(GUID.DECK_COPY).clone({
+    position = {0, -3, 0}
+  })
+  staticObject.hiddenBag.putObject(deckCopy)
+  if blackSevens then
+    staticObject.hiddenBag.takeObject({
+      guid = blackSevens,
+      position = {5, 2, 0},
+      rotation = {0, 0, 180},
+      smooth = false
+    })
+    getObjectFromGUID(blackSevens).setInvisibleTo(ALL_PLAYERS)
+    getObjectFromGUID(blackSevens).destruct()
+  end
+  if playerCount and playerCount == 4 then
+    removeBlackSevens(newDeck)
+  end
+end
+
 ---Called to reset the game space<br>
 ---Removes all chips and sets varSetup to false
 function resetBoard()
-  for _, obj in pairs(zone.table.getObjects()) do
+  for _, obj in pairs(scriptZone.table.getObjects()) do
     if obj.type == "Chip" then
       obj.destruct()
       pause(0.06)
@@ -490,11 +540,11 @@ end
 ---Gets the correct deck for the number of seated players<br>
 ---Will stop setUpGameCoroutine if there is less than 3 seated players
 function printGameSettings()
-  local deck = getDeck(zone.table)
+  local deck = getDeck(scriptZone.table)
   if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
     rebuildDeck()
     pause(0.5)
-    deck = getDeck(zone.table)
+    deck = getDeck(scriptZone.table)
   end
 
   if #sortedSeatedPlayers < 3 then
@@ -528,6 +578,7 @@ function returnDecktoPiquet(deck)
   })
   pause(0.3)
   print("[21AF21]The two black sevens have been added to the deck.[-]")
+  blackSevens = nil
 end
 
 ---Called to remove the blackSevens from a given deck<br>
@@ -550,7 +601,7 @@ function removeBlackSevens(deck)
   end
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.25)
-  local smallDeck = getDeck(zone.table, "small")
+  local smallDeck = getDeck(scriptZone.table, "small")
   staticObject.hiddenBag.putObject(smallDeck)
   pause(0.25)
   return smallDeck.guid
@@ -690,7 +741,7 @@ end
 
 ---Checks if a deck exists on the table
 function deckExists()
-  return getDeck(zone.table) ~= nil
+  return getDeck(scriptZone.table) ~= nil
 end
 
 ---Called to build dealOrder correctly<br>
@@ -753,7 +804,9 @@ function dealCardsCoroutine()
       dealerColorVal = 1
     end
 
-    rebuildDeck()
+    if tableLength(getLooseCards(scriptZone.table)) > 1 then
+      rebuildDeck()
+    end
     pause(0.3)
     moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
     pause(0.4)
@@ -763,7 +816,7 @@ function dealCardsCoroutine()
 
   calculateDealOrder(dealSettings)
 
-  flipDeck(zone.table)
+  flipDeck(scriptZone.table)
   pause(0.35)
 
   local count = getNextColorValInList(dealerColorVal, dealOrder)
@@ -771,10 +824,10 @@ function dealCardsCoroutine()
   local round = 1
   local target = dealOrder[count]
 
-  local deck = getDeck(zone.table)
+  local deck = getDeck(scriptZone.table)
   local rotationVal = deck.getRotation()
 
-  flipDeck(zone.table)
+  flipDeck(scriptZone.table)
   pause(0.15)
   deck.randomize()
   pause(0.35)
@@ -872,7 +925,7 @@ function passEvent(player)
     return
   end
   local dealerColor = getPlayerObject(dealerColorVal, sortedSeatedPlayers).color
-  if not flag.dealInProgress  and checkCardCount(zone.center, 2) then
+  if not flag.dealInProgress  and checkCardCount(scriptZone.center, 2) then
     if player.color == dealerColor then
       if not DEBUG then
         broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", dealerColor)
@@ -898,7 +951,7 @@ function pickBlindsEvent(player)
   if flag.dealInProgress then
     return
   end
-  local blinds = getLooseCards(zone.center)
+  local blinds = getLooseCards(scriptZone.center)
   if #blinds ~= 2 then
     return
   end
@@ -997,7 +1050,7 @@ function toggleCounterVisibility(color)
     --Card counter Loop starts here with setupGuidTable()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
   else
-    for _, tableObject in pairs(zone.table.getObjects()) do
+    for _, tableObject in pairs(scriptZone.table.getObjects()) do
       if tableObject.type == 'Counter' then
         tableObject.destruct()
       end
@@ -1026,12 +1079,12 @@ function setBuriedEvent(player)
   end
   Wait.time(function() group(buriedCards) end, 0.8)
   Wait.time(
-    function() 
+    function()
       getDeck(trickZone[pickingPlayer.color]).setInvisibleTo()
       for _, card in pairs(Player[pickingPlayer.color].getHandObjects()) do
         card.setInvisibleTo()
       end
-    end, 
+    end,
     1.6
   )
   flag.cardsToBeBuried = false
@@ -1093,7 +1146,7 @@ function tryObjectEnterContainer(container, object)
     end
   end
   if flag.trick.inProgress then
-    if isInZone(object, zone.center) then
+    if isInZone(object, scriptZone.center) then
       return false
     end
   end
@@ -1105,7 +1158,8 @@ end
 ---@param object object_item
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
-  if zone == zone.drop then
+  if zone == scriptZone.drop then
+    print("Object entered Drop Zone")
     object.setPosition({0, 3, 0})
   end
   --Makes sure other players can not see what cards the picker is burying
@@ -1138,11 +1192,11 @@ end
 ---@param object object_item
 function onObjectPickUp(playerColor, object)
   if flag.trick.inProgress then
-    if object.type == 'Card' and isInZone(object, zone.center) then
+    if object.type == 'Card' and isInZone(object, scriptZone.center) then
       if tableLength(currentTrick) > 1 then
+        local objectName = object.getName()
         for i = 2, #currentTrick do
-          if object.getName() == currentTrick[i].cardName and playerColor == currentTrick[i].playedByColor then
-            local timerStart
+          if objectName == currentTrick[i].cardName and playerColor == currentTrick[i].playedByColor then
             reCalculateCurrentTrick(currentTrick[i].index)
             break
           end
@@ -1154,16 +1208,16 @@ end
 
 ---Runs when a player drops an object<br>
 ---Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
----Builds the table currentTrick to keep track of cardNames and player color who laid them in the zone.center 
+---Builds the table currentTrick to keep track of cardNames and player color who laid them in the scriptZone.center
 ---@param playerColor string
 ---@param object object_item
 function onObjectDrop(playerColor, object)
   if flag.trick.inProgress then
     if object.type == 'Card' then
-      --Wait function allows script to continue in the case of a player throwing a card into zone.center
+      --Wait function allows script to continue in the case of a player throwing a card into scriptZone.center
       Wait.time(
         function()
-          if isInZone(object, zone.center) then
+          if isInZone(object, scriptZone.center) then
             if not DEBUG and playerColor ~= leadOutPlayer.color then
               broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
             else
@@ -1176,7 +1230,7 @@ function onObjectDrop(playerColor, object)
         end,
         0.5
       )
-    end 
+    end
   end
 end
 
@@ -1308,7 +1362,7 @@ function updateCurrentTrickProperties(isTrump, strengthVal, index)
   end
   currentTrick[1].currentHighStrength = strengthVal
   currentTrick[1].highStrengthIndex = index
-  
+
   if DEBUG then print("[21AF21]Current high Card is: " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]") end
 end
 
@@ -1335,7 +1389,7 @@ function quickSearch(objectName, isTrump)
   else
     strengthList = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
   end
-  
+
   local startIndex
   if not currentTrick[1] or currentTrick[1].currentHighStrength == 0 then
     startIndex = 1
@@ -1359,6 +1413,7 @@ end
 ---Calculates player to give trick to. Sets global leadOutPlayer
 function calculateTrickWinner()
   flag.trick.handOut = true
+  flag.trick.inProgress = false
   local trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
   leadOutPlayer = trickWinner
   broadcastToAll("[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
@@ -1369,7 +1424,6 @@ end
 ---Shows card counters if hand is over
 ---@param player object
 function giveTrickToWinner(player)
-  flag.trick.inProgress = false
   local trick = {}
   for i = 2, #currentTrick do
     table.insert(trick, getObjectFromGUID(currentTrick[i].guid))
@@ -1396,10 +1450,10 @@ function giveTrickToWinner(player)
     1.5
   )
   Wait.time(
-    function() 
-      group(getLooseCards(playerTrickZone)) 
+    function()
+      group(getLooseCards(playerTrickZone))
       flag.trick.handOut = false
-    end, 
+    end,
     2
   )
   if #player.getHandObjects() == 0 then
@@ -1747,7 +1801,7 @@ function enableCrackBack()
   if not callSettings.crackCall then
     return
   end
-  if callSettings.crackAroundCall then 
+  if callSettings.crackAroundCall then
     disableCrackAround()
   end
   UI.setAttribute("settingsButtonCrackBackOff", "active", "false")
@@ -1765,7 +1819,7 @@ function enableCrackAround()
   if not callSettings.crackCall then
     return
   end
-  if callSettings.crackBackCall then 
+  if callSettings.crackBackCall then
     disableCrackBack()
   end
   UI.setAttribute("settingsButtonCrackAroundOff", "active", "false")
