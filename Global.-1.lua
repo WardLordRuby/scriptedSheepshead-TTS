@@ -1661,7 +1661,7 @@ currentRules = {
   "Custom Game Settings       \n",
   "Custom Schrute Silver Coins   \n",
   "Gameplay Rules and Tips    \n",
-  "Use (.help) for Commands    \n\n",
+  "Use ([fc8803].help[-]) for Commands    \n\n",
   "[b415ff]Current Sheepshead Rules:   [-]\n",
   "Jack of Diamonds Partner    \n",
   "Dealer Pick your Own       \n",
@@ -1674,6 +1674,7 @@ CHAT_COMMANDS = {
   "[b415ff]Sheepshead Console Help[-]\n",
   "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]\n",
   "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]\n",
+  "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck][-]\n",
   "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
 }
 
