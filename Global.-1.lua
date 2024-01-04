@@ -136,6 +136,13 @@ function onLoad()
   displayRules()
 end
 
+function safeToContinue()
+  if flag.dealInProgress or flag.trick.handOut or flag.gameSetUp.inProgress then
+    return false
+  end
+  return true
+end
+
 ---Returns the deck from given zone
 ---If you are aware of more than one deck in a given zone
 ---getDeck() can return the smaller or larger of the decks found
@@ -205,8 +212,8 @@ end
 
 ---Moves deck and dealer chip in front of a given color
 ---@param color string
-function moveDeckAndDealerChipToColor(color)
-  local rotationAngle, playerPos = retrieveItemMoveData(color)
+function moveDeckAndDealerChip()
+  local rotationAngle, playerPos = retrieveItemMoveData(sortedSeatedPlayers[dealerColorVal])
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = staticObject.dealerChip.getRotation()
@@ -270,12 +277,12 @@ function rebuildDeck()
             position = {math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)},
             guid = card.guid
           })
-        pause(0.02)
+        pause(0.03)
       end
     else
       object.setRotation({0,math.random(0,360),faceRotation})
       object.setPosition({math.random(-5.75,5.75),1.4,math.random(-5.75,5.75)})
-      pause(0.01)
+      pause(0.03)
     end
   end
   pause(0.25)
@@ -403,6 +410,7 @@ function onChat(message, player)
   end
 end
 
+---@param player object
 function adminCheck(player)
   if player.admin then
     return true
@@ -477,10 +485,14 @@ end
 
 ---Removes any cards on the table and respawns the deck
 function respawnDeck()
-  if flag.trick.handOut or flag.gameSetUp.inProgress or flag.dealInProgress then
+  if not safeToContinue() then
     print("[DC0000]Please wait till event is over and try again.[-]")
     return
   end
+  startLuaCoroutine(self, 'respawnDeckCoroutine')
+end
+
+function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(scriptZone.table)
   if tableLength(remainingTableCards) > 0 then
     for _, card in pairs(remainingTableCards) do
@@ -506,12 +518,17 @@ function respawnDeck()
       rotation = {0, 0, 180},
       smooth = false
     })
-    getObjectFromGUID(blackSevens).setInvisibleTo(ALL_PLAYERS)
     getObjectFromGUID(blackSevens).destruct()
   end
   if playerCount and playerCount == 4 then
-    removeBlackSevens(newDeck)
+    pause(0.2)
+    blackSevens = removeBlackSevens(newDeck)
   end
+  if flag.gameSetUp.ran then
+    pause(0.4)
+    moveDeckAndDealerChip()
+  end
+  return 1
 end
 
 ---Called to reset the game space<br>
@@ -555,13 +572,15 @@ function printGameSettings()
   elseif #sortedSeatedPlayers == 4 then
     if deck.getQuantity() == 32 then
       blackSevens = removeBlackSevens(deck)
+      playerCount = 4
     end
   else
     if deck.getQuantity() == 30 then
       returnDecktoPiquet(deck)
     end
   end
-  moveDeckAndDealerChipToColor(gameSetUpPlayer.color)
+  dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
+  moveDeckAndDealerChip()
   print("[21AF21]Sheepshead set up for [-]",#sortedSeatedPlayers, " players!")
 end
 
@@ -587,6 +606,8 @@ end
 ---@param deck object
 ---@return string_guid
 function removeBlackSevens(deck)
+  deck.setPosition({0, 1.5, 0})
+  deck.setRotation({0, 0, 180})
   local cardsToRemove = {'Seven of Clubs', 'Seven of Spades'}
   for _, card in ipairs(deck.getObjects()) do
     for _, cardName in ipairs(cardsToRemove) do
@@ -602,6 +623,7 @@ function removeBlackSevens(deck)
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.25)
   local smallDeck = getDeck(scriptZone.table, "small")
+  smallDeck.setInvisibleTo(ALL_PLAYERS)
   staticObject.hiddenBag.putObject(smallDeck)
   pause(0.25)
   return smallDeck.guid
@@ -633,7 +655,7 @@ end
 ---Start of game setup event
 ---@param player object_player_event_trigger
 function setUpGameEvent(player)
-  if flag.gameSetUp.inProgress then
+  if not safeToContinue() then
     return
   end
   if player.admin then
@@ -712,9 +734,6 @@ end
 
 ---Sets up variables needed to deal cards for New Hand event
 function setUpVar()
-  if flag.firstDealOfGame then
-    dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
-  end
   flag.varSetup = true
   if settings.sixHandedToFive and #sortedSeatedPlayers == 6 then
     playerCount = 5
@@ -766,16 +785,17 @@ end
 
 ---Start of New Hand event
 function setUpHandEvent()
-  if not flag.dealInProgress and not flag.trick.handOut then
-    flag.dealInProgress = true
-    if flag.cardsToBeBuried then
-      staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
-      flag.cardsToBeBuried = false
-    end
-    trickInProgress = false
-    currentTrick = {}
-    startLuaCoroutine(self, 'dealCardsCoroutine')
+  if not safeToContinue() then
+    return
   end
+  flag.dealInProgress = true
+  if flag.cardsToBeBuried then
+    staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+    flag.cardsToBeBuried = false
+  end
+  trickInProgress = false
+  currentTrick = {}
+  startLuaCoroutine(self, 'dealCardsCoroutine')
 end
 
 ---Order of opperations for dealing
@@ -808,7 +828,7 @@ function dealCardsCoroutine()
       rebuildDeck()
     end
     pause(0.3)
-    moveDeckAndDealerChipToColor(sortedSeatedPlayers[dealerColorVal])
+    moveDeckAndDealerChip()
     pause(0.4)
   else
     flag.firstDealOfGame = false
@@ -1176,7 +1196,7 @@ end
 ---@param object object_item
 function onObjectLeaveZone(zone, object)
   --Starts trick
-  if not flag.trick.inProgress and not flag.dealInProgress and not flag.cardsToBeBuried then
+  if safeToContinue() and not flag.cardsToBeBuried then
     if leadOutPlayer then
       if zone == handZone[leadOutPlayer.color] then
         flag.trick.inProgress = true
@@ -1677,7 +1697,7 @@ end
 
 --Start of buttons inside of settings window
 function dealerSitsOut()
-  if flag.gameSetUp.inProgress or flag.dealInProgress then
+  if not safeToContinue() then
     return
   end
   UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "false")
@@ -1689,7 +1709,7 @@ function dealerSitsOut()
 end
 
 function dealerSitsOutOff()
-  if flag.gameSetUp.inProgress or flag.dealInProgress then
+  if not safeToContinue() then
     return
   end
   UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "true")
