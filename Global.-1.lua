@@ -109,7 +109,7 @@ function onLoad()
   staticObject.setBuriedButton.setInvisibleTo(ALL_PLAYERS)
 
   flag = {
-    gameSetUp = {
+    gameSetup = {
       inProgress = false,
       ran = false
     },
@@ -137,7 +137,7 @@ function onLoad()
 end
 
 function safeToContinue()
-  if flag.dealInProgress or flag.trick.handOut or flag.gameSetUp.inProgress then
+  if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress then
     return false
   end
   return true
@@ -375,7 +375,7 @@ function onChat(message, player)
   if flag.lookForPlayerText then
     local lowerMessage = string.lower(message)
     if lowerMessage == "y" then
-      if player.steam_name == gameSetUpPlayer.steam_name then
+      if player.steam_name == gameSetupPlayer.steam_name then
         print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
         print("[21AF21]New game is being set up.[-]")
         flag.continue = true
@@ -507,7 +507,7 @@ function respawnDeckCoroutine()
   })
   local deckCopy = getObjectFromGUID(GUID.DECK_COPY)
   deckCopy.setInvisibleTo(ALL_PLAYERS)
-  local newDeck = getObjectFromGUID(GUID.DECK_COPY).clone({
+  local newDeck = deckCopy.clone({
     position = {0, -3, 0}
   })
   staticObject.hiddenBag.putObject(deckCopy)
@@ -524,7 +524,7 @@ function respawnDeckCoroutine()
     pause(0.2)
     blackSevens = removeBlackSevens(newDeck)
   end
-  if flag.gameSetUp.ran then
+  if flag.gameSetup.ran then
     pause(0.4)
     moveDeckAndDealerChip()
   end
@@ -557,31 +557,44 @@ end
 ---Gets the correct deck for the number of seated players<br>
 ---Will stop setUpGameCoroutine if there is less than 3 seated players
 function printGameSettings()
+  if #sortedSeatedPlayers < 3 then
+    print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
+    flag.stopCoroutine = true
+    return
+  end
+
+  playerCount = #sortedSeatedPlayers
+  dealerColorVal = getColorVal(gameSetupPlayer.color, sortedSeatedPlayers)
+
   local deck = getDeck(scriptZone.table)
   if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
     rebuildDeck()
     pause(0.5)
-    deck = getDeck(scriptZone.table)
+    isDeckAllThere()
   end
 
-  if #sortedSeatedPlayers < 3 then
-    print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    flag.gameSetUp.inProgress = false
-    flag.stopCoroutine = true
-    return
-  elseif #sortedSeatedPlayers == 4 then
+  deck = getDeck(scriptZone.table)
+  if playerCount == 4 then
     if deck.getQuantity() == 32 then
       blackSevens = removeBlackSevens(deck)
-      playerCount = 4
     end
   else
     if deck.getQuantity() == 30 then
       returnDecktoPiquet(deck)
     end
   end
-  dealerColorVal = getColorVal(gameSetUpPlayer.color, sortedSeatedPlayers)
+
   moveDeckAndDealerChip()
   print("[21AF21]Sheepshead set up for [-]",#sortedSeatedPlayers, " players!")
+end
+
+---Just checks to make sure cards are all there
+function isDeckAllThere()
+  local cardCount = countCards(scriptZone.table)
+  if cardCount < 30 or cardCount == 31 or cardCount > 32 then
+    respawnDeckCoroutine()
+    pause(0.75)
+  end
 end
 
 ---Called to add the blackSevens to a given deck<br>
@@ -659,8 +672,8 @@ function setUpGameEvent(player)
     return
   end
   if player.admin then
-    flag.gameSetUp.inProgress = true
-    gameSetUpPlayer = player
+    flag.gameSetup.inProgress = true
+    gameSetupPlayer = player
     startLuaCoroutine(self, 'setUpGameCoroutine')
   else
     broadcastToColor("[DC0000]You do not have permission to access this feature.", player.color, "[-]")
@@ -669,15 +682,15 @@ end
 
 ---Start of order of opperations for setUpGame
 function setUpGameCoroutine()
-  if flag.gameSetUp.ran and #sortedSeatedPlayers < 3 then
+  if flag.gameSetup.ran and #sortedSeatedPlayers < 3 then
     print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    flag.gameSetUp.inProgress = false
+    flag.gameSetup.inProgress = false
     return 1
-  elseif flag.gameSetUp.ran then
-    Player[gameSetUpPlayer.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
+  elseif flag.gameSetup.ran then
+    Player[gameSetupPlayer.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
     .. #sortedSeatedPlayers .. " players.")
     pause(1.5)
-    Player[gameSetUpPlayer.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
+    Player[gameSetupPlayer.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
     flag.lookForPlayerText = true
     pause(6)
     if flag.continue then
@@ -686,7 +699,7 @@ function setUpGameCoroutine()
     else
       print("[21AF21]New game was not selected.[-]")
       flag.lookForPlayerText, flag.continue = false, false
-      flag.gameSetUp.inProgress = false
+      flag.gameSetup.inProgress = false
       return 1
     end
   end
@@ -702,7 +715,7 @@ function setUpGameCoroutine()
     if sortedSeatedPlayers == nil then
       local json = JSON.encode(ALL_PLAYERS)
       sortedSeatedPlayers = JSON.decode(json)
-      flag.gameSetUp.inProgress = false
+      flag.gameSetup.inProgress = false
       return 1
     end
   else
@@ -713,7 +726,7 @@ function setUpGameCoroutine()
   printGameSettings()
 
   if flag.stopCoroutine then
-    flag.stopCoroutine = false
+    flag.stopCoroutine, flag.gameSetup.inProgress = false, false
     return 1
   end
 
@@ -722,8 +735,8 @@ function setUpGameCoroutine()
     spawnChips(rotationAngle, playerPos)
   end
 
-  flag.gameSetUp.inProgress = false
-  flag.gameSetUp.ran, flag.firstDealOfGame = true, true
+  flag.gameSetup.inProgress = false
+  flag.gameSetup.ran, flag.firstDealOfGame = true, true
   return 1
 end
 --[[End of order of opperations for setUpGame]]--
@@ -744,7 +757,6 @@ function setUpVar()
     print("[21AF21]Dealer will no longer sit out.[-]")
   end
   dealSettings = "normal"
-  playerCount = #sortedSeatedPlayers
 end
 
 ---Returns the index location of a color in a list
@@ -800,12 +812,12 @@ end
 
 ---Order of opperations for dealing
 function dealCardsCoroutine()
-  if flag.gameSetUp.inProgress then
+  if flag.gameSetup.inProgress then
     print("[21AF21]Setup Is Currently In Progress.[-]")
     flag.dealInProgress = false
     return 1
   end
-  if not flag.gameSetUp.ran then
+  if not flag.gameSetup.ran then
     print("[21AF21]Press Set Up Game First.[-]")
     flag.dealInProgress = false
     return 1
@@ -835,6 +847,7 @@ function dealCardsCoroutine()
   end
 
   calculateDealOrder(dealSettings)
+  isDeckAllThere()
 
   flipDeck(scriptZone.table)
   pause(0.35)
