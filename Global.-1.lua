@@ -1,6 +1,6 @@
 --[[ Scripted version of Sheepshead built inside of Tabletop Simulator By: WardLordRuby
      Scoring currently uses a modified version of the blackjack counting script by: MrStump
-     I liked how EpicWolverine handled rebuilding the deck so I modified his code ]]
+     I liked how EpicWolverine handled rebuilding the deck so I modified his code ]]--
 
 DEBUG = true
 
@@ -27,7 +27,7 @@ GUID = {
   DECK_COPY = "f247a7"
 }
 
-ALL_PLAYERS = { "White", "Red", "Yellow", "Green", "Blue", "Pink" }
+ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
 
 SPAWN_POS = {
   tableBlock = Vector(0, 3.96, 0),
@@ -219,9 +219,9 @@ function moveDeckAndDealerChip()
   local chipRotation = staticObject.dealerChip.getRotation()
   repeat coroutine.yield(0) until getDeck(scriptZone.table) ~= nil
   local deck = getDeck(scriptZone.table)
-  staticObject.dealerChip.setRotationSmooth({ chipRotation.x, rotationAngle - 90, chipRotation.z })
+  staticObject.dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
   staticObject.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
-  deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, 180 })
+  deck.setRotationSmooth({deck.getRotation().x, rotationAngle, 180})
   deck.setPositionSmooth(playerPos + rotatedDeckOffset)
 end
 
@@ -273,15 +273,15 @@ function rebuildDeck()
     if object.type == 'Deck' then
       for _, card in ipairs(object.getObjects()) do
         object.takeObject({
-          rotation = { 0, math.random(0, 360), faceRotation },
-          position = { math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75) },
+          rotation = {0, math.random(0, 360), faceRotation},
+          position = {math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75)},
           guid = card.guid
         })
         pause(0.03)
       end
     else
-      object.setRotation({ 0, math.random(0, 360), faceRotation })
-      object.setPosition({ math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75) })
+      object.setRotation({0, math.random(0, 360), faceRotation})
+      object.setPosition({math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75)})
       pause(0.03)
     end
   end
@@ -364,7 +364,7 @@ function getPlayerObject(colorOrVar, list)
   end
 end
 
---[[Start of functions used by Set Up Game event]]
+--[[Start of functions used by Set Up Game event]]--
 
 ---Runs everytime a chat occurs.
 ---<br>Return: true, hides player msg | false, shows player msg
@@ -469,8 +469,8 @@ function getRuleBook(color)
   }]]
   spawnObjectJSON({
     json = myjson,
-    position = { ruleBookPos.x, 1.5, ruleBookPos.z },
-    rotation = { 0, playerRotation - 180, 0 }
+    position = {ruleBookPos.x, 1.5, ruleBookPos.z},
+    rotation = {0, playerRotation - 180, 0}
   })
 end
 
@@ -501,21 +501,21 @@ function respawnDeckCoroutine()
   end
   staticObject.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
-    position = { 3, 2, 0 },
-    rotation = { 0, 0, 180 },
+    position = {3, 2, 0},
+    rotation = {0, 0, 180},
     smooth = false
   })
   local deckCopy = getObjectFromGUID(GUID.DECK_COPY)
   deckCopy.setInvisibleTo(ALL_PLAYERS)
   local newDeck = deckCopy.clone({
-    position = { 0, -3, 0 }
+    position = {0, -3, 0}
   })
   staticObject.hiddenBag.putObject(deckCopy)
   if blackSevens then
     staticObject.hiddenBag.takeObject({
       guid = blackSevens,
-      position = { 5, 2, 0 },
-      rotation = { 0, 0, 180 },
+      position = {5, 2, 0},
+      rotation = {0, 0, 180},
       smooth = false
     })
     getObjectFromGUID(blackSevens).destruct()
@@ -627,8 +627,8 @@ end
 function removeBlackSevens(deck)
   local centerPos = Vector(0, 1.5, 0)
   deck.setPosition(centerPos)
-  deck.setRotation({ 0, 0, 180 })
-  local cardsToRemove = { 'Seven of Clubs', 'Seven of Spades' }
+  deck.setRotation({0, 0, 180})
+  local cardsToRemove = {'Seven of Clubs', 'Seven of Spades'}
   for _, card in ipairs(deck.getObjects()) do
     for _, cardName in ipairs(cardsToRemove) do
       if card.name == cardName then
@@ -662,8 +662,8 @@ function spawnChips(rotationAngle, playerPos)
     local customCoin = spawnObject({
       type = "Custom_Model",
       position = playerPos + rotatedOffset,
-      rotation = { 0, rotationAngle + 180, 0 },
-      scale = { 0.6, 0.6, 0.6 },
+      rotation = {0, rotationAngle + 180, 0},
+      scale = {0.6, 0.6, 0.6},
       sound = false
     })
     customCoin.setCustomObject(COIN_PRAM)
@@ -747,11 +747,11 @@ function setUpGameCoroutine()
   return 1
 end
 
---[[End of order of opperations for setUpGame]]
---[[End of functions used by Set Up Game event]]
+--[[End of order of opperations for setUpGame]]--
+--[[End of functions used by Set Up Game event]]--
 
 
---[[Start of functions used by New Hand event]]
+--[[Start of functions used by New Hand event]]--
 
 ---Sets up variables needed to deal cards for New Hand event
 function setUpVar()
@@ -946,13 +946,13 @@ function dealToBlinds(deck, rotationVal)
   for i = 1, 2 do
     deck.takeObject({
       position = SPAWN_POS.blinds[i]:copy():rotateOver('y', rotationVal.y),
-      rotation = { rotationVal.x, rotationVal.y, 180 }
+      rotation = {rotationVal.x, rotationVal.y, 180}
     })
     pause(0.15)
   end
 end
 
---[[End of functions used by New Hand event]]
+--[[End of functions used by New Hand event]]--
 
 ---Prints a message if player passes or is forced to pick
 ---@param player object_player_event_trigger
@@ -1017,7 +1017,7 @@ function pickBlindsEvent(player)
   local pickerRotation = ROTATION.color[player.color]
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
   staticObject.setBuriedButton.setPosition(setBuriedButtonPos)
-  staticObject.setBuriedButton.setRotation({ 0, pickerRotation, 0 })
+  staticObject.setBuriedButton.setRotation({0, pickerRotation, 0})
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 end
 
@@ -1054,7 +1054,7 @@ function toggleCounterVisibility()
     local blockPos = SPAWN_POS.tableBlock:copy():rotateOver('y', blockRotation)
     local block = staticObject.hiddenBag.takeObject({
       position = blockPos,
-      rotation = { 0, blockRotation, 0 },
+      rotation = {0, blockRotation, 0},
       smooth = false,
       guid = GUID.TABLE_BLOCK
     })
@@ -1065,12 +1065,12 @@ function toggleCounterVisibility()
         tCounter = spawnObject({
           type = 'Counter',
           position = tCounterPos,
-          rotation = { 295, pickerRotation - 180, 0 },
+          rotation = {295, pickerRotation - 180, 0},
         })
         pCounter = spawnObject({
           type = 'Counter',
           position = pCounterPos,
-          rotation = { 295, pickerRotation, 0 },
+          rotation = {295, pickerRotation, 0},
         })
         flag.counterVisible = true
       end,
@@ -1083,8 +1083,8 @@ function toggleCounterVisibility()
       Wait.time(
         function()
           local pickerTricks = getDeck(pickerZone)
-          pickerTricks.setPositionSmooth({ pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z })
-          pickerTricks.setRotationSmooth({ 0, pickerTricks.getRotation().y, 0 })
+          pickerTricks.setPositionSmooth({pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z})
+          pickerTricks.setRotationSmooth({0, pickerTricks.getRotation().y, 0})
         end,
         0.6
       )
@@ -1203,7 +1203,7 @@ function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
   if zone == scriptZone.drop then
     print("Object entered Drop Zone")
-    object.setPosition({ 0, 3, 0 })
+    object.setPosition({0, 3, 0})
   end
   --Makes sure other players can not see what cards the picker is burying
   if flag.cardsToBeBuried then
@@ -1427,11 +1427,11 @@ end
 function quickSearch(objectName, isTrump)
   local strengthList
   if isTrump then
-    strengthList = { "Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
+    strengthList = {"Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
       "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs", "Queen of Diamonds",
-      "Queen of Hearts", "Queen of Spades", "Queen of Clubs" }
+      "Queen of Hearts", "Queen of Spades", "Queen of Clubs"}
   else
-    strengthList = { "Seven", "Eight", "Nine", "King", "Ten", "Ace" }
+    strengthList = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
   end
 
   local startIndex
@@ -1483,13 +1483,13 @@ function giveTrickToWinner(player)
       if oldTricks then
         local oldTricksPos = oldTricks.getPosition()
         local oldTricksRot = oldTricks.getRotation()
-        trick.setPositionSmooth({ oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z })
-        trick.setRotationSmooth({ oldTricksRot.x, oldTricksRot.y, 180 })
+        trick.setPositionSmooth({oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z})
+        trick.setRotationSmooth({oldTricksRot.x, oldTricksRot.y, 180})
       else
         local zoneRotation = playerTrickZone.getRotation()
         local zonePos = playerTrickZone.getPosition()
-        trick.setPositionSmooth({ zonePos.x, zonePos.y - 2.7, zonePos.z })
-        trick.setRotationSmooth({ zoneRotation.x, zoneRotation.y + 180, 180 })
+        trick.setPositionSmooth({zonePos.x, zonePos.y - 2.7, zonePos.z})
+        trick.setRotationSmooth({zoneRotation.x, zoneRotation.y + 180, 180})
       end
     end,
     1.5
@@ -1506,7 +1506,7 @@ function giveTrickToWinner(player)
   end
 end
 
---[[New functions to adapt Blackjack Card Counter]]
+--[[New functions to adapt Blackjack Card Counter]]--
 
 ---Returns the color of the handposition located across the table from given color (pickingPlayer)
 ---@param color string
@@ -1541,31 +1541,26 @@ function setupGuidTable(tCounterGUID, pCounterGUID)
 
   objectSets = {}
   for zoneGUID, counterGUID in pairs(guidTable) do
-    table.insert(objectSets, { z = getObjectFromGUID(zoneGUID), c = getObjectFromGUID(counterGUID) })
+    table.insert(objectSets, {z = getObjectFromGUID(zoneGUID), c = getObjectFromGUID(counterGUID)})
   end
   SheepsheadGlobalTimer = Wait.time(countTricks, 1)
 end
 
 ---------------------------------------------------------------
---[[    Universal Blackjack Card Counter    by: MrStump    ]]
+--[[    Universal Blackjack Card Counter    by: MrStump    ]]--
 ---------------------------------------------------------------
 
 --The names (in quotes) should all match the names on your cards.
 --The values should match the value of those cards.
 
 cardNameTable = {
-  ["Seven"] = 0,
-  ["Eight"] = 0,
-  ["Nine"] = 0,
-  ["Ten"] = 10,
-  ["Jack"] = 2,
-  ["Queen"] = 3,
-  ["King"] = 4,
-  ["Ace"] = 11
+  ["Seven"] = 0, ["Eight"] = 0, ["Nine"] = 0,
+  ["Ten"] = 10, ["Jack"] = 2, ["Queen"] = 3,
+  ["King"] = 4, ["Ace"] = 11
 }
 
 ----------------------------------------------------------
---[[    END OF CODE TO EDIT, unless you know Lua    ]]
+--[[    END OF CODE TO EDIT, unless you know Lua    ]]--
 ----------------------------------------------------------
 
 --Looks for any cards in the scripting zones and sends them on to obtainCardValue
@@ -1638,15 +1633,15 @@ function displayResults()
     set.c.setValue(totals[i])
     local total = totals[i]
     if i == 1 and (total < 61 and total > 30) then
-      set.c.setColorTint({ 1, 250 / 255, 160 / 255 })
+      set.c.setColorTint({1, 250 / 255, 160 / 255})
     elseif i == 2 and (total < 60 and total > 29) then
-      set.c.setColorTint({ 1, 250 / 255, 160 / 255 })
+      set.c.setColorTint({1, 250 / 255, 160 / 255})
     elseif i == 2 and total == 60 then
-      set.c.setColorTint({ 0, 1, 0 })
+      set.c.setColorTint({0, 1, 0})
     elseif total > 60 then
-      set.c.setColorTint({ 0, 1, 0 })
+      set.c.setColorTint({0, 1, 0})
     else
-      set.c.setColorTint({ 0, 0, 0 })
+      set.c.setColorTint({0, 0, 0})
     end
   end
   trickCountStart()
