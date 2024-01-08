@@ -2,7 +2,7 @@
  		 UI elements: Main functions panel for gameplay functions. Dealing ect 
  		 Settings window to change what rules user wants enabled, Set Up Game button
 		 for starting a new game, and a sub panel for callouts (coming soon) 
-		 Written by: WardLordRuby -->
+		 Written by: WardLordRuby --> 
 <button
   onClick="setUpGameEvent"
   rectAlignment="UpperRight"
