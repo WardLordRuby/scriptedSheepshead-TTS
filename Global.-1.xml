@@ -1,12 +1,12 @@
 <!-- Xml UI. Scripted Version of Sheepshead for Tabletop Simulator
- UI elements: Main functions panel for gameplay functions. Dealing ect 
- Settings window to change what rules user wants enabled, Set Up Game button
- for starting a new game, and a sub panel for callouts (coming soon) 
- Written by: WardLordRuby -->
-
+ 		 UI elements: Main functions panel for gameplay functions. Dealing ect 
+ 		 Settings window to change what rules user wants enabled, Set Up Game button
+		 for starting a new game, and a sub panel for callouts (coming soon) 
+		 Written by: WardLordRuby -->
 <button
   onClick="setUpGameEvent"
-  position="610 513 0"
+  rectAlignment="UpperRight"
+  offsetXY="-300 -1"
   width="175"
   height="52"
   fontsize="24"
@@ -46,7 +46,7 @@
 <Panel id="Toolbox"
   width="165" height="505"
   rectAlignment="LowerRight"
-  offsetXY="-250 2"
+  offsetXY="-290 2"
   allowDragging="true"
   showAnimation="FadeIn"
   showAnimationDelay="2"
@@ -56,33 +56,22 @@
   onMouseUp="toolboxAnimateUp"
   image="toolboxMain"
 >
-  <Button id="TakeTrick"
-  	width="113" height="113"
-  	offsetXY="00 -145"
-  	onClick="takeTrickEvent"
-  	onMouseEnter="takeTrickButtonAnimateEnter"
-  	onMouseExit="takeTrickButtonAnimateExit"
-  	onMouseDown="takeTrickButtonAnimateDown"
-  	onMouseUp="takeTrickButtonAnimateUp"
-  	image="http://cloud-3.steamusercontent.com/ugc/2233283965353731772/C51F655BEE5CBF3E2F8202CFEAE85450948C392E/"
-	>
-	</Button>
 
-  <Button id="Pass"
+  <Button id="Deal"
     width="113" height="113"
-    offsetXY="00 -42"
-    onClick="passEvent"
-    onMouseEnter="passButtonAnimateEnter"
-    onMouseExit="passButtonAnimateExit"
-    onMouseDown="passButtonAnimateDown"
-    onMouseUp="passButtonAnimateUp"
-    image="http://cloud-3.steamusercontent.com/ugc/2233283965353731501/13B7D22788C1142BFC7852C48DFED46A5897C757/"
-	>
-	</Button>
+    offsetXY="00 150"
+    onClick="setUpHandEvent"
+    onMouseEnter="dealButtonAnimateEnter"
+    onMouseExit="dealButtonAnimateExit"
+    onMouseDown="dealButtonAnimateDown"
+    onMouseUp="dealButtonAnimateUp"
+    image="http://cloud-3.steamusercontent.com/ugc/2233283965353654571/82CC6E88D206B72B2E0AE8DEF90887FFD6D20BB6/"
+  >
+  </Button>
 
   <Button id="Pick"
     width="113" height="113"
-    offsetXY="00 60"
+    offsetXY="00 25"
     onClick="pickBlindsEvent"
     onMouseEnter="pickButtonAnimateEnter"
     onMouseExit="pickButtonAnimateExit"
@@ -92,17 +81,150 @@
   >
   </Button>
 
-  <Button id="Deal"
+  <Button id="Pass"
     width="113" height="113"
-    offsetXY="00 160"
-    onClick="setUpHandEvent"
-    onMouseEnter="dealButtonAnimateEnter"
-    onMouseExit="dealButtonAnimateExit"
-    onMouseDown="dealButtonAnimateDown"
-    onMouseUp="dealButtonAnimateUp"
-    image="http://cloud-3.steamusercontent.com/ugc/2233283965353654571/82CC6E88D206B72B2E0AE8DEF90887FFD6D20BB6/"
+    offsetXY="00 -92"
+    onClick="passEvent"
+    onMouseEnter="passButtonAnimateEnter"
+    onMouseExit="passButtonAnimateExit"
+    onMouseDown="passButtonAnimateDown"
+    onMouseUp="passButtonAnimateUp"
+    image="http://cloud-3.steamusercontent.com/ugc/2233283965353731501/13B7D22788C1142BFC7852C48DFED46A5897C757/"
   >
   </Button>
+
+  <Button id="showCalls"
+    width="30" height="30"
+    offsetXY="00 -180"
+    onClick="showCallsEvent"
+    onMouseEnter="callsButtonAnimateEnter"
+    onMouseExit="callsButtonAnimateExit"
+    onMouseDown="callsButtonAnimateDown"
+    onMouseUp="callsButtonAnimateUp"
+    image="callButton"
+    tooltip="Show/Hide Calls"
+    tooltipBorderColor="7B797C"
+    tooltipPosition="Above"
+  >
+  </Button>
+</Panel>
+
+<Panel id="callsWindow"
+  width="163"
+  height="58"
+  offsetXY="-10 -270"
+  color="rgba(0,0,0,0)"
+  rectAlignment="upperRight"
+  showAnimation="Grow"
+  hideAnimation="Shrink"
+  active="false"
+>
+  <Image
+    id="callsWindowBackground"
+    image="callWindow"
+    preserveAspect="false"
+    width="163"
+    height="58"
+    rectAlignment="UpperLeft"
+  >
+
+    <Button
+      id="callPartnerButton"
+      rectAlignment="UpperCenter"
+      width="153" height="48"
+      offsetXY="00 -5"
+      onMouseEnter="callPartnerButtonAnimateEnter"
+      onMouseExit="callPartnerButtonAnimateExit"
+      onMouseDown="callPartnerButtonAnimateDown"
+      onMouseUp="callPartnerButtonAnimateUp"
+      image="callPartnerButton"
+    >
+    </Button>
+
+    <Button
+      id="sheepsheadButton"
+      rectAlignment="UpperCenter"
+      width="153" height="48"
+      offsetXY="00 -58"
+      onMouseEnter="sheepsheadButtonAnimateEnter"
+      onMouseExit="sheepsheadButtonAnimateExit"
+      onMouseDown="sheepsheadButtonAnimateDown"
+      onMouseUp="sheepsheadButtonAnimateUp"
+      image="sheepsheadButton"
+      active="false"
+    >
+    </Button>
+
+    <Button
+        id="blitzButton"
+				rectAlignment="UpperCenter"
+				width="153" height="48"
+  			offsetXY="00 -111"
+				onMouseEnter="blitzButtonAnimateEnter"
+        onMouseExit="blitzButtonAnimateExit"
+        onMouseDown="blitzButtonAnimateDown"
+        onMouseUp="blitzButtonAnimateUp"
+        image="blitzButton"
+        active="false"
+      >
+      </Button>
+
+      <Button
+        id="leasterButton"
+				rectAlignment="UpperCenter"
+				width="153" height="48"
+  			offsetXY="00 -164"
+				onMouseEnter="leasterButtonAnimateEnter"
+        onMouseExit="leasterButtonAnimateExit"
+        onMouseDown="leasterButtonAnimateDown"
+        onMouseUp="leasterButtonAnimateUp"
+        image="leasterButton"
+        active="false"
+      >
+      </Button>
+
+      <Button
+        id="crackButton"
+				rectAlignment="UpperCenter"
+				width="153" height="48"
+  			offsetXY="00 -217"
+				onMouseEnter="crackButtonAnimateEnter"
+        onMouseExit="crackButtonAnimateExit"
+        onMouseDown="crackButtonAnimateDown"
+        onMouseUp="crackButtonAnimateUp"
+        image="crackButton"
+        active="false"
+      >
+      </Button>
+
+      <Button
+        id="crackBackButton"
+				rectAlignment="UpperCenter"
+				width="153" height="48"
+  			offsetXY="00 -270"
+				onMouseEnter="crackBackButtonAnimateEnter"
+        onMouseExit="crackBackButtonAnimateExit"
+        onMouseDown="crackBackButtonAnimateDown"
+        onMouseUp="crackBackButtonAnimateUp"
+        image="crackBackButton"
+        active="false"
+      >
+      </Button>
+
+      <Button
+        id="crackAroundTheCornerButton"
+				rectAlignment="UpperCenter"
+				width="153" height="48"
+  			offsetXY="00 -323"
+				onMouseEnter="crackAroundTheCornerButtonAnimateEnter"
+        onMouseExit="crackAroundTheCornerButtonAnimateExit"
+        onMouseDown="crackAroundTheCornerButtonAnimateDown"
+        onMouseUp="crackAroundTheCornerButtonAnimateUp"
+        image="crackAroundTheCornerButton"
+        active="false"
+      >
+      </Button>
+  </Image>
 </Panel>
 
 <Panel
@@ -142,9 +264,9 @@ active="false"
 			width="26"
 			color="rgba(0,0,0,0)"
 			onMouseEnter="closeSettingsButtonAnimateEnter"
-      			onMouseExit="closeSettingsButtonAnimateExit"
-      			onMouseDown="closeSettingsButtonAnimateDown"
-      			onMouseUp="closeSettingsWindow"
+      onMouseExit="closeSettingsButtonAnimateExit"
+      onMouseDown="closeSettingsButtonAnimateDown"
+      onMouseUp="closeSettingsWindow"
 			>
 			</Button>
 		</Image>
@@ -196,7 +318,7 @@ active="false"
 				</Button>
 			</Image>
 
-      			<!-- JD Partner Button -->
+      <!-- JD Partner Button -->
 			<Image
 			id="settingsButtonJDPartner"
 			image="jdPartner"
@@ -215,17 +337,17 @@ active="false"
 				</Button>
 			</Image>
 
-      			<!-- Call an Ace Button -->
-      			<Image
+      <!-- Call an Ace Button -->
+      <Image
 			id="settingsButtonCallAnAce"
 			image="callAce"
 			width="304"
 			height="32"
 			offsetXY="47 -97"
 			rectAlignment="UpperLeft"
-      			active="false"
+      active="false"
 			>
-        			<Button
+        <Button
 				rectAlignment="UpperLeft"
 				width="152"
 				offsetXY="150 0"
@@ -233,7 +355,7 @@ active="false"
 				onClick="jdPartnerOn"
 				>
 				</Button>
-      			</Image>
+      </Image>
 		</Image>
 		
 		<Image
