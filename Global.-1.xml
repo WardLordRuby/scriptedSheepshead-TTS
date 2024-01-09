@@ -2,7 +2,7 @@
  		 UI elements: Main functions panel for gameplay functions. Dealing ect 
  		 Settings window to change what rules user wants enabled, Set Up Game button
 		 for starting a new game, and a sub panel for callouts (coming soon) 
-		 Written by: WardLordRuby --> 
+		 Written by: WardLordRuby -->
 <button
   onClick="setUpGameEvent"
   rectAlignment="UpperRight"
@@ -19,7 +19,7 @@
   width="175"
   height="52"
   fontsize="24"
-  active="false"
+	active="false"
 >Player up
 </button>
 
@@ -28,8 +28,8 @@
   position="880 320 0"
   width="175"
   height="52"
-  fontsize="24"
-  active="false"
+	fontsize="24"
+	active="false"
 >Player down
 </button>
 
@@ -39,7 +39,7 @@
   width="175"
   height="52"
   fontsize="24"
-  active="false"
+	active="false"
 >test
 </button>
 
@@ -66,8 +66,8 @@
     onMouseDown="dealButtonAnimateDown"
     onMouseUp="dealButtonAnimateUp"
     image="http://cloud-3.steamusercontent.com/ugc/2233283965353654571/82CC6E88D206B72B2E0AE8DEF90887FFD6D20BB6/"
-  >
-  </Button>
+	>
+	</Button>
 
   <Button id="Pick"
     width="113" height="113"
@@ -78,8 +78,8 @@
     onMouseDown="pickButtonAnimateDown"
     onMouseUp="pickButtonAnimateUp"
     image="http://cloud-3.steamusercontent.com/ugc/2233283965353731650/2C7000D4525A18ADB4A361D6B1EC61EC38E02C91/"
-  >
-  </Button>
+	>
+	</Button>
 
   <Button id="Pass"
     width="113" height="113"
@@ -90,23 +90,23 @@
     onMouseDown="passButtonAnimateDown"
     onMouseUp="passButtonAnimateUp"
     image="http://cloud-3.steamusercontent.com/ugc/2233283965353731501/13B7D22788C1142BFC7852C48DFED46A5897C757/"
-  >
-  </Button>
+	>
+	</Button>
 
   <Button id="showCalls"
-    width="30" height="30"
-    offsetXY="00 -180"
-    onClick="showCallsEvent"
-    onMouseEnter="callsButtonAnimateEnter"
-    onMouseExit="callsButtonAnimateExit"
-    onMouseDown="callsButtonAnimateDown"
-    onMouseUp="callsButtonAnimateUp"
-    image="callButton"
+  	width="30" height="30"
+  	offsetXY="00 -180"
+  	onClick="showOrHideCallsEvent"
+  	onMouseEnter="callsButtonAnimateEnter"
+  	onMouseExit="callsButtonAnimateExit"
+  	onMouseDown="callsButtonAnimateDown"
+  	onMouseUp="callsButtonAnimateUp"
+  	image="callButton"
     tooltip="Show/Hide Calls"
     tooltipBorderColor="7B797C"
     tooltipPosition="Above"
-  >
-  </Button>
+	>
+	</Button>
 </Panel>
 
 <Panel id="callsWindow"
@@ -115,115 +115,121 @@
   offsetXY="-10 -270"
   color="rgba(0,0,0,0)"
   rectAlignment="upperRight"
-  showAnimation="Grow"
-  hideAnimation="Shrink"
   active="false"
 >
   <Image
-    id="callsWindowBackground"
-    image="callWindow"
-    preserveAspect="false"
-    width="163"
-    height="58"
-    rectAlignment="UpperLeft"
-  >
+	id="callsWindowBackground"
+	image="callWindow"
+	preserveAspect="false"
+	width="163"
+	height="58"
+	rectAlignment="UpperLeft"
+	>
 
-    <Button
+  	<Button
       id="callPartnerButton"
-      rectAlignment="UpperCenter"
-      width="153" height="48"
-      offsetXY="00 -5"
-      onMouseEnter="callPartnerButtonAnimateEnter"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -5"
+      onClick="callPartnerEvent"
+			onMouseEnter="callPartnerButtonAnimateEnter"
       onMouseExit="callPartnerButtonAnimateExit"
       onMouseDown="callPartnerButtonAnimateDown"
       onMouseUp="callPartnerButtonAnimateUp"
       image="callPartnerButton"
-    >
-    </Button>
+		>
+		</Button>
 
     <Button
       id="sheepsheadButton"
-      rectAlignment="UpperCenter"
-      width="153" height="48"
-      offsetXY="00 -58"
-      onMouseEnter="sheepsheadButtonAnimateEnter"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -58"
+      onClick="callSheepsheadEvent"
+			onMouseEnter="sheepsheadButtonAnimateEnter"
       onMouseExit="sheepsheadButtonAnimateExit"
       onMouseDown="sheepsheadButtonAnimateDown"
       onMouseUp="sheepsheadButtonAnimateUp"
       image="sheepsheadButton"
       active="false"
-    >
-    </Button>
+		>
+		</Button>
 
     <Button
-        id="blitzButton"
-				rectAlignment="UpperCenter"
-				width="153" height="48"
-  			offsetXY="00 -111"
-				onMouseEnter="blitzButtonAnimateEnter"
-        onMouseExit="blitzButtonAnimateExit"
-        onMouseDown="blitzButtonAnimateDown"
-        onMouseUp="blitzButtonAnimateUp"
-        image="blitzButton"
-        active="false"
-      >
-      </Button>
+      id="blitzButton"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -111"
+      onClick="callBlitzEvent"
+			onMouseEnter="blitzButtonAnimateEnter"
+      onMouseExit="blitzButtonAnimateExit"
+      onMouseDown="blitzButtonAnimateDown"
+      onMouseUp="blitzButtonAnimateUp"
+      image="blitzButton"
+      active="false"
+		>
+		</Button>
 
-      <Button
-        id="leasterButton"
-				rectAlignment="UpperCenter"
-				width="153" height="48"
-  			offsetXY="00 -164"
-				onMouseEnter="leasterButtonAnimateEnter"
-        onMouseExit="leasterButtonAnimateExit"
-        onMouseDown="leasterButtonAnimateDown"
-        onMouseUp="leasterButtonAnimateUp"
-        image="leasterButton"
-        active="false"
-      >
-      </Button>
+    <Button
+      id="leasterButton"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -164"
+      onClick="callLeasterEvent"
+			onMouseEnter="leasterButtonAnimateEnter"
+      onMouseExit="leasterButtonAnimateExit"
+      onMouseDown="leasterButtonAnimateDown"
+      onMouseUp="leasterButtonAnimateUp"
+      image="leasterButton"
+      active="false"
+		>
+		</Button>
 
-      <Button
-        id="crackButton"
-				rectAlignment="UpperCenter"
-				width="153" height="48"
-  			offsetXY="00 -217"
-				onMouseEnter="crackButtonAnimateEnter"
-        onMouseExit="crackButtonAnimateExit"
-        onMouseDown="crackButtonAnimateDown"
-        onMouseUp="crackButtonAnimateUp"
-        image="crackButton"
-        active="false"
-      >
-      </Button>
+    <Button
+      id="crackButton"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -217"
+      onClick="callCrackEvent"
+			onMouseEnter="crackButtonAnimateEnter"
+      onMouseExit="crackButtonAnimateExit"
+      onMouseDown="crackButtonAnimateDown"
+      onMouseUp="crackButtonAnimateUp"
+      image="crackButton"
+      active="false"
+		>
+		</Button>
 
-      <Button
-        id="crackBackButton"
-				rectAlignment="UpperCenter"
-				width="153" height="48"
-  			offsetXY="00 -270"
-				onMouseEnter="crackBackButtonAnimateEnter"
-        onMouseExit="crackBackButtonAnimateExit"
-        onMouseDown="crackBackButtonAnimateDown"
-        onMouseUp="crackBackButtonAnimateUp"
-        image="crackBackButton"
-        active="false"
-      >
-      </Button>
+    <Button
+      id="crackBackButton"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -270"
+      onClick="callCrackBackEvent"
+			onMouseEnter="crackBackButtonAnimateEnter"
+      onMouseExit="crackBackButtonAnimateExit"
+      onMouseDown="crackBackButtonAnimateDown"
+      onMouseUp="crackBackButtonAnimateUp"
+      image="crackBackButton"
+      active="false"
+		>
+		</Button>
 
-      <Button
-        id="crackAroundTheCornerButton"
-				rectAlignment="UpperCenter"
-				width="153" height="48"
-  			offsetXY="00 -323"
-				onMouseEnter="crackAroundTheCornerButtonAnimateEnter"
-        onMouseExit="crackAroundTheCornerButtonAnimateExit"
-        onMouseDown="crackAroundTheCornerButtonAnimateDown"
-        onMouseUp="crackAroundTheCornerButtonAnimateUp"
-        image="crackAroundTheCornerButton"
-        active="false"
-      >
-      </Button>
+    <Button
+      id="crackAroundTheCornerButton"
+		  rectAlignment="UpperCenter"
+			width="153" height="48"
+  	  offsetXY="00 -323"
+      onClick="callCrackAroundTheCornerEvent"
+			onMouseEnter="crackAroundTheCornerButtonAnimateEnter"
+      onMouseExit="crackAroundTheCornerButtonAnimateExit"
+      onMouseDown="crackAroundTheCornerButtonAnimateDown"
+      onMouseUp="crackAroundTheCornerButtonAnimateUp"
+      image="crackAroundTheCornerButton"
+      active="false"
+		>
+		</Button>
+
   </Image>
 </Panel>
 
@@ -651,7 +657,7 @@ active="false"
 				>
 				</Button>
 			</Image>
-			
+
 			<!-- Crack Around Call On -->
 			<Image
 			id="settingsButtonCrackAroundOn"
