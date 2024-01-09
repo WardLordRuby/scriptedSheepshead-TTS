@@ -402,7 +402,6 @@ function onChat(message, player)
     elseif command == "settings" then
       if adminCheck(player) then
         UI.show("settingsWindow")
-        UI.setAttribute("settingsWindowExitButton", "image", "closeButton")
       end
     else
       print("[DC0000]Command not found.[-]")
@@ -1664,13 +1663,12 @@ function trickCountStop()
   end
 end
 
---END OF CARD SCORING
+--[[END OF CARD SCORING]]--
 
---Settings
+--Settings flags and associated outputs to user
 settings = {
   sixHandedToFive = false,
-  showCallsWindow = false,
-  toBuildCallPanel = false
+  callsEnabled = false
 }
 
 callSettings = {
@@ -1699,7 +1697,7 @@ currentRules = {
   "Dealer Pick your Own       \n",
   "Can Call if Forced to Pick    \n",
   "6 Handed - Normal        \n",
-  "Call Menu Disabled       "
+  "Extra Calls Disabled       "
 }
 
 CHAT_COMMANDS = {
@@ -1710,29 +1708,18 @@ CHAT_COMMANDS = {
   "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
 }
 
---Prints currentRules to the screen
+---Prints currentRules to the screen
 function displayRules()
   setNotes(table.concat(currentRules, ""))
 end
 
---Disables all calls
-function resetCalls()
-  settings.toBuildCallPanel = false
-  UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
-  UI.hide("callsWindow")
-  disableSheepshead(); disableBlitz(); disableLeaster()
-  disableCrack(); disableCrackBack(); disableCrackAround()
-end
+--[[Start of functions used by settings window]]--
 
-function showCallsEvent(player)
-  local visibility = UI.getAttribute("callsWindow", "visibility")
-  if not visibility or not string.find(visibility, player.color) then
-    --Add Color to pipe separated list
-    UI.setAttribute("callsWindow", "visibility", player.color)
-    UI.show("callsWindow")
-  elseif string.find(visibility, player.color) then
-    --Remove Color from pipe separated list (this will hide from player but will miss out on animation)
-  end
+---Disables all calls
+function resetCalls()
+  settings.callsEnabled = false
+  UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
+  disableSheepshead(); disableBlitz(); disableLeaster(); disableCrack()
 end
 
 function buildCallPanel()
@@ -1757,7 +1744,9 @@ function buildCallPanel()
   UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
 end
 
---Start of buttons inside of settings window
+--[[End of functions used by settings window]]--
+
+--[[Start of buttons inside of settings window]]--
 function dealerSitsOut()
   if not safeToContinue() then
     return
@@ -1800,8 +1789,8 @@ function enableCalls()
   UI.setAttribute("settingsButtonCallsOff", "active", "false")
   UI.setAttribute("settingsButtonCallsOn", "active", "true")
   UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
-  settings.toBuildCallPanel = true
-  currentRules[18] = "Call Menu Enabled        "
+  settings.callsEnabled = true
+  currentRules[18] = "Extra Calls Enabled        "
   displayRules()
 end
 
@@ -1809,17 +1798,18 @@ function disableCalls()
   UI.setAttribute("settingsButtonCallsOff", "active", "true")
   UI.setAttribute("settingsButtonCallsOn", "active", "false")
   resetCalls()
-  currentRules[18] = "Call Menu Disabled       "
+  currentRules[18] = "Extra Calls Disabled       "
   displayRules()
 end
 
 function enableSheepshead()
-  if not settings.toBuildCallPanel then
+  if not settings.callsEnabled then
     return
   end
   UI.setAttribute("settingsButtonSheepsheadOff", "active", "false")
   UI.setAttribute("settingsButtonSheepsheadOn", "active", "true")
   callSettings.sheepshead = true
+  buildCallPanel()
 end
 
 function disableSheepshead()
@@ -1827,15 +1817,17 @@ function disableSheepshead()
   UI.setAttribute("settingsButtonSheepsheadOn", "active", "false")
   UI.setAttribute("sheepsheadButton", "active", "false")
   callSettings.sheepshead = false
+  buildCallPanel()
 end
 
 function enableBlitz()
-  if not settings.toBuildCallPanel then
+  if not settings.callsEnabled then
     return
   end
   UI.setAttribute("settingsButtonBlitzOff", "active", "false")
   UI.setAttribute("settingsButtonBlitzOn", "active", "true")
   callSettings.blitz = true
+  buildCallPanel()
 end
 
 function disableBlitz()
@@ -1843,15 +1835,17 @@ function disableBlitz()
   UI.setAttribute("settingsButtonBlitzOn", "active", "false")
   UI.setAttribute("blitzButton", "active", "false")
   callSettings.blitz = false
+  buildCallPanel()
 end
 
 function enableLeaster()
-  if not settings.toBuildCallPanel then
+  if not settings.callsEnabled then
     return
   end
   UI.setAttribute("settingsButtonLeasterOff", "active", "false")
   UI.setAttribute("settingsButtonLeasterOn", "active", "true")
   callSettings.leaster = true
+  buildCallPanel()
 end
 
 function disableLeaster()
@@ -1859,28 +1853,35 @@ function disableLeaster()
   UI.setAttribute("settingsButtonLeasterOn", "active", "false")
   UI.setAttribute("leasterButton", "active", "false")
   callSettings.leaster = false
+  buildCallPanel()
 end
 
 function enableCrack()
-  if not settings.toBuildCallPanel then
+  if not settings.callsEnabled then
     return
   end
   UI.setAttribute("settingsButtonCrackOff", "active", "false")
   UI.setAttribute("settingsButtonCrackOn", "active", "true")
   UI.setAttribute("callSettingsBackground", "image", "callPanel")
   callSettings.crack = true
+  buildCallPanel()
 end
 
 function disableCrack()
   UI.setAttribute("settingsButtonCrackOff", "active", "true")
   UI.setAttribute("settingsButtonCrackOn", "active", "false")
   UI.setAttribute("crackButton", "active", "false")
-  if settings.toBuildCallPanel then
+  if settings.callsEnabled then
     UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
   end
-  disableCrackBack()
-  disableCrackAround()
   callSettings.crack = false
+  if callSettings.crackBack then
+    disableCrackBack()
+  end
+  if callSettings.crackAroundTheCorner then
+    disableCrackAround()
+  end
+  buildCallPanel()
 end
 
 function enableCrackBack()
@@ -1893,6 +1894,7 @@ function enableCrackBack()
   UI.setAttribute("settingsButtonCrackBackOff", "active", "false")
   UI.setAttribute("settingsButtonCrackBackOn", "active", "true")
   callSettings.crackBack = true
+  buildCallPanel()
 end
 
 function disableCrackBack()
@@ -1900,6 +1902,7 @@ function disableCrackBack()
   UI.setAttribute("settingsButtonCrackBackOn", "active", "false")
   UI.setAttribute("crackBackButton", "active", "false")
   callSettings.crackBack = false
+  buildCallPanel()
 end
 
 function enableCrackAround()
@@ -1912,6 +1915,7 @@ function enableCrackAround()
   UI.setAttribute("settingsButtonCrackAroundOff", "active", "false")
   UI.setAttribute("settingsButtonCrackAroundOn", "active", "true")
   callSettings.crackAroundTheCorner = true
+  buildCallPanel()
 end
 
 function disableCrackAround()
@@ -1919,19 +1923,90 @@ function disableCrackAround()
   UI.setAttribute("settingsButtonCrackAroundOn", "active", "false")
   UI.setAttribute("crackAroundTheCornerButton", "active", "false")
   callSettings.crackAroundTheCorner = false
+  buildCallPanel()
 end
 
 function closeSettingsWindow()
   UI.setAttribute("settingsWindowExitButton", "image", "closeButton")
   UI.hide("settingsWindow")
-  if settings.toBuildCallPanel then
-    buildCallPanel()
+end
+
+--[[End of buttons inside of settings window]]--
+
+--[[Start off functions and buttons for calls window]]--
+
+---@param player object_player_event_trigger
+function showOrHideCallsEvent(player)
+  local visibility = UI.getAttribute("callsWindow", "visibility")
+  if not visibility or not string.find(visibility, player.color) then
+    visibility = addColorToPipeList(player.color, visibility)
+    UI.setAttribute("callsWindow", "visibility", visibility)
+    UI.show("callsWindow")
+  elseif string.find(visibility, player.color) then
+    visibility = removeColorFromPipeList(player.color, visibility)
+    UI.setAttribute("callsWindow", "visibility", visibility)
   end
 end
 
---End of buttons inside of settings window
+---@param color string
+---@param pipeList string
+function addColorToPipeList(color, pipeList)
+  if pipeList == nil or pipeList == "" then
+    pipeList = color
+  else
+    pipeList = pipeList .. "|" .. color
+  end
+  return pipeList
+end
 
---Start of graphic anamations
+---@param color string
+---@param pipeList string
+function removeColorFromPipeList(color, pipeList)
+  if pipeList == color then
+    UI.Hide("callsWindow")
+  end
+  pipeList = string.gsub(pipeList, color .. "|", "")
+  pipeList = string.gsub(pipeList, "|" .. color, "")
+  pipeList = string.gsub(pipeList, color, "")
+  return pipeList
+end
+function callPartnerEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+  --Show call partner window for selected parter mode
+end
+
+function callSheepsheadEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+end
+
+function callBlitzEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+end
+
+function callLeasterEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+end
+
+function callCrackEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+end
+
+function callCrackBackEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+end
+
+function callCrackAroundTheCornerEvent(player)
+  local player = player
+  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+end
+
+--[[Start of graphic anamations]]--
 function passButtonAnimateEnter()
   UI.setAttribute("Pass", "image",
     "http://cloud-3.steamusercontent.com/ugc/2233283965353731614/810B2AC159903904EBDB0531A5807A6A679DD8B4/")
@@ -2049,132 +2124,118 @@ function closeSettingsButtonAnimateDown()
 end
 
 function callPartnerButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "callPartnerButtonHover")
+  UI.setAttribute("callPartnerButton", "image", "callPartnerButtonHover")
 end
 
 function callPartnerButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "callPartnerButton")
+  UI.setAttribute("callPartnerButton", "image", "callPartnerButton")
 end
 
 function callPartnerButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "callPartnerButtonPressed")
+  UI.setAttribute("callPartnerButton", "image", "callPartnerButtonPressed")
 end
 
-function callPartnerButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "callPartnerButton")
-  UI.hide("callsWindow")
-  callPartner()
+function callPartnerButtonAnimateUp(player)
+  UI.setAttribute("callPartnerButton", "image", "callPartnerButton")
 end
 
 function sheepsheadButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "sheepsheadButtonHover")
+  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButtonHover")
 end
 
 function sheepsheadButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "sheepsheadButton")
+  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButton")
 end
 
 function sheepsheadButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "sheepsheadButtonPressed")
+  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButtonPressed")
 end
 
-function sheepsheadButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "sheepsheadButton")
-  UI.hide("callsWindow")
-  callSheepshead()
+function sheepsheadButtonAnimateUp(player)
+  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButton")
 end
 
 function blitzButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "blitzButtonHover")
+  UI.setAttribute("blitzButton", "image", "blitzButtonHover")
 end
 
 function blitzButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "blitzButton")
+  UI.setAttribute("blitzButton", "image", "blitzButton")
 end
 
 function blitzButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "blitzButtonPressed")
+  UI.setAttribute("blitzButton", "image", "blitzButtonPressed")
 end
 
-function blitzButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "blitzButton")
-  UI.hide("callsWindow")
-  callBlitz()
+function blitzButtonAnimateUp(player)
+  UI.setAttribute("blitzButton", "image", "blitzButton")
 end
 
 function leasterButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "leasterButtonHover")
+  UI.setAttribute("leasterButton", "image", "leasterButtonHover")
 end
 
 function leasterButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "leasterButton")
+  UI.setAttribute("leasterButton", "image", "leasterButton")
 end
 
 function leasterButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "leasterButtonPressed")
+  UI.setAttribute("leasterButton", "image", "leasterButtonPressed")
 end
 
-function leasterButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "leasterButton")
-  UI.hide("callsWindow")
-  callLeaster()
+function leasterButtonAnimateUp(player)
+  UI.setAttribute("leasterButton", "image", "leasterButton")
 end
 
 function crackButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "crackButtonHover")
+  UI.setAttribute("crackButton", "image", "crackButtonHover")
 end
 
 function crackButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackButton")
+  UI.setAttribute("crackButton", "image", "crackButton")
 end
 
 function crackButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackButtonPressed")
+  UI.setAttribute("crackButton", "image", "crackButtonPressed")
 end
 
-function crackButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackButton")
-  UI.hide("callsWindow")
-  callCrack()
+function crackButtonAnimateUp(player)
+  UI.setAttribute("crackButton", "image", "crackButton")
 end
 
 function crackBackButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "crackBackButtonHover")
+  UI.setAttribute("crackBackButton", "image", "crackBackButtonHover")
 end
 
 function crackBackButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackBackButton")
+  UI.setAttribute("crackBackButton", "image", "crackBackButton")
 end
 
 function crackBackButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackBackButtonPressed")
+  UI.setAttribute("crackBackButton", "image", "crackBackButtonPressed")
 end
 
-function crackBackButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackBackButton")
-  UI.hide("callsWindow")
-  callCrackBack()
+function crackBackButtonAnimateUp(player)
+  UI.setAttribute("crackBackButton", "image", "crackBackButton")
 end
 
 function crackAroundTheCornerButtonAnimateEnter()
-  UI.setAttribute("Settings", "image", "crackAroundTheCornerButtonHover")
+  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButtonHover")
 end
 
 function crackAroundTheCornerButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackAroundTheCornerButton")
+  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButton")
 end
 
 function crackAroundTheCornerButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackAroundTheCornerButtonPressed")
+  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButtonPressed")
 end
 
-function crackAroundTheCornerButtonAnimateUp()
-  UI.setAttribute("settingsWindowExitButton", "image", "crackAroundTheCornerButton")
-  UI.hide("callsWindow")
-  callCrackAroundTheCorner()
+function crackAroundTheCornerButtonAnimateUp(player)
+  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButton")
 end
 
---End of graphic anamations
+--[[End of graphic anamations]]--
 
 --Debug tools
 function playerCountDebugUp()
