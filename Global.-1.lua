@@ -1736,10 +1736,8 @@ function buildCallPanel()
       UI.setAttribute(attributeID, "offsetXY", currentoffsetXY)
     end
   end
-  currentoffsetY = 60 + (numOfCallsEnabled * 52)
-  if numOfCallsEnabled == 0 then
-    currentoffsetY = 58
-  end
+  local initialFrameSizeY = 58
+  currentoffsetY = initialFrameSizeY + (numOfCallsEnabled * math.abs(buttonoffsetY))
   UI.setAttribute("callsWindow", "height", currentoffsetY)
   UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
 end
