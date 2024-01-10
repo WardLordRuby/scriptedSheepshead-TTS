@@ -119,7 +119,6 @@ function onLoad()
     },
     stopCoroutine = false,
     dealInProgress = false,
-    varSetup = false,
     lookForPlayerText = false,
     continue = false,
     cardsToBeBuried = false,
@@ -138,7 +137,6 @@ end
 
 function safeToContinue()
   if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress then
-    print("[DC0000]Please wait and try again[-]")
     return false
   end
   return true
@@ -534,7 +532,7 @@ function respawnDeckCoroutine()
 end
 
 ---Called to reset the game space<br>
----Removes all chips and sets varSetup to false
+---Removes all chips
 function resetBoard()
   for _, obj in pairs(scriptZone.table.getObjects()) do
     if obj.type == "Chip" then
@@ -542,7 +540,6 @@ function resetBoard()
       pause(0.06)
     end
   end
-  flag.varSetup = false
 end
 
 ---Builds a global table of all seated players [sortedSeatedPlayers]
@@ -567,6 +564,10 @@ function printGameSettings()
 
   playerCount = #sortedSeatedPlayers
   dealerColorVal = getColorVal(gameSetupPlayer.color, sortedSeatedPlayers)
+
+  if settings.dealerSitsOut and playerCount == 6 then
+    stateChangeDealerSitsOut(settings.dealerSitsOut)
+  end
 
   local deck = getDeck(scriptZone.table)
   if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
@@ -754,20 +755,6 @@ end
 
 --[[Start of functions used by New Hand event]]--
 
----Sets up variables needed to deal cards for New Hand event
-function setUpVar()
-  flag.varSetup = true
-  if settings.dealerSitsOut and #sortedSeatedPlayers == 6 then
-    playerCount = 5
-    dealSettings = "dealerSitsOut"
-    print("[21AF21]Dealer will sit out every hand.[-]")
-    return
-  elseif not settings.dealerSitsOut and dealSettings == "dealerSitsOut" then
-    print("[21AF21]Dealer will no longer sit out.[-]")
-  end
-  dealSettings = "normal"
-end
-
 ---Returns the index location of a color in a list
 ---@param color string
 ---@param list table_colors
@@ -788,11 +775,11 @@ end
 ---Adds "Blinds" to the dealOrder table in the position directly after the current dealer<br>
 ---If dealer sits out replaces dealer with blinds
 ---@param arg string <"normal"|"dealerSitsOut">
-function calculateDealOrder(arg)
+function calculateDealOrder()
   local json = JSON.encode(sortedSeatedPlayers)
   dealOrder = JSON.decode(json)
   local blinds = "Blinds"
-  if arg == "normal" then
+  if playerCount == #sortedSeatedPlayers then
     blindVal = dealerColorVal + 1
     if blindVal > #dealOrder + 1 then
       blindVal = 1
@@ -831,9 +818,6 @@ function dealCardsCoroutine()
     flag.dealInProgress = false
     return 1
   end
-  if not flag.varSetup or flag.firstDealOfGame then
-    setUpVar()
-  end
 
   if flag.counterVisible then
     toggleCounterVisibility()
@@ -855,7 +839,7 @@ function dealCardsCoroutine()
     flag.firstDealOfGame = false
   end
 
-  calculateDealOrder(dealSettings)
+  calculateDealOrder()
   isDeckAllThere()
 
   flipDeck(scriptZone.table)
@@ -1748,7 +1732,8 @@ function updateRules(rule, bool)
     dealerSitsOut = {
       [true] = "6 Handed - Dealer Sits Out   \n",
       [false] = "6 Handed - Normal        \n",
-      ruleIndex = 17
+      ruleIndex = 17,
+      execute = stateChangeDealerSitsOut
     },
     calls = {
       [true] = "Extra Calls Enabled        ",
@@ -1819,6 +1804,7 @@ end
 ---@param id string
 function toggleSetting(player, val, id)
   if not safeToContinue() then
+    print("[DC0000]Please wait and try again[-]")
     return
   end
   local idName, state
@@ -1860,6 +1846,23 @@ function stateChangeCalls(bool)
         local formatKey = "turnOff" .. key
         toggleSetting(player, val, formatKey)
       end
+    end
+  end
+end
+
+function stateChangeDealerSitsOut(bool)
+  if sortedSeatedPlayers == nil then
+    return
+  end
+  if bool == true then
+    if #sortedSeatedPlayers == 6 then
+      playerCount = 5
+      print("[21AF21]Dealer will sit out every hand.[-]")
+    end
+  else
+    if #sortedSeatedPlayers == 6 then
+      playerCount = #sortedSeatedPlayers
+      print("[21AF21]Dealer will no longer sit out.[-]")
     end
   end
 end
