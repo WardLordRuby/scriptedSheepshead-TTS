@@ -3,6 +3,7 @@
   Settings window to change what rules user wants enabled, Set Up Game button
   for starting a new game, and a sub panel for callouts (coming soon) 
   Written by: WardLordRuby -->
+
 <button
   onClick="setUpGameEvent"
   rectAlignment="UpperRight"
@@ -12,6 +13,7 @@
   fontsize="24"
   >Set Up Game
 </button>
+
 <button id="playerUp"
   onClick="playerCountDebugUp"
   position="880 380 0"
@@ -21,6 +23,7 @@
   active="false"
   >Player up
 </button>
+
 <button id="playerDown"
   onClick="playerCountDebugDown"
   position="880 320 0"
@@ -30,6 +33,7 @@
   active="false"
   >Player down
 </button>
+
 <button id="test"
   onClick="test"
   position="880 260 0"
@@ -39,6 +43,7 @@
   active="false"
   >test
 </button>
+
 <Panel id="toolbox"
   width="165" height="505"
   rectAlignment="LowerRight"
@@ -51,6 +56,7 @@
   onMouseUp="animateButtonUp"
   image="toolbox"
   >
+
   <Button id="dealButton"
     image="dealButton"
     width="113" height="113"
@@ -62,6 +68,7 @@
     onMouseUp="animateButtonUp"
     >
   </Button>
+
   <Button id="pickButton"
     image="pickButton"
     width="113" height="113"
@@ -73,6 +80,7 @@
     onMouseUp="animateButtonUp"
     >
   </Button>
+
   <Button id="passButton"
     image="passButton"
     width="113" height="113"
@@ -84,6 +92,7 @@
     onMouseUp="animateButtonUp"
     >
   </Button>
+
   <Button id="callButton"
     image="callButton"
     width="30" height="30"
@@ -98,6 +107,7 @@
     tooltipPosition="Above"
     >
   </Button>
+
 </Panel>
 <Panel id="callsWindow"
   width="163"
@@ -108,6 +118,7 @@
   active="false"
   visibility=""
   >
+
   <Image id="callsWindowBackground"
     image="callWindow"
     preserveAspect="false"
@@ -115,6 +126,7 @@
     height="58"
     rectAlignment="UpperLeft"
     >
+
     <Button id="callPartnerButton"
       image="callPartnerButton"
       rectAlignment="UpperCenter"
@@ -127,6 +139,7 @@
       onMouseUp="animateButtonUp"
       >
     </Button>
+
     <Button id="sheepsheadButton"
       image="sheepsheadButton"
       rectAlignment="UpperCenter"
@@ -140,6 +153,7 @@
       active="false"
       >
     </Button>
+
     <Button id="blitzButton"
       image="blitzButton"
       rectAlignment="UpperCenter"
@@ -153,6 +167,7 @@
       active="false"
       >
     </Button>
+
     <Button id="leasterButton"
       image="leasterButton"
       rectAlignment="UpperCenter"
@@ -166,6 +181,7 @@
       active="false"
       >
     </Button>
+
     <Button id="crackButton"
       image="crackButton"
       rectAlignment="UpperCenter"
@@ -179,6 +195,7 @@
       active="false"
       >
     </Button>
+
     <Button id="crackBackButton"
       image="crackBackButton"
       rectAlignment="UpperCenter"
@@ -192,6 +209,7 @@
       active="false"
       >
     </Button>
+
     <Button id="crackAroundTheCornerButton"
       image="crackAroundTheCornerButton"
       rectAlignment="UpperCenter"
@@ -207,6 +225,7 @@
     </Button>
   </Image>
 </Panel>
+
 <Panel id="settingsWindow"
   width="372"
   height="563"
@@ -221,6 +240,7 @@
   hideAnimation="Shrink"
   active="false"
   >
+
   <Image id="settingsWindowBackground"
     image="settingsWindow"
     preserveAspect="false"
@@ -228,6 +248,7 @@
     height="570"
     rectAlignment="UpperLeft"
     >
+
     <!-- Close Button -->
     <Image id="settingsWindowExitButton"
       image="closeButton"
@@ -236,6 +257,7 @@
       offsetXY="-5 -5"
       rectAlignment="UpperRight"
       >
+
       <Button id="settingsWindowExit"
         width="26"
         color="rgba(0,0,0,0)"
@@ -246,6 +268,7 @@
         >
       </Button>
     </Image>
+
     <Image id="gameSettingsBackground"
       image="gameSettings"
       width="365"
@@ -253,6 +276,7 @@
       offsetXY="3 -115"
       rectAlignment="UpperLeft"
       >
+
       <!-- DealerSitsOut Off -->
       <Image id="settingsButtonDealerSitsOutOff"
         image="unchecked"
@@ -261,6 +285,7 @@
         offsetXY="322 -55"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOnDealerSitsOut"
           rectAlignment="UpperLeft"
           width="310"
@@ -270,6 +295,7 @@
           >
         </Button>
       </Image>
+
       <!-- DealerSitsOut On -->
       <Image id="settingsButtonDealerSitsOutOn"
         image="checked"
@@ -279,6 +305,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffDealerSitsOut"
           rectAlignment="UpperLeft"
           width="310"
@@ -288,6 +315,7 @@
           >
         </Button>
       </Image>
+
       <!-- JD Partner Button -->
       <Image id="settingsButtonjdPartnerOn"
         image="jdPartner"
@@ -296,6 +324,7 @@
         offsetXY="47 -97"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOffjdPartner"
           rectAlignment="UpperLeft"
           width="152"
@@ -305,6 +334,7 @@
           >
         </Button>
       </Image>
+
       <!-- Call an Ace Button -->
       <Image id="settingsButtonjdPartnerOff"
         image="callAce"
@@ -314,6 +344,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOnjdPartner"
           rectAlignment="UpperLeft"
           width="152"
@@ -324,6 +355,7 @@
         </Button>
       </Image>
     </Image>
+
     <Image id="callSettingsBackground"
       image="callsDisabled"
       width="365"
@@ -331,6 +363,7 @@
       offsetXY="3 -259"
       rectAlignment="UpperLeft"
       >
+
       <!-- Calls Off -->
       <Image id="settingsButtonCallsOff"
         image="unchecked"
@@ -339,6 +372,7 @@
         offsetXY="322 -12"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOnCalls"
           rectAlignment="UpperLeft"
           width="335"
@@ -348,6 +382,7 @@
           >
         </Button>
       </Image>
+
       <!-- Calls On -->
       <Image id="settingsButtonCallsOn"
         image="checked"
@@ -357,6 +392,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffCalls"
           rectAlignment="UpperLeft"
           width="335"
@@ -366,6 +402,7 @@
           >
         </Button>
       </Image>
+
       <!-- Sheepshead Call Off -->
       <Image id="settingsButtonSheepsheadOff"
         image="unchecked"
@@ -374,6 +411,7 @@
         offsetXY="322 -55"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOnSheepshead"
           rectAlignment="UpperLeft"
           width="310"
@@ -386,6 +424,7 @@
           >
         </Button>
       </Image>
+
       <!-- Sheepshead Call On -->
       <Image id="settingsButtonSheepsheadOn"
         image="checked"
@@ -395,6 +434,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffSheepshead"
           rectAlignment="UpperLeft"
           width="310"
@@ -407,6 +447,7 @@
           >
         </Button>
       </Image>
+
       <!-- Blitz Call Off -->
       <Image id="settingsButtonBlitzOff"
         image="unchecked"
@@ -415,6 +456,7 @@
         offsetXY="322 -97"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOnBlitz"
           rectAlignment="UpperLeft"
           width="310"
@@ -427,6 +469,7 @@
           >
         </Button>
       </Image>
+
       <!-- Blitz Call On -->
       <Image id="settingsButtonBlitzOn"
         image="checked"
@@ -436,6 +479,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffBlitz"
           rectAlignment="UpperLeft"
           width="310"
@@ -448,6 +492,7 @@
           >
         </Button>
       </Image>
+
       <!-- Leaster Call Off -->
       <Image id="settingsButtonLeasterOff"
         image="unchecked"
@@ -456,6 +501,7 @@
         offsetXY="322 -140"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOnLeaster"
           rectAlignment="UpperLeft"
           width="310"
@@ -468,6 +514,7 @@
           >
         </Button>
       </Image>
+
       <!-- Leaster Call On -->
       <Image id="settingsButtonLeasterOn"
         image="checked"
@@ -477,6 +524,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffLeaster"
           rectAlignment="UpperLeft"
           width="310"
@@ -489,6 +537,7 @@
           >
         </Button>
       </Image>
+
       <!-- Crack Call Off -->
       <Image id="settingsButtonCrackOff"
         image="unchecked"
@@ -509,6 +558,7 @@
           >
         </Button>
       </Image>
+
       <!-- Crack Call On -->
       <Image id="settingsButtonCrackOn"
         image="checked"
@@ -518,6 +568,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffCrack"
           rectAlignment="UpperLeft"
           width="310"
@@ -530,6 +581,7 @@
           >
         </Button>
       </Image>
+
       <!-- Crack Back Call Off -->
       <Image id="settingsButtonCrackBackOff"
         image="unchecked"
@@ -538,6 +590,7 @@
         offsetXY="322 -224"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOnCrackBack"
           rectAlignment="UpperLeft"
           width="288"
@@ -550,6 +603,7 @@
           >
         </Button>
       </Image>
+
       <!-- Crack Back Call On -->
       <Image id="settingsButtonCrackBackOn"
         image="checked"
@@ -559,6 +613,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffCrackBack"
           rectAlignment="UpperLeft"
           width="288"
@@ -571,6 +626,7 @@
           >
         </Button>
       </Image>
+
       <!-- Crack Around Call Off -->
       <Image id="settingsButtoncrackAroundTheCornerOff"
         image="unchecked"
@@ -579,6 +635,7 @@
         offsetXY="322 -267"
         rectAlignment="UpperLeft"
         >
+
         <Button id="turnOncrackAroundTheCorner"
           rectAlignment="UpperLeft"
           width="288"
@@ -591,6 +648,7 @@
           >
         </Button>
       </Image>
+
       <!-- Crack Around Call On -->
       <Image id="settingsButtoncrackAroundTheCornerOn"
         image="checked"
@@ -600,6 +658,7 @@
         rectAlignment="UpperLeft"
         active="false"
         >
+
         <Button id="turnOffcrackAroundTheCorner"
           rectAlignment="UpperLeft"
           width="288"
@@ -615,6 +674,7 @@
     </Image>
   </Image>
 </Panel>
+
 <Panel id="playAloneWindow"
   image="playAloneWindow"
   width="489" height="181"
@@ -626,6 +686,7 @@
   hideAnimation="Shrink"
   visibility=""
   >
+
   <!-- Close Button -->
   <Image id="playAloneWindowExitButton"
     image="closeButton"
@@ -637,6 +698,7 @@
     tooltipBorderColor="7B797C"
     tooltipPosition="Above"
     >
+
     <Button id="playAloneWindowExit"
       width="26"
       color="rgba(0,0,0,0)"
@@ -647,6 +709,7 @@
       >
     </Button>
   </Image>
+
   <HorizontalLayout
     padding="20 20 0 0"
     offsetXY="0 -38"
@@ -655,6 +718,7 @@
     height="48"
     childForceExpandWidth="false"
     >
+
     <Button id="yesButton"
       image="yesButton"
       preferredWidth="153"
@@ -665,6 +729,7 @@
       onMouseUp="animateButtonUp"
       >
     </Button>
+
     <Button id="noButton"
       image="noButton"
       preferredWidth="153"
@@ -677,6 +742,7 @@
     </Button>
   </HorizontalLayout>
 </Panel>
+
 <Panel id="selectPartnerWindow"
   image="selectPartnerWindow"
   width="489" height="220"
@@ -688,6 +754,7 @@
   hideAnimation="Shrink"
   visibility=""
   >
+
   <HorizontalLayout
     padding="20 20 0 0"
     offsetXY="0 -50"
@@ -696,6 +763,7 @@
     height="100"
     childForceExpandWidth="false"
     >
+
     <Button id="AceOfHearts"
       image="AceOfHearts"
       preferredWidth="72"
@@ -703,6 +771,7 @@
       active="false"
       >
     </Button>
+
     <Button id="AceOfSpades"
       image="AceOfSpades"
       preferredWidth="72"
@@ -710,6 +779,7 @@
       active="false"
       >
     </Button>
+
     <Button id="AceOfClubs"
       image="AceOfClubs"
       preferredWidth="72"
@@ -717,6 +787,7 @@
       active="false"
       >
     </Button>
+
     <Button id="TenOfHearts"
       image="TenOfHearts"
       preferredWidth="72"
@@ -724,6 +795,7 @@
       active="false"
       >
     </Button>
+
     <Button id="TenOfSpades"
       image="TenOfSpades"
       preferredWidth="72"
@@ -731,6 +803,7 @@
       active="false"
       >
     </Button>
+    
     <Button id="TenOfClubs"
       image="TenOfClubs"
       preferredWidth="72"
