@@ -43,18 +43,17 @@
 >test
 </button>
 
-<Panel id="Toolbox"
+<Panel id="toolbox"
   width="165" height="505"
   rectAlignment="LowerRight"
   offsetXY="-290 2"
   allowDragging="true"
   showAnimation="FadeIn"
   showAnimationDelay="2"
-  visibility="White|Red|Yellow|Green|Blue|Pink"
   returnToOriginalPositionWhenReleased="false"
-  onMouseDown="toolboxAnimateDown"
-  onMouseUp="toolboxAnimateUp"
-  image="toolboxMain"
+  onMouseDown="animateButtonDown"
+  onMouseUp="animateButtonUp"
+  image="toolbox"
 >
 
   <Button id="Deal"
@@ -93,14 +92,14 @@
 	>
 	</Button>
 
-  <Button id="showCalls"
+  <Button id="callButton"
   	width="30" height="30"
   	offsetXY="00 -180"
-  	onClick="showOrHideCallsEvent"
-  	onMouseEnter="callsButtonAnimateEnter"
-  	onMouseExit="callsButtonAnimateExit"
-  	onMouseDown="callsButtonAnimateDown"
-  	onMouseUp="callsButtonAnimateUp"
+  	onClick="showCallsEvent"
+  	onMouseEnter="animateButtonEnter"
+    onMouseExit="animateButtonExit"
+    onMouseDown="animateButtonDown"
+    onMouseUp="animateButtonUp"
   	image="callButton"
     tooltip="Show/Hide Calls"
     tooltipBorderColor="7B797C"
@@ -116,6 +115,7 @@
   color="rgba(0,0,0,0)"
   rectAlignment="upperRight"
   active="false"
+  visibility=""
 >
   <Image
 	id="callsWindowBackground"
@@ -132,10 +132,10 @@
 			width="153" height="48"
   	  offsetXY="00 -5"
       onClick="callPartnerEvent"
-			onMouseEnter="callPartnerButtonAnimateEnter"
-      onMouseExit="callPartnerButtonAnimateExit"
-      onMouseDown="callPartnerButtonAnimateDown"
-      onMouseUp="callPartnerButtonAnimateUp"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="callPartnerButton"
 		>
 		</Button>
@@ -145,11 +145,11 @@
 		  rectAlignment="UpperCenter"
 			width="153" height="48"
   	  offsetXY="00 -58"
-      onClick="callSheepsheadEvent"
-			onMouseEnter="sheepsheadButtonAnimateEnter"
-      onMouseExit="sheepsheadButtonAnimateExit"
-      onMouseDown="sheepsheadButtonAnimateDown"
-      onMouseUp="sheepsheadButtonAnimateUp"
+      onClick="playerCallsEvent"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="sheepsheadButton"
       active="false"
 		>
@@ -160,11 +160,11 @@
 		  rectAlignment="UpperCenter"
 			width="153" height="48"
   	  offsetXY="00 -111"
-      onClick="callBlitzEvent"
-			onMouseEnter="blitzButtonAnimateEnter"
-      onMouseExit="blitzButtonAnimateExit"
-      onMouseDown="blitzButtonAnimateDown"
-      onMouseUp="blitzButtonAnimateUp"
+      onClick="playerCallsEvent"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="blitzButton"
       active="false"
 		>
@@ -175,11 +175,11 @@
 		  rectAlignment="UpperCenter"
 			width="153" height="48"
   	  offsetXY="00 -164"
-      onClick="callLeasterEvent"
-			onMouseEnter="leasterButtonAnimateEnter"
-      onMouseExit="leasterButtonAnimateExit"
-      onMouseDown="leasterButtonAnimateDown"
-      onMouseUp="leasterButtonAnimateUp"
+      onClick="playerCallsEvent"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="leasterButton"
       active="false"
 		>
@@ -190,11 +190,11 @@
 		  rectAlignment="UpperCenter"
 			width="153" height="48"
   	  offsetXY="00 -217"
-      onClick="callCrackEvent"
-			onMouseEnter="crackButtonAnimateEnter"
-      onMouseExit="crackButtonAnimateExit"
-      onMouseDown="crackButtonAnimateDown"
-      onMouseUp="crackButtonAnimateUp"
+      onClick="playerCallsEvent"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="crackButton"
       active="false"
 		>
@@ -205,11 +205,11 @@
 		  rectAlignment="UpperCenter"
 			width="153" height="48"
   	  offsetXY="00 -270"
-      onClick="callCrackBackEvent"
-			onMouseEnter="crackBackButtonAnimateEnter"
-      onMouseExit="crackBackButtonAnimateExit"
-      onMouseDown="crackBackButtonAnimateDown"
-      onMouseUp="crackBackButtonAnimateUp"
+      onClick="playerCallsEvent"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="crackBackButton"
       active="false"
 		>
@@ -220,11 +220,11 @@
 		  rectAlignment="UpperCenter"
 			width="153" height="48"
   	  offsetXY="00 -323"
-      onClick="callCrackAroundTheCornerEvent"
-			onMouseEnter="crackAroundTheCornerButtonAnimateEnter"
-      onMouseExit="crackAroundTheCornerButtonAnimateExit"
-      onMouseDown="crackAroundTheCornerButtonAnimateDown"
-      onMouseUp="crackAroundTheCornerButtonAnimateUp"
+      onClick="playerCallsEvent"
+			onMouseEnter="animateButtonEnter"
+      onMouseExit="animateButtonExit"
+      onMouseDown="animateButtonDown"
+      onMouseUp="animateButtonUp"
       image="crackAroundTheCornerButton"
       active="false"
 		>
@@ -262,17 +262,17 @@ active="false"
 		image="closeButton"
 		width="26"
 		height="26"
-		offsetXY="340 -5"
-		rectAlignment="UpperLeft"
+		offsetXY="-5 -5"
+		rectAlignment="UpperRight"
 		>
 			<Button
-			rectAlignment="UpperLeft"
+      id="settingsWindowExit"
 			width="26"
 			color="rgba(0,0,0,0)"
 			onMouseEnter="closeSettingsButtonAnimateEnter"
       onMouseExit="closeSettingsButtonAnimateExit"
       onMouseDown="closeSettingsButtonAnimateDown"
-      onMouseUp="closeSettingsWindow"
+      onMouseUp="closeWindow"
 			>
 			</Button>
 		</Image>
@@ -295,11 +295,12 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnDealerSitsOut"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
 				color="rgba(0,0,0,0)"
-				onClick="dealerSitsOut"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -315,18 +316,19 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffDealerSitsOut"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
 				color="rgba(0,0,0,0)"
-				onClick="dealerSitsOutOff"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
 
       <!-- JD Partner Button -->
 			<Image
-			id="settingsButtonJDPartner"
+			id="settingsButtonjdPartnerOn"
 			image="jdPartner"
 			width="304"
 			height="32"
@@ -334,18 +336,19 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOffjdPartner"
 				rectAlignment="UpperLeft"
 				width="152"
 				offsetXY="0 0"
 				color="rgba(0,0,0,0)"
-				onClick="callAnAceOn"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
 
       <!-- Call an Ace Button -->
       <Image
-			id="settingsButtonCallAnAce"
+			id="settingsButtonjdPartnerOff"
 			image="callAce"
 			width="304"
 			height="32"
@@ -354,11 +357,12 @@ active="false"
       active="false"
 			>
         <Button
+        id="turnOnjdPartner"
 				rectAlignment="UpperLeft"
 				width="152"
 				offsetXY="150 0"
 				color="rgba(0,0,0,0)"
-				onClick="jdPartnerOn"
+				onClick="toggleSetting"
 				>
 				</Button>
       </Image>
@@ -382,11 +386,12 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnCalls"
 				rectAlignment="UpperLeft"
 				width="335"
 				offsetXY="-305 0"
 				color="rgba(0,0,0,0)"
-				onClick="enableCalls"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -402,11 +407,12 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffCalls"
 				rectAlignment="UpperLeft"
 				width="335"
 				offsetXY="-305 0"
 				color="rgba(0,0,0,0)"
-				onClick="disableCalls"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -421,6 +427,7 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnSheepshead"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -428,7 +435,7 @@ active="false"
 				tooltip="If picker believes they can pull off winning a trickless hand. 2x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="enableSheepshead"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -444,6 +451,7 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffSheepshead"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -451,7 +459,7 @@ active="false"
 				tooltip="If picker believes they can pull off winning a trickless hand. 2x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="disableSheepshead"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -466,6 +474,7 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnBlitz"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -473,7 +482,7 @@ active="false"
 				tooltip="Player reveals they have 2 red or 2 black Queens. 2x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="enableBlitz"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -489,6 +498,7 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffBlitz"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -496,7 +506,7 @@ active="false"
 				tooltip="Player reveals they have 2 red or 2 black Queens. 2x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="disableBlitz"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -511,6 +521,7 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnLeaster"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -518,7 +529,7 @@ active="false"
 				tooltip="Can call if forced to pick. No teams. Player with least points get +1 from all!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="enableLeaster"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -534,6 +545,7 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffLeaster"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -541,7 +553,7 @@ active="false"
 				tooltip="Can call if forced to pick. No teams. Player with least points get +1 from all!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="disableLeaster"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -556,6 +568,7 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnCrack"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -563,7 +576,7 @@ active="false"
 				tooltip="Any player who did not get a chance to pick can crack and 2x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="enableCrack"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -579,6 +592,7 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffCrack"
 				rectAlignment="UpperLeft"
 				width="310"
 				offsetXY="-280 0"
@@ -586,7 +600,7 @@ active="false"
 				tooltip="Any player who did not get a chance to pick can crack and 2x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="disableCrack"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -601,6 +615,7 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOnCrackBack"
 				rectAlignment="UpperLeft"
 				width="288"
 				offsetXY="-261 0"
@@ -608,7 +623,7 @@ active="false"
 				tooltip="Picker can crack-back resulting in 4x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="enableCrackBack"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
@@ -624,6 +639,7 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffCrackBack"
 				rectAlignment="UpperLeft"
 				width="288"
 				offsetXY="-261 0"
@@ -631,14 +647,14 @@ active="false"
 				tooltip="Picker can crack-back resulting in 4x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="disableCrackBack"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
 			
 			<!-- Crack Around Call Off -->
 			<Image
-			id="settingsButtonCrackAroundOff"
+			id="settingsButtoncrackAroundTheCornerOff"
 			image="unchecked"
 			width="28"
 			height="28"
@@ -646,6 +662,7 @@ active="false"
 			rectAlignment="UpperLeft"
 			>
 				<Button
+        id="turnOncrackAroundTheCorner"
 				rectAlignment="UpperLeft"
 				width="288"
 				offsetXY="-261 0"
@@ -653,14 +670,14 @@ active="false"
 				tooltip="Partner can also crack-back, outting themself as partner. resulting in 4x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="enableCrackAround"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
 
 			<!-- Crack Around Call On -->
 			<Image
-			id="settingsButtonCrackAroundOn"
+			id="settingsButtoncrackAroundTheCornerOn"
 			image="checked"
 			width="28"
 			height="28"
@@ -669,6 +686,7 @@ active="false"
 			active="false"
 			>
 				<Button
+        id="turnOffcrackAroundTheCorner"
 				rectAlignment="UpperLeft"
 				width="288"
 				offsetXY="-261 0"
@@ -676,10 +694,157 @@ active="false"
 				tooltip="Partner can also crack-back, outting themself as partner. resulting in 4x scoring!"
 				tooltipBorderColor="7B797C"
 				color="rgba(0,0,0,0)"
-				onClick="disableCrackAround"
+				onClick="toggleSetting"
 				>
 				</Button>
 			</Image>
 		</Image>	
 	</Image>
+</Panel>
+
+<Panel
+  id="playAloneWindow"
+  image="playAloneWindow"
+  width="489" height="181"
+  active="false"
+  allowDragging="true"
+  returnToOriginalPositionWhenReleased="false"
+  showAnimationDelay="0"
+  showAnimation="Grow"
+  hideAnimation="Shrink"
+  visibility=""
+>
+
+  <!-- Close Button -->
+  <Image
+  id="playAloneWindowExitButton"
+  image="closeButton"
+  width="26"
+  height="26"
+  offsetXY="-5 -5"
+  rectAlignment="UpperRight"
+  tooltip="Closing this window will result in playing alone"
+  tooltipBorderColor="7B797C"
+  tooltipPosition="Above"
+  >
+    <Button
+    id="playAloneWindowExit"
+    width="26"
+    color="rgba(0,0,0,0)"
+    onMouseEnter="closeSettingsButtonAnimateEnter"
+    onMouseExit="closeSettingsButtonAnimateExit"
+    onMouseDown="closeSettingsButtonAnimateDown"
+    onMouseUp="closeWindow"
+    >
+    </Button>
+  </Image>
+
+  <HorizontalLayout
+  padding="20 20 0 0"
+  offsetXY="0 -38"
+  spacing="50"
+  childAlignment="MiddleCenter"
+  height="48"
+  childForceExpandWidth="false"
+  >
+    <Button
+    id="yesButton"
+    image="yesButton"
+    preferredWidth="153"
+    onClick="playAloneEvent"
+    onMouseEnter="animateButtonEnter"
+    onMouseExit="animateButtonExit"
+    onMouseDown="animateButtonDown"
+    onMouseUp="animateButtonUp"
+    >
+    </Button>
+    <Button
+    id="noButton"
+    image="noButton"
+    preferredWidth="153"
+    onClick="callUpEvent"
+    onMouseEnter="animateButtonEnter"
+    onMouseExit="animateButtonExit"
+    onMouseDown="animateButtonDown"
+    onMouseUp="animateButtonUp"
+    >
+    </Button>
+  </HorizontalLayout>
+</Panel>
+
+
+<Panel
+  id="selectPartnerWindow"
+  image="selectPartnerWindow"
+  width="489" height="220"
+  active="false"
+  allowDragging="true"
+  returnToOriginalPositionWhenReleased="false"
+  showAnimationDelay="0"
+  showAnimation="Grow"
+  hideAnimation="Shrink"
+  visibility=""
+>
+  <HorizontalLayout
+  padding="20 20 0 0"
+  offsetXY="0 -50"
+  spacing="50"
+  childAlignment="MiddleCenter"
+  height="100"
+  childForceExpandWidth="false"
+  >
+    <Button
+    id="AceOfHearts"
+    image="AceOfHearts"
+    preferredWidth="72"
+    onClick="selectPartnerEvent"
+    active="false"
+    >
+    </Button>
+
+    <Button
+    id="AceOfSpades"
+    image="AceOfSpades"
+    preferredWidth="72"
+    onClick="selectPartnerEvent"
+    active="false"
+    >
+    </Button>
+
+    <Button
+    id="AceOfClubs"
+    image="AceOfClubs"
+    preferredWidth="72"
+    onClick="selectPartnerEvent"
+    active="false"
+    >
+    </Button>
+
+    <Button
+    id="TenOfHearts"
+    image="TenOfHearts"
+    preferredWidth="72"
+    onClick="selectPartnerEvent"
+    active="false"
+    >
+    </Button>
+
+    <Button
+    id="TenOfSpades"
+    image="TenOfSpades"
+    preferredWidth="72"
+    onClick="selectPartnerEvent"
+    active="false"
+    >
+    </Button>
+
+    <Button
+    id="TenOfClubs"
+    image="TenOfClubs"
+    preferredWidth="72"
+    onClick="selectPartnerEvent"
+    active="false"
+    >
+    </Button>
+  </HorizontalLayout>
 </Panel>
