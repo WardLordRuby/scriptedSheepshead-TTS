@@ -1564,9 +1564,9 @@ cardNameTable = {
 --[[    END OF CODE TO EDIT, unless you know Lua    ]]--
 ----------------------------------------------------------
 
---Looks for any cards in the scripting zones and sends them on to obtainCardValue
---Looks for any decks in the scripting zones and sends them on to obtainDeckValue
---Triggers next step, addValues(), after that
+---Looks for any cards in the scripting zones and sends them on to obtainCardValue
+---Looks for any decks in the scripting zones and sends them on to obtainDeckValue
+---Triggers next step, addValues(), after that
 function countTricks()
   values = {}
   hiddenValue = nil
@@ -1587,7 +1587,7 @@ function countTricks()
   addValues()
 end
 
---Checks cards sent to it and, if their name contains cardNameTable, it adds the value to a table
+---Checks cards sent to it and, if their name contains cardNameTable, it adds the value to a table
 function obtainCardValue(i, object)
   for name, val in pairs(cardNameTable) do
     if string.find(object.getName(), name) then
@@ -1601,7 +1601,7 @@ function obtainCardValue(i, object)
   end
 end
 
---Checks decks sent to it and, if their cards names contains cardNameTable, it adds the values to a table
+---Checks decks sent to it and, if their cards names contains cardNameTable, it adds the values to a table
 function obtainDeckValue(i, deck)
   local cards = deck.getObjects()
   for k, card in ipairs(cards) do
@@ -1613,7 +1613,7 @@ function obtainDeckValue(i, deck)
   end
 end
 
---Totals up values in the tables from the 2 above functions
+---Totals up values in the tables from the 2 above functions
 function addValues()
   totals = {}
   --For non-ace cards
@@ -1628,7 +1628,7 @@ function addValues()
   displayResults()
 end
 
---Sends totaled values to the counters. It also color codes the counters to match
+---Sends totaled values to the counters. It also color codes the counters to match
 function displayResults()
   for i, set in pairs(objectSets) do
     set.c.setValue(totals[i])
@@ -1649,7 +1649,7 @@ function displayResults()
 end
 
 
---Restarts loop back up at countTricks
+---Restarts loop back up at countTricks
 function trickCountStart()
   if SheepsheadGlobalTimer then
     Wait.stop(SheepsheadGlobalTimer); SheepsheadGlobalTimer = nil
@@ -1657,7 +1657,7 @@ function trickCountStart()
   SheepsheadGlobalTimer = Wait.time(countTricks, 1)
 end
 
---Stops the trickCount Loop
+---Stops the trickCount Loop
 function trickCountStop()
   if SheepsheadGlobalTimer then
     Wait.stop(SheepsheadGlobalTimer); SheepsheadGlobalTimer = nil
@@ -1717,12 +1717,8 @@ end
 
 --[[Start of functions used by settings window]]--
 
----Disables all calls
-function resetCalls()
-  UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
-  disableSheepshead(); disableBlitz(); disableLeaster(); disableCrack()
-end
-
+---Updates position of buttons for all enabled calls and<br>
+---updates height of panel to fit all buttons
 function buildCallPanel()
   local numOfCallsEnabled = 0
   local currentoffsetY = -5
@@ -1745,10 +1741,8 @@ function buildCallPanel()
   UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
 end
 
---[[End of functions used by settings window]]--
-
---[[Start of buttons inside of settings window]]--
-
+---@param rule string
+---@param bool boolean
 function updateRules(rule, bool)
   local ruleTable = {
     dealerSitsOut = {
@@ -1768,22 +1762,61 @@ function updateRules(rule, bool)
       ruleIndex = 14
     },
   }
+  settings[rule] = bool
   if ruleTable[rule].execute then
     ruleTable[rule].execute(bool)
   end
-  settings[rule] = bool
   currentRules[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
   displayRules()
 end
 
+---@param call string
+---@param bool boolean
 function updateCalls(call, bool)
-  local callsTable = {
-
+  local callTable = {
+    crack = {
+      execute = stateChangeCrack
+    },
+    crackBack = {
+      execute = stateChangeCrackSubSet
+    },
+    crackAroundTheCorner = {
+      execute = stateChangeCrackSubSet
+    }
   }
   callSettings[call] = bool
+  if callTable[call] then
+    callTable[call].execute(bool, call)
+  end
   buildCallPanel()
 end
 
+---Abstracted gaurd clause for determining if settings window toggle is not valid
+---@param id string
+---@param state boolean
+---@return boolean
+function toggleNotValid(id, state)
+  local lowerID = string.lower(id)
+  if not settings.calls and state then
+    for key in pairs(callSettings) do
+      local lowerKey = string.lower(key)
+      if string.find(lowerID, lowerKey) then
+        return true
+      end
+    end
+  end
+  if not callSettings.crack and state then
+    if string.find(lowerID, "crack.") then
+      return true
+    end
+  end
+  return false
+end
+
+---Toggle setting with id formatted as "turnOnSettingName or turnOffSettingName"
+---@param player nil
+---@param val nil
+---@param id string
 function toggleSetting(player, val, id)
   if not safeToContinue() then
     return
@@ -1796,40 +1829,27 @@ function toggleSetting(player, val, id)
     idName = string.gsub(id, "turnOff", "")
     state = false
   end
+  if toggleNotValid(idName, state) then
+    return
+  end
   local parentID1 = "settingsButton" .. idName .. "On"
   local parentID2 = "settingsButton" .. idName .. "Off"
   idName = idName:sub(1, 1):lower() .. idName:sub(2)
   for key in pairs(settings) do
     if key == idName then
       updateRules(idName, state)
-      print(idName .. ": ", settings[idName])
-    end
-  end
-  local lowerID = string.lower(id)
-  if not settings.calls then
-    for key in pairs(callSettings) do
-      local lowerKey = string.lower(key)
-      if string.find(lowerID, lowerKey) then
-        return
-      end
-    end
-  end
-  --Bug here when resetting all calls to off this returns out and does not let last 2 turn off
-  if not callSettings.crack then
-    if string.find(lowerID, "crack.") then
-      return
     end
   end
   for key in pairs(callSettings) do
     if key == idName then
       updateCalls(idName, state)
-      print(idName .. ": ", callSettings[idName])
     end
   end
   UI.setAttribute(parentID1, "active", state)
   UI.setAttribute(parentID2, "active", not state)
 end
 
+---@param bool boolean
 function stateChangeCalls(bool)
   if bool == true then
     UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
@@ -1837,195 +1857,46 @@ function stateChangeCalls(bool)
     UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
     for key, value in pairs(callSettings) do
       if value == true then
-        local formatState = "turnOff" .. key
-        toggleSetting(player, val, formatState)
+        local formatKey = "turnOff" .. key
+        toggleSetting(player, val, formatKey)
       end
     end
   end
 end
 
-function dealerSitsOut()
-  if not safeToContinue() then
-    return
+---@param bool boolean
+function stateChangeCrack(bool)
+  if bool == true then
+    UI.setAttribute("callSettingsBackground", "image", "callPanel")
+  else
+    if settings.calls then
+      UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
+    end
+    for key, value in pairs(callSettings) do
+      local lowerKey = string.lower(key)
+      if value == true and string.find(lowerKey, "crack.") then
+        local formatKey = "turnOff" .. key
+        toggleSetting(player, val, formatKey)
+      end
+    end
   end
-  UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "false")
-  UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "true")
-  settings.dealerSitsOut = true
-  flag.varSetup = false
-  currentRules[17] = "6 Handed - Dealer Sits Out   \n"
-  displayRules()
 end
 
-function dealerSitsOutOff()
-  if not safeToContinue() then
-    return
+---@param bool boolean
+---@param call string
+function stateChangeCrackSubSet(bool, call)
+  if bool == true then
+    for key, value in pairs(callSettings) do
+      local lowerKey = string.lower(key)
+      if value == true and string.find(lowerKey, "crack.") and key ~= call then
+        local formatKey = "turnOff" .. key
+        toggleSetting(player, val, formatKey)
+      end
+    end
   end
-  UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "true")
-  UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "false")
-  settings.dealerSitsOut = false
-  flag.varSetup = false
-  currentRules[17] = "6 Handed - Normal        \n"
-  displayRules()
 end
 
-function callAnAceOn()
-  UI.setAttribute("settingsButtonjdPartnerOn", "active", "false")
-  UI.setAttribute("settingsButtonjdPartnerOff", "active", "true")
-  settings.jdPartner = false
-  currentRules[14] = "Call an Ace                \n"
-  displayRules()
-end
-
-function jdPartnerOn()
-  UI.setAttribute("settingsButtonCallAnAce", "active", "false")
-  UI.setAttribute("settingsButtonJDPartner", "active", "true")
-  settings.jdPartner = true
-  currentRules[14] = "Jack of Diamonds Partner    \n"
-  displayRules()
-end
-
-function enableCalls()
-  UI.setAttribute("settingsButtonCallsOff", "active", "false")
-  UI.setAttribute("settingsButtonCallsOn", "active", "true")
-  UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
-  settings.calls = true
-  currentRules[18] = "Extra Calls Enabled        "
-  displayRules()
-end
-
-function disableCalls()
-  UI.setAttribute("settingsButtonCallsOff", "active", "true")
-  UI.setAttribute("settingsButtonCallsOn", "active", "false")
-  resetCalls()
-  currentRules[18] = "Extra Calls Disabled       "
-  displayRules()
-end
-
-function enableSheepshead()
-  if not settings.calls then
-    return
-  end
-  UI.setAttribute("settingsButtonSheepsheadOff", "active", "false")
-  UI.setAttribute("settingsButtonSheepsheadOn", "active", "true")
-  callSettings.sheepshead = true
-  buildCallPanel()
-end
-
-function disableSheepshead()
-  UI.setAttribute("settingsButtonSheepsheadOff", "active", "true")
-  UI.setAttribute("settingsButtonSheepsheadOn", "active", "false")
-  UI.setAttribute("sheepsheadButton", "active", "false")
-  callSettings.sheepshead = false
-  buildCallPanel()
-end
-
-function enableBlitz()
-  if not settings.calls then
-    return
-  end
-  UI.setAttribute("settingsButtonBlitzOff", "active", "false")
-  UI.setAttribute("settingsButtonBlitzOn", "active", "true")
-  callSettings.blitz = true
-  buildCallPanel()
-end
-
-function disableBlitz()
-  UI.setAttribute("settingsButtonBlitzOff", "active", "true")
-  UI.setAttribute("settingsButtonBlitzOn", "active", "false")
-  UI.setAttribute("blitzButton", "active", "false")
-  callSettings.blitz = false
-  buildCallPanel()
-end
-
-function enableLeaster()
-  if not settings.calls then
-    return
-  end
-  UI.setAttribute("settingsButtonLeasterOff", "active", "false")
-  UI.setAttribute("settingsButtonLeasterOn", "active", "true")
-  callSettings.leaster = true
-  buildCallPanel()
-end
-
-function disableLeaster()
-  UI.setAttribute("settingsButtonLeasterOff", "active", "true")
-  UI.setAttribute("settingsButtonLeasterOn", "active", "false")
-  UI.setAttribute("leasterButton", "active", "false")
-  callSettings.leaster = false
-  buildCallPanel()
-end
-
-function enableCrack()
-  if not settings.calls then
-    return
-  end
-  UI.setAttribute("settingsButtonCrackOff", "active", "false")
-  UI.setAttribute("settingsButtonCrackOn", "active", "true")
-  UI.setAttribute("callSettingsBackground", "image", "callPanel")
-  callSettings.crack = true
-  buildCallPanel()
-end
-
-function disableCrack()
-  UI.setAttribute("settingsButtonCrackOff", "active", "true")
-  UI.setAttribute("settingsButtonCrackOn", "active", "false")
-  UI.setAttribute("crackButton", "active", "false")
-  if settings.calls then
-    UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
-  end
-  callSettings.crack = false
-  if callSettings.crackBack then
-    disableCrackBack()
-  end
-  if callSettings.crackAroundTheCorner then
-    disablecrackAroundTheCorner()
-  end
-  buildCallPanel()
-end
-
-function enableCrackBack()
-  if not callSettings.crack then
-    return
-  end
-  if callSettings.crackAroundTheCorner then
-    disablecrackAroundTheCorner()
-  end
-  UI.setAttribute("settingsButtonCrackBackOff", "active", "false")
-  UI.setAttribute("settingsButtonCrackBackOn", "active", "true")
-  callSettings.crackBack = true
-  buildCallPanel()
-end
-
-function disableCrackBack()
-  UI.setAttribute("settingsButtonCrackBackOff", "active", "true")
-  UI.setAttribute("settingsButtonCrackBackOn", "active", "false")
-  UI.setAttribute("crackBackButton", "active", "false")
-  callSettings.crackBack = false
-  buildCallPanel()
-end
-
-function enablecrackAroundTheCorner()
-  if not callSettings.crack then
-    return
-  end
-  if callSettings.crackBack then
-    disableCrackBack()
-  end
-  UI.setAttribute("settingsButtoncrackAroundTheCornerOff", "active", "false")
-  UI.setAttribute("settingsButtoncrackAroundTheCornerOn", "active", "true")
-  callSettings.crackAroundTheCorner = true
-  buildCallPanel()
-end
-
-function disablecrackAroundTheCorner()
-  UI.setAttribute("settingsButtoncrackAroundTheCornerOff", "active", "true")
-  UI.setAttribute("settingsButtoncrackAroundTheCornerOn", "active", "false")
-  UI.setAttribute("crackAroundTheCornerButton", "active", "false")
-  callSettings.crackAroundTheCorner = false
-  buildCallPanel()
-end
-
---[[End of buttons inside of settings window]]--
+--[[End of functions for settings window]]--
 
 ---@param player object_player_event_trigger
 ---@param window string
@@ -2113,9 +1984,6 @@ function callcrackAroundTheCornerEvent(player)
   Wait.time(function() toggleWindowVisibility(player) end, 0.13)
 end
 
---[[End of functions and buttons for calls window]]--
-
---[[Start of functions and buttons for calls window]]--
 function playAloneEvent(player)
   toggleWindowVisibility(player, "playAloneWindow")
 end
@@ -2125,66 +1993,9 @@ function callUpEvent(player)
   toggleWindowVisibility(player, "playAloneWindow")
 end
 
+--[[End of functions and buttons for calls window]]--
+
 --[[Start of graphic anamations]]--
-function passButtonAnimateEnter()
-  UI.setAttribute("Pass", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731614/810B2AC159903904EBDB0531A5807A6A679DD8B4/")
-end
-
-function passButtonAnimateExit()
-  UI.setAttribute("Pass", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731501/13B7D22788C1142BFC7852C48DFED46A5897C757/")
-end
-
-function passButtonAnimateDown()
-  UI.setAttribute("Pass", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731566/5B95753A5AC0B64B37D4861AAF85C427C8F2E01C/")
-end
-
-function passButtonAnimateUp()
-  UI.setAttribute("Pass", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731614/810B2AC159903904EBDB0531A5807A6A679DD8B4/")
-end
-
-function dealButtonAnimateEnter()
-  UI.setAttribute("Deal", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731456/E1D91D169AF5BEA05ACEB680DB0A784CD3537A51/")
-end
-
-function dealButtonAnimateExit()
-  UI.setAttribute("Deal", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353654571/82CC6E88D206B72B2E0AE8DEF90887FFD6D20BB6/")
-end
-
-function dealButtonAnimateDown()
-  UI.setAttribute("Deal", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731392/BE2E76F2FB88EF05D794D4BF094FEC6EF90D38B8/")
-end
-
-function dealButtonAnimateUp()
-  UI.setAttribute("Deal", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731456/E1D91D169AF5BEA05ACEB680DB0A784CD3537A51/")
-end
-
-function pickButtonAnimateEnter()
-  UI.setAttribute("Pick", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731729/BD02E7BFE2C75F3D8705FD90CF9B4B8483F0AF6D/")
-end
-
-function pickButtonAnimateExit()
-  UI.setAttribute("Pick", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731650/2C7000D4525A18ADB4A361D6B1EC61EC38E02C91/")
-end
-
-function pickButtonAnimateDown()
-  UI.setAttribute("Pick", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731687/0403B70DEE5F66118506F5C0D3BA3636F6036171/")
-end
-
-function pickButtonAnimateUp()
-  UI.setAttribute("Pick", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353731729/BD02E7BFE2C75F3D8705FD90CF9B4B8483F0AF6D/")
-end
 
 function closeSettingsButtonAnimateEnter(player, val, id)
   local id = id .. "Button"
