@@ -138,6 +138,7 @@ end
 
 function safeToContinue()
   if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress then
+    print("[DC0000]Please wait and try again[-]")
     return false
   end
   return true
@@ -756,12 +757,12 @@ end
 ---Sets up variables needed to deal cards for New Hand event
 function setUpVar()
   flag.varSetup = true
-  if settings.sixHandedToFive and #sortedSeatedPlayers == 6 then
+  if settings.dealerSitsOut and #sortedSeatedPlayers == 6 then
     playerCount = 5
     dealSettings = "dealerSitsOut"
     print("[21AF21]Dealer will sit out every hand.[-]")
     return
-  elseif not settings.sixHandedToFive and dealSettings == "dealerSitsOut" then
+  elseif not settings.dealerSitsOut and dealSettings == "dealerSitsOut" then
     print("[21AF21]Dealer will no longer sit out.[-]")
   end
   dealSettings = "normal"
@@ -1667,8 +1668,9 @@ end
 
 --Settings flags and associated outputs to user
 settings = {
-  sixHandedToFive = false,
-  callsEnabled = false
+  dealerSitsOut = false,
+  calls = false,
+  jdPartner = true
 }
 
 callSettings = {
@@ -1717,7 +1719,6 @@ end
 
 ---Disables all calls
 function resetCalls()
-  settings.callsEnabled = false
   UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
   disableSheepshead(); disableBlitz(); disableLeaster(); disableCrack()
 end
@@ -1727,13 +1728,15 @@ function buildCallPanel()
   local currentoffsetY = -5
   local buttonoffsetY = -53
   for key, value in pairs(callSettings) do
+    local attributeID = key .. "Button"
     if value == true then
       numOfCallsEnabled = numOfCallsEnabled + 1
-      local attributeID = key .. "Button"
       currentoffsetY = currentoffsetY + buttonoffsetY
       local currentoffsetXY = "00 " .. currentoffsetY
       UI.setAttribute(attributeID, "active", "true")
       UI.setAttribute(attributeID, "offsetXY", currentoffsetXY)
+    else
+      UI.setAttribute(attributeID, "active", "false")
     end
   end
   local initialFrameSizeY = 58
@@ -1745,13 +1748,109 @@ end
 --[[End of functions used by settings window]]--
 
 --[[Start of buttons inside of settings window]]--
+
+function updateRules(rule, bool)
+  local ruleTable = {
+    dealerSitsOut = {
+      [true] = "6 Handed - Dealer Sits Out   \n",
+      [false] = "6 Handed - Normal        \n",
+      ruleIndex = 17
+    },
+    calls = {
+      [true] = "Extra Calls Enabled        ",
+      [false] = "Extra Calls Disabled       ",
+      ruleIndex = 18,
+      execute = stateChangeCalls
+    },
+    jdPartner = {
+      [true] = "Jack of Diamonds Partner    \n",
+      [false] = "Call an Ace                \n",
+      ruleIndex = 14
+    },
+  }
+  if ruleTable[rule].execute then
+    ruleTable[rule].execute(bool)
+  end
+  settings[rule] = bool
+  currentRules[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
+  displayRules()
+end
+
+function updateCalls(call, bool)
+  local callsTable = {
+
+  }
+  callSettings[call] = bool
+  buildCallPanel()
+end
+
+function toggleSetting(player, val, id)
+  if not safeToContinue() then
+    return
+  end
+  local idName, state
+  if string.find(id, "turnOn") then
+    idName = string.gsub(id, "turnOn", "")
+    state = true
+  else
+    idName = string.gsub(id, "turnOff", "")
+    state = false
+  end
+  local parentID1 = "settingsButton" .. idName .. "On"
+  local parentID2 = "settingsButton" .. idName .. "Off"
+  idName = idName:sub(1, 1):lower() .. idName:sub(2)
+  for key in pairs(settings) do
+    if key == idName then
+      updateRules(idName, state)
+      print(idName .. ": ", settings[idName])
+    end
+  end
+  local lowerID = string.lower(id)
+  if not settings.calls then
+    for key in pairs(callSettings) do
+      local lowerKey = string.lower(key)
+      if string.find(lowerID, lowerKey) then
+        return
+      end
+    end
+  end
+  --Bug here when resetting all calls to off this returns out and does not let last 2 turn off
+  if not callSettings.crack then
+    if string.find(lowerID, "crack.") then
+      return
+    end
+  end
+  for key in pairs(callSettings) do
+    if key == idName then
+      updateCalls(idName, state)
+      print(idName .. ": ", callSettings[idName])
+    end
+  end
+  UI.setAttribute(parentID1, "active", state)
+  UI.setAttribute(parentID2, "active", not state)
+end
+
+function stateChangeCalls(bool)
+  if bool == true then
+    UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
+  else
+    UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
+    for key, value in pairs(callSettings) do
+      if value == true then
+        local formatState = "turnOff" .. key
+        toggleSetting(player, val, formatState)
+      end
+    end
+  end
+end
+
 function dealerSitsOut()
   if not safeToContinue() then
     return
   end
   UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "false")
   UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "true")
-  settings.sixHandedToFive = true
+  settings.dealerSitsOut = true
   flag.varSetup = false
   currentRules[17] = "6 Handed - Dealer Sits Out   \n"
   displayRules()
@@ -1763,15 +1862,16 @@ function dealerSitsOutOff()
   end
   UI.setAttribute("settingsButtonDealerSitsOutOff", "active", "true")
   UI.setAttribute("settingsButtonDealerSitsOutOn", "active", "false")
-  settings.sixHandedToFive = false
+  settings.dealerSitsOut = false
   flag.varSetup = false
   currentRules[17] = "6 Handed - Normal        \n"
   displayRules()
 end
 
 function callAnAceOn()
-  UI.setAttribute("settingsButtonJDPartner", "active", "false")
-  UI.setAttribute("settingsButtonCallAnAce", "active", "true")
+  UI.setAttribute("settingsButtonjdPartnerOn", "active", "false")
+  UI.setAttribute("settingsButtonjdPartnerOff", "active", "true")
+  settings.jdPartner = false
   currentRules[14] = "Call an Ace                \n"
   displayRules()
 end
@@ -1779,6 +1879,7 @@ end
 function jdPartnerOn()
   UI.setAttribute("settingsButtonCallAnAce", "active", "false")
   UI.setAttribute("settingsButtonJDPartner", "active", "true")
+  settings.jdPartner = true
   currentRules[14] = "Jack of Diamonds Partner    \n"
   displayRules()
 end
@@ -1787,7 +1888,7 @@ function enableCalls()
   UI.setAttribute("settingsButtonCallsOff", "active", "false")
   UI.setAttribute("settingsButtonCallsOn", "active", "true")
   UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
-  settings.callsEnabled = true
+  settings.calls = true
   currentRules[18] = "Extra Calls Enabled        "
   displayRules()
 end
@@ -1801,7 +1902,7 @@ function disableCalls()
 end
 
 function enableSheepshead()
-  if not settings.callsEnabled then
+  if not settings.calls then
     return
   end
   UI.setAttribute("settingsButtonSheepsheadOff", "active", "false")
@@ -1819,7 +1920,7 @@ function disableSheepshead()
 end
 
 function enableBlitz()
-  if not settings.callsEnabled then
+  if not settings.calls then
     return
   end
   UI.setAttribute("settingsButtonBlitzOff", "active", "false")
@@ -1837,7 +1938,7 @@ function disableBlitz()
 end
 
 function enableLeaster()
-  if not settings.callsEnabled then
+  if not settings.calls then
     return
   end
   UI.setAttribute("settingsButtonLeasterOff", "active", "false")
@@ -1855,7 +1956,7 @@ function disableLeaster()
 end
 
 function enableCrack()
-  if not settings.callsEnabled then
+  if not settings.calls then
     return
   end
   UI.setAttribute("settingsButtonCrackOff", "active", "false")
@@ -1869,7 +1970,7 @@ function disableCrack()
   UI.setAttribute("settingsButtonCrackOff", "active", "true")
   UI.setAttribute("settingsButtonCrackOn", "active", "false")
   UI.setAttribute("crackButton", "active", "false")
-  if settings.callsEnabled then
+  if settings.calls then
     UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
   end
   callSettings.crack = false
@@ -1877,7 +1978,7 @@ function disableCrack()
     disableCrackBack()
   end
   if callSettings.crackAroundTheCorner then
-    disableCrackAround()
+    disablecrackAroundTheCorner()
   end
   buildCallPanel()
 end
@@ -1887,7 +1988,7 @@ function enableCrackBack()
     return
   end
   if callSettings.crackAroundTheCorner then
-    disableCrackAround()
+    disablecrackAroundTheCorner()
   end
   UI.setAttribute("settingsButtonCrackBackOff", "active", "false")
   UI.setAttribute("settingsButtonCrackBackOn", "active", "true")
@@ -1903,46 +2004,45 @@ function disableCrackBack()
   buildCallPanel()
 end
 
-function enableCrackAround()
+function enablecrackAroundTheCorner()
   if not callSettings.crack then
     return
   end
   if callSettings.crackBack then
     disableCrackBack()
   end
-  UI.setAttribute("settingsButtonCrackAroundOff", "active", "false")
-  UI.setAttribute("settingsButtonCrackAroundOn", "active", "true")
+  UI.setAttribute("settingsButtoncrackAroundTheCornerOff", "active", "false")
+  UI.setAttribute("settingsButtoncrackAroundTheCornerOn", "active", "true")
   callSettings.crackAroundTheCorner = true
   buildCallPanel()
 end
 
-function disableCrackAround()
-  UI.setAttribute("settingsButtonCrackAroundOff", "active", "true")
-  UI.setAttribute("settingsButtonCrackAroundOn", "active", "false")
+function disablecrackAroundTheCorner()
+  UI.setAttribute("settingsButtoncrackAroundTheCornerOff", "active", "true")
+  UI.setAttribute("settingsButtoncrackAroundTheCornerOn", "active", "false")
   UI.setAttribute("crackAroundTheCornerButton", "active", "false")
   callSettings.crackAroundTheCorner = false
   buildCallPanel()
 end
 
-function closeSettingsWindow()
-  UI.setAttribute("settingsWindowExitButton", "image", "closeButton")
-  UI.hide("settingsWindow")
-end
-
 --[[End of buttons inside of settings window]]--
 
---[[Start off functions and buttons for calls window]]--
-
 ---@param player object_player_event_trigger
-function showOrHideCallsEvent(player)
-  local visibility = UI.getAttribute("callsWindow", "visibility")
-  if not visibility or not string.find(visibility, player.color) then
+---@param window string
+function toggleWindowVisibility(player, window)
+  local visibility = UI.getAttribute(window, "visibility")
+  if string.find(visibility, player.color) then
+    if visibility == player.color then
+      UI.setAttribute(window, "visibility", "")
+      UI.Hide(window)
+    else
+      visibility = removeColorFromPipeList(player.color, visibility)
+      UI.setAttribute(window, "visibility", visibility)
+    end
+  else
     visibility = addColorToPipeList(player.color, visibility)
-    UI.setAttribute("callsWindow", "visibility", visibility)
-    UI.show("callsWindow")
-  elseif string.find(visibility, player.color) then
-    visibility = removeColorFromPipeList(player.color, visibility)
-    UI.setAttribute("callsWindow", "visibility", visibility)
+    UI.setAttribute(window, "visibility", visibility)
+    UI.show(window)
   end
 end
 
@@ -1960,48 +2060,69 @@ end
 ---@param color string
 ---@param pipeList string
 function removeColorFromPipeList(color, pipeList)
-  if pipeList == color then
-    UI.Hide("callsWindow")
-  end
   pipeList = string.gsub(pipeList, color .. "|", "")
   pipeList = string.gsub(pipeList, "|" .. color, "")
   pipeList = string.gsub(pipeList, color, "")
   return pipeList
 end
+
+--[[Start of functions and buttons for calls window]]--
+
+function showCallsEvent(player)
+  toggleWindowVisibility(player, "callsWindow")
+end
+
 function callPartnerEvent(player)
   local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+  Wait.time(
+    function() 
+      if settings.jdPartner then
+        --if player == dealer and dealer has JD
+        toggleWindowVisibility(player, "playAloneWindow")
+        --else brodcast to player Can only call if you have JD and are forced to pick
+        else
+        toggleWindowVisibility(player, "selectPartnerWindow")
+      end
+      
+
+      toggleWindowVisibility(player, "callsWindow")
+    end, 
+    0.13
+  )
   --Show call partner window for selected parter mode
 end
 
-function callSheepsheadEvent(player)
+function playerCallsEvent(player, val, id)
   local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+  Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
+  local id = string.gsub(id, "Button", "")
+  id = id:sub(1, 1):upper() .. id:sub(2)
+  if id == "Leaster" then
+    broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
+  elseif id:sub(1, 5) == "Crack" then
+    id = id:gsub("(%u)", " %1")
+    id = string.gsub(id, "Crack", "Crack's")
+    broadcastToAll("[21AF21]" .. player.steam_name .. id .. "![-]")
+  else
+    broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. id .. "![-]")
+  end
 end
 
-function callBlitzEvent(player)
+function callcrackAroundTheCornerEvent(player)
   local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+  Wait.time(function() toggleWindowVisibility(player) end, 0.13)
 end
 
-function callLeasterEvent(player)
-  local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+--[[End of functions and buttons for calls window]]--
+
+--[[Start of functions and buttons for calls window]]--
+function playAloneEvent(player)
+  toggleWindowVisibility(player, "playAloneWindow")
 end
 
-function callCrackEvent(player)
-  local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
-end
-
-function callCrackBackEvent(player)
-  local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
-end
-
-function callCrackAroundTheCornerEvent(player)
-  local player = player
-  Wait.time(function() showOrHideCallsEvent(player) end, 0.13)
+function callUpEvent(player)
+  --Code callUp next highest card after JD picker does not have
+  toggleWindowVisibility(player, "playAloneWindow")
 end
 
 --[[Start of graphic anamations]]--
@@ -2023,14 +2144,6 @@ end
 function passButtonAnimateUp()
   UI.setAttribute("Pass", "image",
     "http://cloud-3.steamusercontent.com/ugc/2233283965353731614/810B2AC159903904EBDB0531A5807A6A679DD8B4/")
-end
-
-function toolboxAnimateDown()
-  UI.setAttribute("Toolbox", "image", "toolboxMainPressed")
-end
-
-function toolboxAnimateUp()
-  UI.setAttribute("Toolbox", "image", "toolboxMain")
 end
 
 function dealButtonAnimateEnter()
@@ -2073,164 +2186,47 @@ function pickButtonAnimateUp()
     "http://cloud-3.steamusercontent.com/ugc/2233283965353731729/BD02E7BFE2C75F3D8705FD90CF9B4B8483F0AF6D/")
 end
 
-function callsButtonAnimateEnter()
-  UI.setAttribute("Calls", "image", "callButtonHover")
+function closeSettingsButtonAnimateEnter(player, val, id)
+  local id = id .. "Button"
+  UI.setAttribute(id, "image", "closeButtonHover")
 end
 
-function callsButtonAnimateExit()
-  UI.setAttribute("Calls", "image", "callButton")
+function closeSettingsButtonAnimateExit(player, val, id)
+  local id = id .. "Button"
+  UI.setAttribute(id, "image", "closeButton")
 end
 
-function callsButtonAnimateDown()
-  UI.setAttribute("Calls", "image", "callButtonPressed")
+function closeSettingsButtonAnimateDown(player, val, id)
+  local id = id .. "Button"
+  UI.setAttribute(id, "image", "closeButtonPressed")
 end
 
-function callsButtonAnimateUp()
-  UI.setAttribute("Calls", "image", "callButton")
+function closeWindow(player, val, id)
+  local id1 = id .. "Button"
+  local id2 = string.gsub(id, "Exit", "")
+  if id ~= "settingsWindowExit" then
+    UI.setAttribute(id2, "visibility", "")
+  end
+  UI.setAttribute(id1, "image", "closeButton")
+  UI.hide(id2)
 end
 
-function settingsButtonAnimateEnter()
-  UI.setAttribute("Settings", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353654037/58CD87EEF6CEB3B846065CF643B7485071E6B8E7/")
+function animateButtonEnter(player, val, id)
+  local state = id .. "Hover"
+  UI.setAttribute(id, "image", state)
 end
 
-function settingsButtonAnimateExit()
-  UI.setAttribute("Settings", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353653899/8D89287896177F48C753C7435E8D224DE57632CF/")
+function animateButtonExit(player, val, id)
+  UI.setAttribute(id, "image", id)
 end
 
-function settingsButtonAnimateDown()
-  UI.setAttribute("Settings", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353653970/67B6C0044AB08D7069D725D09A7513CD76DFB3A3/")
+function animateButtonDown(player, val, id)
+  local state = id .. "Pressed"
+  UI.setAttribute(id, "image", state)
 end
 
-function settingsButtonAnimateUp()
-  UI.setAttribute("Settings", "image",
-    "http://cloud-3.steamusercontent.com/ugc/2233283965353654037/58CD87EEF6CEB3B846065CF643B7485071E6B8E7/")
-end
-
-function closeSettingsButtonAnimateEnter()
-  UI.setAttribute("settingsWindowExitButton", "image", "closeButtonHover")
-end
-
-function closeSettingsButtonAnimateExit()
-  UI.setAttribute("settingsWindowExitButton", "image", "closeButton")
-end
-
-function closeSettingsButtonAnimateDown()
-  UI.setAttribute("settingsWindowExitButton", "image", "closeButtonPressed")
-end
-
-function callPartnerButtonAnimateEnter()
-  UI.setAttribute("callPartnerButton", "image", "callPartnerButtonHover")
-end
-
-function callPartnerButtonAnimateExit()
-  UI.setAttribute("callPartnerButton", "image", "callPartnerButton")
-end
-
-function callPartnerButtonAnimateDown()
-  UI.setAttribute("callPartnerButton", "image", "callPartnerButtonPressed")
-end
-
-function callPartnerButtonAnimateUp(player)
-  UI.setAttribute("callPartnerButton", "image", "callPartnerButton")
-end
-
-function sheepsheadButtonAnimateEnter()
-  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButtonHover")
-end
-
-function sheepsheadButtonAnimateExit()
-  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButton")
-end
-
-function sheepsheadButtonAnimateDown()
-  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButtonPressed")
-end
-
-function sheepsheadButtonAnimateUp(player)
-  UI.setAttribute("sheepsheadButton", "image", "sheepsheadButton")
-end
-
-function blitzButtonAnimateEnter()
-  UI.setAttribute("blitzButton", "image", "blitzButtonHover")
-end
-
-function blitzButtonAnimateExit()
-  UI.setAttribute("blitzButton", "image", "blitzButton")
-end
-
-function blitzButtonAnimateDown()
-  UI.setAttribute("blitzButton", "image", "blitzButtonPressed")
-end
-
-function blitzButtonAnimateUp(player)
-  UI.setAttribute("blitzButton", "image", "blitzButton")
-end
-
-function leasterButtonAnimateEnter()
-  UI.setAttribute("leasterButton", "image", "leasterButtonHover")
-end
-
-function leasterButtonAnimateExit()
-  UI.setAttribute("leasterButton", "image", "leasterButton")
-end
-
-function leasterButtonAnimateDown()
-  UI.setAttribute("leasterButton", "image", "leasterButtonPressed")
-end
-
-function leasterButtonAnimateUp(player)
-  UI.setAttribute("leasterButton", "image", "leasterButton")
-end
-
-function crackButtonAnimateEnter()
-  UI.setAttribute("crackButton", "image", "crackButtonHover")
-end
-
-function crackButtonAnimateExit()
-  UI.setAttribute("crackButton", "image", "crackButton")
-end
-
-function crackButtonAnimateDown()
-  UI.setAttribute("crackButton", "image", "crackButtonPressed")
-end
-
-function crackButtonAnimateUp(player)
-  UI.setAttribute("crackButton", "image", "crackButton")
-end
-
-function crackBackButtonAnimateEnter()
-  UI.setAttribute("crackBackButton", "image", "crackBackButtonHover")
-end
-
-function crackBackButtonAnimateExit()
-  UI.setAttribute("crackBackButton", "image", "crackBackButton")
-end
-
-function crackBackButtonAnimateDown()
-  UI.setAttribute("crackBackButton", "image", "crackBackButtonPressed")
-end
-
-function crackBackButtonAnimateUp(player)
-  UI.setAttribute("crackBackButton", "image", "crackBackButton")
-end
-
-function crackAroundTheCornerButtonAnimateEnter()
-  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButtonHover")
-end
-
-function crackAroundTheCornerButtonAnimateExit()
-  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButton")
-end
-
-function crackAroundTheCornerButtonAnimateDown()
-  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButtonPressed")
-end
-
-function crackAroundTheCornerButtonAnimateUp(player)
-  UI.setAttribute("crackAroundTheCornerButton", "image", "crackAroundTheCornerButton")
+function animateButtonUp(player, val, id)
+  UI.setAttribute(id, "image", id)
 end
 
 --[[End of graphic anamations]]--
