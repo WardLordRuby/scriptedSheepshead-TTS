@@ -954,7 +954,11 @@ function passEvent(player)
   if not flag.dealInProgress and checkCardCount(scriptZone.center, 2) then
     if player.color == dealer.color then
       if not DEBUG then
-        broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", dealer.color)
+        if callSettings.leaster then
+          broadcastToColor("[DC0000]Dealer can not pass. Pick your own or Call a Leaster.[-]", player.color)
+        else
+          broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", player.color)
+        end
       else
         print("[DC0000]Dealer can not pass. " .. dealer.color .. " pick your own![-]")
       end
@@ -962,11 +966,6 @@ function passEvent(player)
       broadcastToAll(player.steam_name .. " passed")
       local rightOfDealerColor = sortedSeatedPlayers[getPreviousColorValInList(dealerColorVal, sortedSeatedPlayers)]
       if player.color == rightOfDealerColor then
-        if doesPlayerPossessCard(dealer, "Jack of Diamonds") then
-          if not string.find(UI.getAttribute("callsWindow", "visibility"), dealer.color) then
-            toggleWindowVisibility(dealer, "playAloneWindow")
-          end
-        end
         if callSettings.leaster then
           broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealer.color)
           if not string.find(UI.getAttribute("callsWindow", "visibility"), dealer.color) then
@@ -1017,7 +1016,7 @@ end
 ---@return table card_list
 function filterPlayerCards(player, scheme, doNotInclude)
   local schemes = {
-    suitableFail = {"Seven", "Eight", "Nine", "King"},
+    suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
     Ace = {"Ace"},
     Ten = {"Ten"},
     Jack = {"Jack"},
@@ -1053,14 +1052,19 @@ function pickBlindsEvent(player)
     return
   end
   pickingPlayer = player
-  broadcastToAll("[21AF21]" .. player.steam_name .. " Picks![-]")
+  startLuaCoroutine(self, 'pickBlindsCoroutine')
+end
+
+function pickBlindsCoroutine()
+  broadcastToAll("[21AF21]" .. pickingPlayer.steam_name .. " Picks![-]")
+  local blinds = getLooseCards(scriptZone.center)
   for _, card in pairs(blinds) do
-    card.setPositionSmooth(Player[player.color].getHandTransform().position)
-    card.setRotationSmooth(Player[player.color].getHandTransform().rotation)
+    card.setPositionSmooth(Player[pickingPlayer.color].getHandTransform().position)
+    card.setRotationSmooth(Player[pickingPlayer.color].getHandTransform().rotation)
   end
   Wait.time(
     function()
-      for _, card in pairs(Player[player.color].getHandObjects()) do
+      for _, card in pairs(Player[pickingPlayer.color].getHandObjects()) do
         if card.is_face_down then
           card.flip()
         end
@@ -1069,11 +1073,40 @@ function pickBlindsEvent(player)
     end,
     0.35
   )
-  local pickerRotation = ROTATION.color[player.color]
+  local pickerRotation = ROTATION.color[pickingPlayer.color]
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
   staticObject.setBuriedButton.setPosition(setBuriedButtonPos)
   staticObject.setBuriedButton.setRotation({0, pickerRotation, 0})
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
+
+  if settings.jdPartner then
+    local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
+    if pickingPlayer.color == dealer.color then
+      if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
+        if not string.find(UI.getAttribute("playAloneWindow", "visibility"), pickingPlayer.color) then
+          toggleWindowVisibility(pickingPlayer, "playAloneWindow")
+        end
+      end
+      if callSettings.leaster then
+        if not string.find(UI.getAttribute("callsWindow", "visibility"), pickingPlayer.color) then
+          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", pickingPlayer.color)
+          toggleWindowVisibility(pickingPlayer, "callsWindow")
+        end
+      end
+    end
+  else --Call an Ace
+    pause(0.5)
+    local holdCards = buildPartnerChoices(pickingPlayer)
+    pause(0.25)
+    if holdCards then
+      --buryCardsEvent needs access to holdCards
+      toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
+    else
+      --Unknown event
+      print("Unknown event triggered")
+    end
+  end
+  return 1
 end
 
 ---Returns the index of the player seated clockwise from given index
@@ -2033,6 +2066,9 @@ function showCallsEvent(player)
 end
 
 function callPartnerEvent(player)
+  if not pickingPlayer then
+    return
+  end
   local player = player
   Wait.time(
     function() 
@@ -2059,6 +2095,9 @@ function callPartnerEvent(player)
 end
 
 function playerCallsEvent(player, val, id)
+  if not pickingPlayer then
+    return
+  end
   local player = player
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   local id = string.gsub(id, "Button", "")
@@ -2093,6 +2132,10 @@ function callUpEvent(player)
   broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. callCard .. " to be their partner![-]")
 end
 
+---Finds next highest card that is not in passed in table
+---@param cards table
+---@param name string <"Jack"|"Queen">
+---@return string cardName
 function findCardToCall(cards, name)
   local callCard
   if tableLength(cards) == 0 then
@@ -2116,6 +2159,122 @@ end
 
 --[[Start of functions and buttons for playAloneWindow window]]--
 --Create dynamic funtion one for all
+
+---if valid hold cards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
+---and return holdCards | if no validHoldCards will return nil
+---@param player object
+---@return nil|table
+function buildPartnerChoices(player)
+  --failCards = all suitableFail including ten's
+  local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
+  local failSuits, holdCards, partnerChoices = {}, {}, {}
+  if tableLength(failCards) > 0 then
+    --failSuits = only unique suits in failCards
+    for _, cardName in pairs(failCards) do
+      local cardSuit = getLastWord(cardName)
+      if not tableContains(failSuits, cardSuit) then
+        table.insert(failSuits, cardSuit)
+      end
+    end
+    local tryOrder = {"Ace", "Ten"}
+    --notPartnerChoices = Aces or Tens player has
+    local notPartnerChoices, card
+    for _, tryCard in ipairs(tryOrder) do
+      card = tryCard
+      notPartnerChoices = filterPlayerCards(player, tryCard, "Diamonds")
+      if tableLength(notPartnerChoices) < 3 then
+        break
+      end
+    end
+    --calculate partnerChoices by removing held aces or tens from list(failSuits)
+    if card == "Ten" then --player has 3 aces --Hold card must be the ace
+      failSuits = {"Hearts", "Spades", "Clubs"}
+    end
+    if tableLength(notPartnerChoices) > 0 then
+      for _, cardToRemove in pairs(notPartnerChoices) do
+        for i, suit in ipairs(failSuits) do
+          if string.find(cardToRemove, suit) then
+            table.remove(failSuits, i)
+          end
+        end
+      end
+    end
+    --compile list of valid partnerChoices and valid holdCards
+    if tableLength(failSuits) > 0 then
+      for _, suit in pairs(failSuits) do
+        table.insert(partnerChoices, card .. " of " .. suit)
+      end
+      for _, cardName in pairs(failCards) do
+        for _, suit in pairs(failSuits) do
+          if string.find(cardName, suit) and not tableContains(notPartnerChoices, cardName) then
+            table.insert(holdCards, cardName)
+          end
+        end
+      end
+      if DEBUG then
+        print("Valid cards for player to call: " .. table.concat(partnerChoices, ", "))
+        print("Valid holdCards are: " .. table.concat(holdCards, ", "))
+      end
+    end
+  end 
+  --start unknown mode 
+  if tableLength(failCards) == 0 or tableLength(failSuits) == 0 then
+    return nil
+  end
+  setActivePartnerButtons(partnerChoices)
+  return holdCards
+end
+
+function setActivePartnerButtons(list)
+  local xmlTable = UI.getXmlTable()
+  local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
+  resetSelectPartnerWindow(selectPartnerWindow, xmlTable)
+  xmlTable = UI.getXmlTable()
+  local formattedList = {}
+  for _, cardName in pairs(list) do
+    local noSpaces = cardName:gsub("%s", "")
+    table.insert(formattedList, noSpaces)
+  end
+  for _, childrenButtons in pairs(xmlTable[selectPartnerWindow].children[1].children) do
+    local buttonID = childrenButtons.attributes.id
+    if tableContains(formattedList, buttonID) then
+      UI.setAttribute(buttonID, "active", "true")
+    end
+  end
+end
+
+function findPanelElement(id, table)
+  for i, element in ipairs(table) do
+    if element.tag == "Panel" and element.attributes.id == id then
+      return i
+    end
+  end
+end
+
+function resetSelectPartnerWindow(id, table)
+  for _, childrenButtons in pairs(table[id].children[1].children) do
+    if childrenButtons.attributes.active == "true" then
+      UI.setAttribute(childrenButtons.attributes.id, "active", "false")
+    end
+  end
+end
+
+
+
+---@param table table
+---@param value table_value
+function tableContains(table, value)
+  for _, v in ipairs(table) do
+    if v == value then
+      return true
+    end
+  end
+  return false
+end
+
+function selectPartnerEvent(player, val, id)
+  --print choice
+end
 --[[End of functions and buttons for playAloneWindow window]]--
 
 
