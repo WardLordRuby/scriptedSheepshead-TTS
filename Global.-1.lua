@@ -774,7 +774,6 @@ end
 ---Called to build dealOrder correctly<br>
 ---Adds "Blinds" to the dealOrder table in the position directly after the current dealer<br>
 ---If dealer sits out replaces dealer with blinds
----@param arg string <"normal"|"dealerSitsOut">
 function calculateDealOrder()
   local json = JSON.encode(sortedSeatedPlayers)
   dealOrder = JSON.decode(json)
@@ -942,27 +941,98 @@ end
 ---Prints a message if player passes or is forced to pick
 ---@param player object_player_event_trigger
 function passEvent(player)
-  if playerCount == 5 and #sortedSeatedPlayers == 6 then
-    if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
+  if not dealerColorVal then
+    return
+  end
+  local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
+  if playerCount ~= #sortedSeatedPlayers then
+    if player.color == dealer.color then
       broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
       return
     end
   end
-  if not dealerColorVal then
-    return
-  end
-  local dealerColor = getPlayerObject(dealerColorVal, sortedSeatedPlayers).color
   if not flag.dealInProgress and checkCardCount(scriptZone.center, 2) then
-    if player.color == dealerColor then
+    if player.color == dealer.color then
       if not DEBUG then
-        broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", dealerColor)
+        broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", dealer.color)
       else
-        print("[DC0000]Dealer can not pass. " .. dealerColor .. " pick your own![-]")
+        print("[DC0000]Dealer can not pass. " .. dealer.color .. " pick your own![-]")
       end
     else
       broadcastToAll(player.steam_name .. " passed")
+      local rightOfDealerColor = sortedSeatedPlayers[getPreviousColorValInList(dealerColorVal, sortedSeatedPlayers)]
+      if player.color == rightOfDealerColor then
+        if doesPlayerPossessCard(dealer, "Jack of Diamonds") then
+          if not string.find(UI.getAttribute("callsWindow", "visibility"), dealer.color) then
+            toggleWindowVisibility(dealer, "playAloneWindow")
+          end
+        end
+        if callSettings.leaster then
+          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealer.color)
+          if not string.find(UI.getAttribute("callsWindow", "visibility"), dealer.color) then
+            toggleWindowVisibility(dealer, "callsWindow")
+          end
+        end
+      end
     end
   end
+end
+
+---@param player object
+---@param cardName string
+function doesPlayerPossessCard(player, cardName)
+  local playerCards = getPlayerCards(player)
+  for _, name in pairs(playerCards) do
+    if name == cardName then
+      return true
+    end
+  end
+  return false
+end
+
+---Searches player handZone and trickZone
+---@param player object
+---@return table card_list
+function getPlayerCards(player)
+  local cards = {}
+  for _, card in pairs(getLooseCards(handZone[player.color])) do 
+    table.insert(cards, card.getName())
+  end
+  for _, object in pairs(getLooseCards(trickZone[player.color])) do
+    if object.type == 'Card' then
+      table.insert(cards, object.getName())
+    else
+      for _, card in pairs(object.getObjects()) do
+        table.insert(cards, card.name)
+      end
+    end
+  end
+  return cards
+end
+
+---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
+---@param player object
+---@param scheme string <"suitableFail"|"Ace"|"Ten"|"Jack"|"Queen">
+---@param doNotInclude string
+---@return table card_list
+function filterPlayerCards(player, scheme, doNotInclude)
+  local schemes = {
+    suitableFail = {"Seven", "Eight", "Nine", "King"},
+    Ace = {"Ace"},
+    Ten = {"Ten"},
+    Jack = {"Jack"},
+    Queen = {"Queen"}
+  }
+  local playerCards = getPlayerCards(player)
+  local filteredCards = {}
+  for _, name in pairs(playerCards) do
+    for _, findName in pairs(schemes[scheme]) do
+      if string.find(name, findName) and not string.find(name, doNotInclude) then
+        table.insert(filteredCards, name)
+      end
+    end
+  end
+  return filteredCards
 end
 
 ---Moves the blinds into the pickers hand, sets player to pickingPlayer
@@ -1006,21 +1076,36 @@ function pickBlindsEvent(player)
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 end
 
----Returns the color of the next seated player clockwise from given color
+---Returns the index of the player seated clockwise from given index
 ---@param index integer
 ---@param list table_colors
 ---@return integer_index
 function getNextColorValInList(index, list)
-  for i, colors in ipairs(list) do
+  local listLength = #list
+  for i = 1, listLength, 1 do
     if i == index then
-      local nextColorVal = i + 1
-      if list[nextColorVal] == "Blinds" then
-        nextColorVal = nextColorVal + 1
-      end
-      if nextColorVal > #list then
-        nextColorVal = 1
+      local nextColorVal = (index + 1) % listLength + 1
+      while list[nextColorVal] == "Blinds" do
+        nextColorVal = (nextColorVal + 1) % listLength + 1
       end
       return nextColorVal
+    end
+  end
+end
+
+---Returns the index of the player seated counter-clockwise from given index
+---@param index integer
+---@param list table_colors
+---@return integer_index
+function getPreviousColorValInList(index, list)
+  local listLength = #list
+  for i = listLength, 1, -1 do
+    if i == index then
+      local previousColorVal = (index - 2 + listLength) % listLength + 1
+      while list[previousColorVal] == "Blinds" do
+        previousColorVal = (previousColorVal - 2 + listLength) % listLength + 1
+      end
+      return previousColorVal
     end
   end
 end
@@ -1850,6 +1935,7 @@ function stateChangeCalls(bool)
   end
 end
 
+---@param bool boolean
 function stateChangeDealerSitsOut(bool)
   if sortedSeatedPlayers == nil then
     return
@@ -1951,14 +2037,20 @@ function callPartnerEvent(player)
   Wait.time(
     function() 
       if settings.jdPartner then
-        --if player == dealer and dealer has JD
-        toggleWindowVisibility(player, "playAloneWindow")
-        --else brodcast to player Can only call if you have JD and are forced to pick
+        local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
+        if player.color == dealer.color and player.color == pickingPlayer.color then
+          if doesPlayerPossessCard(player, "Jack of Diamonds") then
+            toggleWindowVisibility(player, "playAloneWindow")
+          else
+            broadcastToColor("[DC0000]Jack of Diamonds will be your partner[-]", player.color)
+          end
         else
+          broadcastToColor("[DC0000]You can only call up if you are forced to pick and have the Jack[-]", player.color)
+        end
+      else
+        --create conditions
         toggleWindowVisibility(player, "selectPartnerWindow")
       end
-      
-
       toggleWindowVisibility(player, "callsWindow")
     end, 
     0.13
@@ -1982,21 +2074,51 @@ function playerCallsEvent(player, val, id)
   end
 end
 
-function callcrackAroundTheCornerEvent(player)
-  local player = player
-  Wait.time(function() toggleWindowVisibility(player) end, 0.13)
-end
-
-function playAloneEvent(player)
-  toggleWindowVisibility(player, "playAloneWindow")
-end
+--[[End of functions and buttons for calls window]]--
 
 function callUpEvent(player)
-  --Code callUp next highest card after JD picker does not have
   toggleWindowVisibility(player, "playAloneWindow")
+  local tryOrder = {"Jack", "Queen"}
+  local callCard
+  for _, tryCard in ipairs(tryOrder) do
+    callCard = findCardToCall(filterPlayerCards(player, tryCard, "nil"), tryCard)
+    if callCard then
+      break
+    end
+  end
+  if not callCard then
+    broadcastToColor("[DC0000]No suitable card to Call. Try your luck playing alone![-]", player.color)
+    return
+  end
+  broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. callCard .. " to be their partner![-]")
 end
 
---[[End of functions and buttons for calls window]]--
+function findCardToCall(cards, name)
+  local callCard
+  if tableLength(cards) == 0 then
+    callCard = name .. " of Diamonds"
+    return callCard
+  end
+  if #cards > 3 then
+    return nil
+  end
+  local nextHigh = { "Diamonds", "Hearts", "Spades", "Clubs" }
+  for _, cardInHand in pairs(cards) do
+    for i, suit in ipairs(nextHigh) do
+      if string.find(cardInHand, suit) then
+        table.remove(nextHigh, i)
+      end
+    end
+  end
+  callCard = name .. " of " .. nextHigh[1]
+  return callCard
+end
+
+--[[Start of functions and buttons for playAloneWindow window]]--
+--Create dynamic funtion one for all
+--[[End of functions and buttons for playAloneWindow window]]--
+
+
 
 --[[Start of graphic anamations]]--
 
@@ -2075,6 +2197,6 @@ function playerCountDebugDown()
   end
 end
 
-function test()
+function test(player)
 
 end
