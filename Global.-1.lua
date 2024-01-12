@@ -135,11 +135,132 @@ function onLoad()
   displayRules()
 end
 
+--[[Utility functions]]--
+
+---Checks dealInProgress, trick.handOut, and gameSetup.inProgress
 function safeToContinue()
   if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress then
     return false
   end
   return true
+end
+
+---Pauses script, must be called from within a coroutine
+---@param time integer_seconds
+function pause(time)
+  local start = os.time()
+  repeat coroutine.yield(0) until os.time() > start + time
+end
+
+--[[String manipulation]]--
+
+---@return string
+function getLastWord(str)
+  return str:match("%S+$") --%S+ = one or more non-space characters, $ = match end of string
+end
+
+---@param str string
+function upperFirstChar(str)
+  return str:sub(1, 1):upper() .. str:sub(2)
+end
+
+---@param str string
+function lowerFirstChar(str)
+  return str:sub(1, 1):lower() .. str:sub(2)
+end
+
+---Inserts a space before every capital letter in string
+---@param str string
+---@return string
+function insertSpaces(str)
+  return str:gsub("(%u)", " %1") --(%u) = capture group match upperCase letter, %1 = link to capture group
+end
+
+---@param str string
+---@return string
+function removeSpaces(str)
+  return str:gsub("%s", "") --%s = space character
+end
+
+--[[Table manipulation]]--
+
+---Copys input table and removes input color, if color not found returns original table
+---@param color string
+---@param list table_colors
+---@return table
+function removeColorFromList(color, list)
+  local currentIndex
+  local json = JSON.encode(list)
+  local modifiedList = JSON.decode(json)
+  for i, colors in ipairs(modifiedList) do
+    if colors == color then
+      currentIndex = i
+      break
+    end
+  end
+  if currentIndex then
+    table.remove(modifiedList, currentIndex)
+    return modifiedList
+  end
+  return list
+end
+
+---@param color string
+---@param pipeList string
+function addColorToPipeList(color, pipeList)
+  if pipeList == nil or pipeList == "" then
+    pipeList = color
+  else
+    pipeList = pipeList .. "|" .. color
+  end
+  return pipeList
+end
+
+---@param color string
+---@param pipeList string
+function removeColorFromPipeList(color, pipeList)
+  pipeList = string.gsub(pipeList, color .. "|", "")
+  pipeList = string.gsub(pipeList, "|" .. color, "")
+  pipeList = string.gsub(pipeList, color, "")
+  return pipeList
+end
+
+--[[Data retrieval]]--
+
+---@param object object_item
+---@param zone object
+function isInZone(object, zone)
+  local occupiedZones = object.getZones()
+  for _, zoneObject in pairs(occupiedZones) do
+    if zoneObject == zone then
+      return true
+    end
+  end
+  return false
+end
+
+---Just used to ensure 0 is returned if table empty or nil
+---@param table table
+function tableLength(table)
+  local count = 0
+  if table == {} or table == nil then
+    return 0
+  end
+  for _ in pairs(table) do
+    count = count + 1
+  end
+  return count
+end
+
+---@param table table
+---@param value table_value
+function tableContains(table, value)
+  for _, v in ipairs(table) do
+    if v == value then
+      return true
+    end
+  end
+  return false
 end
 
 ---Returns the deck from given zone
@@ -194,103 +315,69 @@ function getLooseCards(zone)
   return looseCards
 end
 
----Pauses script, must be called from within a coroutine
----@param time integer_seconds
-function pause(time)
-  local start = os.time()
-  repeat coroutine.yield(0) until os.time() > start + time
+---@param colorOrVar string_color|integer_index
+---@param list table_colors
+---@return object_player
+function getPlayerObject(colorOrVar, list)
+  if colorOrVar == 0 then
+    return Player[list[#list]]
+  elseif colorOrVar == #list + 1 then
+    return Player[list[1]]
+  elseif tonumber(colorOrVar) then
+    return Player[list[colorOrVar]]
+  else
+    return Player[colorOrVar]
+  end
 end
 
----@param color string
----@return integer_rotationAngle, vector_playerPosition
-function retrieveItemMoveData(color)
-  local rotationAngle = ROTATION.color[color]
-  local playerPos = Player[color].getHandTransform().position
-  return rotationAngle, playerPos
-end
-
----Moves deck and dealer chip in front of a given color
----@param color string
-function moveDeckAndDealerChip()
-  local rotationAngle, playerPos = retrieveItemMoveData(sortedSeatedPlayers[dealerColorVal])
-  local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
-  local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
-  local chipRotation = staticObject.dealerChip.getRotation()
-  repeat coroutine.yield(0) until getDeck(scriptZone.table) ~= nil
-  local deck = getDeck(scriptZone.table)
-  staticObject.dealerChip.setRotationSmooth({chipRotation.x, rotationAngle - 90, chipRotation.z})
-  staticObject.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
-  deck.setRotationSmooth({deck.getRotation().x, rotationAngle, 180})
-  deck.setPositionSmooth(playerPos + rotatedDeckOffset)
-end
-
----Copys input table and removes input color, if color not found returns original table
+---Returns the index location of a color in a list
 ---@param color string
 ---@param list table_colors
----@return table
-function removeColorFromList(color, list)
-  local currentIndex
-  local json = JSON.encode(list)
-  local modifiedList = JSON.decode(json)
-  for i, colors in ipairs(modifiedList) do
+function getColorVal(color, list)
+  for i, colors in ipairs(list) do
     if colors == color then
-      currentIndex = i
-      break
-    end
-  end
-  if currentIndex then
-    table.remove(modifiedList, currentIndex)
-    return modifiedList
-  end
-  return list
-end
-
----Checks if a deck in the given zone is face up, if so it flips the deck
----@param zone object
-function flipDeck(zone)
-  local deck = getDeck(zone)
-  if not deck.is_face_down then
-    deck.flip()
-  end
-end
-
----Checks if cards in the given zone are face up, if so it flips cards
----@param zone object
-function flipCards(zone)
-  local cards = getLooseCards(zone)
-  for _, card in pairs(cards) do
-    if not card.is_face_down then
-      card.flip()
+      return i
     end
   end
 end
 
----Spreads cards out over the center of the table, makes sure they are face down, and groups cards
-function rebuildDeck()
-  local faceRotation = moreFaceUpOrDown(scriptZone.table)
-  for _, object in ipairs(getLooseCards(scriptZone.table)) do
-    if object.type == 'Deck' then
-      for _, card in ipairs(object.getObjects()) do
-        object.takeObject({
-          rotation = {0, math.random(0, 360), faceRotation},
-          position = {math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75)},
-          guid = card.guid
-        })
-        pause(0.03)
+---Returns the index of the player seated clockwise from given index
+---@param index integer
+---@param list table_colors
+---@return integer_index
+function getNextColorValInList(index, list)
+  local listLength = #list
+  for i = 1, listLength, 1 do
+    if i == index then
+      local nextColorVal = (index + 1) % listLength + 1
+      while list[nextColorVal] == "Blinds" do
+        nextColorVal = (nextColorVal + 1) % listLength + 1
       end
-    else
-      object.setRotation({0, math.random(0, 360), faceRotation})
-      object.setPosition({math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75)})
-      pause(0.03)
+      return nextColorVal
     end
   end
-  pause(0.25)
-  flipCards(scriptZone.table)
-  pause(0.5)
-  group(getLooseCards(scriptZone.table))
-  pause(0.5)
-  group(getLooseCards(scriptZone.table))
-  pause(0.5)
+end
+
+---Returns the index of the player seated counter-clockwise from given index
+---@param index integer
+---@param list table_colors
+---@return integer_index
+function getPreviousColorValInList(index, list)
+  local listLength = #list
+  for i = listLength, 1, -1 do
+    if i == index then
+      local previousColorVal = (index - 2 + listLength) % listLength + 1
+      while list[previousColorVal] == "Blinds" do
+        previousColorVal = (previousColorVal - 2 + listLength) % listLength + 1
+      end
+      return previousColorVal
+    end
+  end
+end
+
+---Checks if a deck exists on the table
+function deckExists()
+  return getDeck(scriptZone.table) ~= nil
 end
 
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
@@ -348,19 +435,88 @@ function checkCardCount(zone, count)
   return false
 end
 
----@param colorOrVar string_color|integer_index
----@param list table_colors
----@return object_player
-function getPlayerObject(colorOrVar, list)
-  if colorOrVar == 0 then
-    return Player[list[#list]]
-  elseif colorOrVar == #list + 1 then
-    return Player[list[1]]
-  elseif tonumber(colorOrVar) then
-    return Player[list[colorOrVar]]
-  else
-    return Player[colorOrVar]
+---@param color string
+---@return integer_rotationAngle, vector_playerPosition
+function getItemMoveData(color)
+  local rotationAngle = ROTATION.color[color]
+  local playerPos = Player[color].getHandTransform().position
+  return rotationAngle, playerPos
+end
+
+--[[Object manipulation]]--
+
+---Checks if a deck in the given zone is face up, if so it flips the deck
+---@param zone object
+function flipDeck(zone)
+  local deck = getDeck(zone)
+  if not deck.is_face_down then
+    deck.flip()
   end
+end
+
+---Checks if cards in the given zone are face up, if so it flips cards
+---@param zone object
+function flipCards(zone)
+  local cards = getLooseCards(zone)
+  for _, card in pairs(cards) do
+    if not card.is_face_down then
+      card.flip()
+    end
+  end
+end
+
+---Called to reset the game space<br>
+---Removes all chips
+function resetBoard()
+  for _, obj in pairs(scriptZone.table.getObjects()) do
+    if obj.type == "Chip" then
+      obj.destruct()
+      pause(0.06)
+    end
+  end
+end
+
+---Moves deck and dealer chip in front of a given color
+---@param color string
+function moveDeckAndDealerChip()
+  local rotationAngle, playerPos = getItemMoveData(sortedSeatedPlayers[dealerColorVal])
+  local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
+  local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
+  local chipRotation = staticObject.dealerChip.getRotation()
+  repeat coroutine.yield(0) until getDeck(scriptZone.table) ~= nil
+  local deck = getDeck(scriptZone.table)
+  staticObject.dealerChip.setRotationSmooth({ chipRotation.x, rotationAngle - 90, chipRotation.z })
+  staticObject.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
+  deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, 180 })
+  deck.setPositionSmooth(playerPos + rotatedDeckOffset)
+end
+
+---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
+function rebuildDeck()
+  local faceRotation = moreFaceUpOrDown(scriptZone.table)
+  for _, object in ipairs(getLooseCards(scriptZone.table)) do
+    if object.type == 'Deck' then
+      for _, card in ipairs(object.getObjects()) do
+        object.takeObject({
+          rotation = { 0, math.random(0, 360), faceRotation },
+          position = { math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75) },
+          guid = card.guid
+        })
+        pause(0.03)
+      end
+    else
+      object.setRotation({ 0, math.random(0, 360), faceRotation })
+      object.setPosition({ math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75) })
+      pause(0.03)
+    end
+  end
+  pause(0.25)
+  flipCards(scriptZone.table)
+  pause(0.5)
+  group(getLooseCards(scriptZone.table))
+  pause(0.5)
+  group(getLooseCards(scriptZone.table))
+  pause(0.5)
 end
 
 --[[Start of functions used by Set Up Game event]]--
@@ -529,17 +685,6 @@ function respawnDeckCoroutine()
   end
   pause(0.75)
   return 1
-end
-
----Called to reset the game space<br>
----Removes all chips
-function resetBoard()
-  for _, obj in pairs(scriptZone.table.getObjects()) do
-    if obj.type == "Chip" then
-      obj.destruct()
-      pause(0.06)
-    end
-  end
 end
 
 ---Builds a global table of all seated players [sortedSeatedPlayers]
@@ -740,7 +885,7 @@ function setUpGameCoroutine()
   end
 
   for _, color in ipairs(sortedSeatedPlayers) do
-    local rotationAngle, playerPos = retrieveItemMoveData(color)
+    local rotationAngle, playerPos = getItemMoveData(color)
     spawnChips(rotationAngle, playerPos)
   end
 
@@ -754,22 +899,6 @@ end
 
 
 --[[Start of functions used by New Hand event]]--
-
----Returns the index location of a color in a list
----@param color string
----@param list table_colors
-function getColorVal(color, list)
-  for i, colors in ipairs(list) do
-    if colors == color then
-      return i
-    end
-  end
-end
-
----Checks if a deck exists on the table
-function deckExists()
-  return getDeck(scriptZone.table) ~= nil
-end
 
 ---Called to build dealOrder correctly<br>
 ---Adds "Blinds" to the dealOrder table in the position directly after the current dealer<br>
@@ -1109,40 +1238,6 @@ function pickBlindsCoroutine()
   return 1
 end
 
----Returns the index of the player seated clockwise from given index
----@param index integer
----@param list table_colors
----@return integer_index
-function getNextColorValInList(index, list)
-  local listLength = #list
-  for i = 1, listLength, 1 do
-    if i == index then
-      local nextColorVal = (index + 1) % listLength + 1
-      while list[nextColorVal] == "Blinds" do
-        nextColorVal = (nextColorVal + 1) % listLength + 1
-      end
-      return nextColorVal
-    end
-  end
-end
-
----Returns the index of the player seated counter-clockwise from given index
----@param index integer
----@param list table_colors
----@return integer_index
-function getPreviousColorValInList(index, list)
-  local listLength = #list
-  for i = listLength, 1, -1 do
-    if i == index then
-      local previousColorVal = (index - 2 + listLength) % listLength + 1
-      while list[previousColorVal] == "Blinds" do
-        previousColorVal = (previousColorVal - 2 + listLength) % listLength + 1
-      end
-      return previousColorVal
-    end
-  end
-end
-
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
 ---a counter in front of pickingPlayer<br> and player accross from color.
 ---Flips over pickers tricks to see score of hand
@@ -1244,40 +1339,6 @@ function setBuriedEvent(player)
     print("[21AF21]" .. leadOutPlayer.color .. " leads out.[-]")
   end
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
-end
-
----Just used to ensure 0 is returned if table empty or nil
----@param table table
-function tableLength(table)
-  local count = 0
-  if table == {} or table == nil then
-    return 0
-  end
-  for _ in pairs(table) do
-    count = count + 1
-  end
-  return count
-end
-
----@param object object_item
----@param zone object
-function isInZone(object, zone)
-  local occupiedZones = object.getZones()
-  for _, zoneObject in pairs(occupiedZones) do
-    if zoneObject == zone then
-      return true
-    end
-  end
-  return false
-end
-
----@return string_last_word
-function getLastWord(string)
-  local words = {}
-  for word in string:gmatch("%S+") do
-    table.insert(words, word)
-  end
-  return words[#words]
 end
 
 ---Runs when an object tries to enter a container<br>
@@ -1515,8 +1576,8 @@ end
 
 ---@param objectName string
 function isTrump(objectName)
-  local stringToSearch = "Diamonds Jack Queen"
-  for word in stringToSearch:gmatch("%S+") do
+  local trumpIdentifier = {"Diamonds", "Jack", "Queen"}
+  for _, word in pairs(trumpIdentifier) do
     if string.find(objectName, word) then
       return true
     end
@@ -1938,7 +1999,7 @@ function toggleSetting(player, val, id)
   end
   local parentID1 = "settingsButton" .. idName .. "On"
   local parentID2 = "settingsButton" .. idName .. "Off"
-  idName = idName:sub(1, 1):lower() .. idName:sub(2)
+  idName = lowerFirstChar(idName)
   for key in pairs(settings) do
     if key == idName then
       updateRules(idName, state)
@@ -2039,26 +2100,6 @@ function toggleWindowVisibility(player, window)
   end
 end
 
----@param color string
----@param pipeList string
-function addColorToPipeList(color, pipeList)
-  if pipeList == nil or pipeList == "" then
-    pipeList = color
-  else
-    pipeList = pipeList .. "|" .. color
-  end
-  return pipeList
-end
-
----@param color string
----@param pipeList string
-function removeColorFromPipeList(color, pipeList)
-  pipeList = string.gsub(pipeList, color .. "|", "")
-  pipeList = string.gsub(pipeList, "|" .. color, "")
-  pipeList = string.gsub(pipeList, color, "")
-  return pipeList
-end
-
 --[[Start of functions and buttons for calls window]]--
 
 function showCallsEvent(player)
@@ -2101,11 +2142,11 @@ function playerCallsEvent(player, val, id)
   local player = player
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   local id = string.gsub(id, "Button", "")
-  id = id:sub(1, 1):upper() .. id:sub(2)
+  id = upperFirstChar(id)
   if id == "Leaster" then
     broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
   elseif id:sub(1, 5) == "Crack" then
-    id = id:gsub("(%u)", " %1")
+    id = insertSpaces(id)
     id = string.gsub(id, "Crack", "Crack's")
     broadcastToAll("[21AF21]" .. player.steam_name .. id .. "![-]")
   else
@@ -2158,10 +2199,9 @@ function findCardToCall(cards, name)
 end
 
 --[[Start of functions and buttons for playAloneWindow window]]--
---Create dynamic funtion one for all
 
----if valid hold cards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
----and return holdCards | if no validHoldCards will return nil
+---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
+---and return holdCards | if no valid holdCards will return nil
 ---@param player object
 ---@return nil|table
 function buildPartnerChoices(player)
@@ -2217,7 +2257,7 @@ function buildPartnerChoices(player)
       end
     end
   end 
-  --start unknown mode 
+  --nil = unknown mode 
   if tableLength(failCards) == 0 or tableLength(failSuits) == 0 then
     return nil
   end
@@ -2225,6 +2265,8 @@ function buildPartnerChoices(player)
   return holdCards
 end
 
+
+---@param list list_strings
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
@@ -2232,8 +2274,8 @@ function setActivePartnerButtons(list)
   xmlTable = UI.getXmlTable()
   local formattedList = {}
   for _, cardName in pairs(list) do
-    local noSpaces = cardName:gsub("%s", "")
-    table.insert(formattedList, noSpaces)
+    local formattedName = removeSpaces(cardName)
+    table.insert(formattedList, formattedName)
   end
   for _, childrenButtons in pairs(xmlTable[selectPartnerWindow].children[1].children) do
     local buttonID = childrenButtons.attributes.id
@@ -2243,6 +2285,8 @@ function setActivePartnerButtons(list)
   end
 end
 
+---@param id string
+---@param table xmlTable
 function findPanelElement(id, table)
   for i, element in ipairs(table) do
     if element.tag == "Panel" and element.attributes.id == id then
@@ -2251,25 +2295,15 @@ function findPanelElement(id, table)
   end
 end
 
+---Hides all cardButtons in selectPartnerWindow
+---@param id string
+---@param table xmlTable
 function resetSelectPartnerWindow(id, table)
   for _, childrenButtons in pairs(table[id].children[1].children) do
     if childrenButtons.attributes.active == "true" then
       UI.setAttribute(childrenButtons.attributes.id, "active", "false")
     end
   end
-end
-
-
-
----@param table table
----@param value table_value
-function tableContains(table, value)
-  for _, v in ipairs(table) do
-    if v == value then
-      return true
-    end
-  end
-  return false
 end
 
 function selectPartnerEvent(player, val, id)
