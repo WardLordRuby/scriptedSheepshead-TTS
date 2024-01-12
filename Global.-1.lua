@@ -938,6 +938,7 @@ function setUpHandEvent()
   end
   flag.dealInProgress = true
   if flag.cardsToBeBuried then
+    staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
     staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
     flag.cardsToBeBuried = false
   end
@@ -1228,6 +1229,7 @@ function pickBlindsCoroutine()
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
   staticObject.setBuriedButton.setPosition(setBuriedButtonPos)
   staticObject.setBuriedButton.setRotation({0, pickerRotation, 0})
+  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", pickingPlayer.color)
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 
   if settings.jdPartner == true then
@@ -1360,6 +1362,7 @@ function setBuriedEvent(player)
   else
     print("[21AF21]" .. leadOutPlayer.color .. " leads out.[-]")
   end
+  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
 
