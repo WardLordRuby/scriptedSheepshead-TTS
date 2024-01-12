@@ -123,7 +123,8 @@ function onLoad()
     continue = false,
     cardsToBeBuried = false,
     counterVisible = false,
-    firstDealOfGame = false
+    firstDealOfGame = false,
+    allowGrouping = true
   }
 
   if DEBUG then
@@ -384,44 +385,42 @@ end
 ---@param zone object
 ---@return integer_0|integer_180
 function moreFaceUpOrDown(zone)
-  local faceUpCount, faceDownCount = 0, 0
-  local objectsInZone = zone.getObjects()
-  for _, obj in pairs(objectsInZone) do
-    if obj.type == 'Card' then
-      if obj.is_face_down then
-        faceDownCount = faceDownCount + 1
-      else
-        faceUpCount = faceUpCount + 1
-      end
-    elseif obj.type == 'Deck' then
-      if obj.is_face_down then
-        faceDownCount = faceDownCount + obj.getQuantity()
-      else
-        faceUpCount = faceUpCount + obj.getQuantity()
-      end
-    end
-  end
-  if faceUpCount >= faceDownCount then
+  local total, faceDownCount = countCards(zone, true)
+  local halfOfTotal = math.floor(total / 2)
+  if halfOfTotal >= faceDownCount then
     return 0
   else
     return 180
   end
 end
 
----Returns the number of cards in a given zone
+---Returns the number of cards in a given zone, can also return faceDownCount
 ---@param zone object
----@return integer
-function countCards(zone)
+---@param countFaceDown boolean
+---@return integer <numCards | numCards_and_numFaceDown>
+function countCards(zone, countFaceDown)
   local objects = zone.getObjects()
-  local cardCount = 0
-  for _, obj in ipairs(objects) do
+  local cardCount, faceDownCount = 0, 0
+  for _, obj in pairs(objects) do
     if obj.type == 'Deck' then
       cardCount = cardCount + obj.getQuantity()
+      if countFaceDown then
+        if obj.is_face_down then
+          faceDownCount = faceDownCount + obj.getQuantity()
+        end
+      end
     elseif obj.type == 'Card' then
       cardCount = cardCount + 1
+      if obj.is_face_down then
+        faceDownCount = faceDownCount + 1
+      end
     end
   end
-  return cardCount
+  if countFaceDown then
+    return cardCount, faceDownCount
+  else
+    return cardCount
+  end
 end
 
 ---Checks the given card count of a given zone, returns true or false
@@ -493,6 +492,7 @@ end
 
 ---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
 function rebuildDeck()
+  flag.allowGrouping = false
   local faceRotation = moreFaceUpOrDown(scriptZone.table)
   for _, object in ipairs(getLooseCards(scriptZone.table)) do
     if object.type == 'Deck' then
@@ -512,6 +512,7 @@ function rebuildDeck()
   end
   pause(0.25)
   flipCards(scriptZone.table)
+  flag.allowGrouping = true
   pause(0.5)
   group(getLooseCards(scriptZone.table))
   pause(0.5)
@@ -940,8 +941,8 @@ function setUpHandEvent()
     staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
     flag.cardsToBeBuried = false
   end
-  trickInProgress = false
-  leadOutPlayer = nil
+  pickingPlayer, leadOutPlayer = nil, nil
+  flag.trick.inProgress = false
   currentTrick = {}
   startLuaCoroutine(self, 'dealCardsCoroutine')
 end
@@ -1188,8 +1189,7 @@ function pickBlindsEvent(player)
   if flag.dealInProgress then
     return
   end
-  local blinds = getLooseCards(scriptZone.center)
-  if #blinds ~= 2 then
+  if countCards(scriptZone.center) ~= 2 then
     return
   end
   pickingPlayer = player
@@ -1199,9 +1199,19 @@ end
 function pickBlindsCoroutine()
   broadcastToAll("[21AF21]" .. pickingPlayer.steam_name .. " Picks![-]")
   local blinds = getLooseCards(scriptZone.center)
+  local playerPosition = Player[pickingPlayer.color].getHandTransform().position
+  local playerRotation = Player[pickingPlayer.color].getHandTransform().rotation
+  if blinds[1].type == 'Deck' then
+    blinds[1].takeObject({
+      position = playerPosition,
+      rotation = playerRotation
+    })
+    pause(0.2)
+  end
+  blinds = getLooseCards(scriptZone.center)
   for _, card in pairs(blinds) do
-    card.setPositionSmooth(Player[pickingPlayer.color].getHandTransform().position)
-    card.setRotationSmooth(Player[pickingPlayer.color].getHandTransform().rotation)
+    card.setPositionSmooth(playerPosition)
+    card.setRotationSmooth(playerRotation)
   end
   Wait.time(
     function()
@@ -1359,6 +1369,9 @@ end
 ---@param container type_object
 ---@param object object_item
 function tryObjectEnterContainer(container, object)
+  if not flag.allowGrouping then
+    return false
+  end
   if flag.cardsToBeBuried then
     if isInZone(object, trickZone[pickingPlayer.color]) then
       return false
@@ -1378,7 +1391,6 @@ end
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
   if zone == scriptZone.drop then
-    print("Object entered Drop Zone")
     object.setPosition({0, 3, 0})
   end
   --Makes sure other players can not see what cards the picker is burying
@@ -1638,7 +1650,7 @@ function calculateTrickWinner()
   leadOutPlayer = trickWinner
   broadcastToAll("[21AF21]" ..
   trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
-  Wait.time(function() giveTrickToWinner(trickWinner) end, 2.5)
+  Wait.time(function() giveTrickToWinner(trickWinner) end, 1.75)
 end
 
 ---Resets trick flag and data then moves Trick to trickZone of trickWinner
