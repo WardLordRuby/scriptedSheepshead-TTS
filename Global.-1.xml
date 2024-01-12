@@ -109,6 +109,7 @@
   </Button>
 
 </Panel>
+
 <Panel id="callsWindow"
   width="163"
   height="58"
@@ -323,6 +324,9 @@
         height="32"
         offsetXY="47 -97"
         rectAlignment="UpperLeft"
+        tooltip=""
+        tooltipBorderColor="7B797C"
+        tooltipPosition="Below"
         >
 
         <Button id="turnOffjdPartner"
@@ -342,6 +346,9 @@
         height="32"
         offsetXY="47 -97"
         rectAlignment="UpperLeft"
+        tooltip=""
+        tooltipBorderColor="7B797C"
+        tooltipPosition="Below"
         active="false"
         >
 
@@ -722,11 +729,14 @@
     <Button id="yesButton"
       image="yesButton"
       preferredWidth="153"
-      onClick="playAloneEvent"
+      onClick="closeWindow"
       onMouseEnter="animateButtonEnter"
       onMouseExit="animateButtonExit"
       onMouseDown="animateButtonDown"
       onMouseUp="animateButtonUp"
+      tooltip="Play Alone?"
+      tooltipBorderColor="7B797C"
+      tooltipPosition="Below"
       >
     </Button>
 
@@ -738,6 +748,9 @@
       onMouseExit="animateButtonExit"
       onMouseDown="animateButtonDown"
       onMouseUp="animateButtonUp"
+      tooltip="Call Up?"
+      tooltipBorderColor="7B797C"
+      tooltipPosition="Below"
       >
     </Button>
   </HorizontalLayout>
@@ -755,7 +768,7 @@
   visibility=""
   >
 
-  <HorizontalLayout
+  <HorizontalLayout id="cardButtons"
     padding="20 20 0 0"
     offsetXY="0 -50"
     spacing="50"
@@ -764,7 +777,7 @@
     childForceExpandWidth="false"
     >
 
-    <Button id="AceOfHearts"
+    <Button id="AceofHearts"
       image="AceOfHearts"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -772,7 +785,7 @@
       >
     </Button>
 
-    <Button id="AceOfSpades"
+    <Button id="AceofSpades"
       image="AceOfSpades"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -780,7 +793,7 @@
       >
     </Button>
 
-    <Button id="AceOfClubs"
+    <Button id="AceofClubs"
       image="AceOfClubs"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -788,7 +801,7 @@
       >
     </Button>
 
-    <Button id="TenOfHearts"
+    <Button id="TenofHearts"
       image="TenOfHearts"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -796,15 +809,15 @@
       >
     </Button>
 
-    <Button id="TenOfSpades"
+    <Button id="TenofSpades"
       image="TenOfSpades"
       preferredWidth="72"
       onClick="selectPartnerEvent"
       active="false"
       >
     </Button>
-    
-    <Button id="TenOfClubs"
+
+    <Button id="TenofClubs"
       image="TenOfClubs"
       preferredWidth="72"
       onClick="selectPartnerEvent"
