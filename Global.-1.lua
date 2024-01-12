@@ -930,6 +930,7 @@ function setUpHandEvent()
     flag.cardsToBeBuried = false
   end
   trickInProgress = false
+  leadOutPlayer = nil
   currentTrick = {}
   startLuaCoroutine(self, 'dealCardsCoroutine')
 end
@@ -2124,9 +2125,12 @@ function callPartnerEvent(player)
         else
           broadcastToColor("[DC0000]You can only call up if you are forced to pick and have the Jack[-]", player.color)
         end
-      else
-        --create conditions
-        toggleWindowVisibility(player, "selectPartnerWindow")
+      else --Call an Ace
+        if player.color == pickingPlayer.color then
+          toggleWindowVisibility(player, "selectPartnerWindow")
+        else
+          broadcastToColor("[DC0000]Only the picker can call their partner[-]", player.color)
+        end
       end
       toggleWindowVisibility(player, "callsWindow")
     end, 
@@ -2331,11 +2335,15 @@ function closeSettingsButtonAnimateDown(player, val, id)
 end
 
 function closeWindow(player, val, id)
+  if id == "yesButton" then
+    id = "playAloneWindowExit"
+  end
   local id1 = id .. "Button"
   local id2 = string.gsub(id, "Exit", "")
   if id ~= "settingsWindowExit" then
     UI.setAttribute(id2, "visibility", "")
   end
+  
   UI.setAttribute(id1, "image", "closeButton")
   UI.hide(id2)
 end
