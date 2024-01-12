@@ -232,7 +232,7 @@ end
 ---@param zone object
 function isInZone(object, zone)
   local occupiedZones = object.getZones()
-  for _, zoneObject in pairs(occupiedZones) do
+  for _, zoneObject in ipairs(occupiedZones) do
     if zoneObject == zone then
       return true
     end
@@ -240,14 +240,15 @@ function isInZone(object, zone)
   return false
 end
 
----Just used to ensure 0 is returned if table empty or nil
+---Used to ensure 0 is returned if table empty or nil,<br>
+---or used if you want to get number of elements in table with non integer keys
 ---@param table table
 function tableLength(table)
   local count = 0
   if table == {} or table == nil then
     return 0
   end
-  for _ in pairs(table) do
+  for _, _ in pairs(table) do
     count = count + 1
   end
   return count
@@ -256,7 +257,7 @@ end
 ---@param table table
 ---@param value table_value
 function tableContains(table, value)
-  for _, v in ipairs(table) do
+  for _, v in pairs(table) do
     if v == value then
       return true
     end
@@ -308,7 +309,7 @@ end
 ---@return table_card_objects
 function getLooseCards(zone)
   local looseCards = {}
-  for _, obj in pairs(zone.getObjects()) do
+  for _, obj in ipairs(zone.getObjects()) do
     if obj.type == "Deck" or obj.type == "Card" then
       table.insert(looseCards, obj)
     end
@@ -401,7 +402,7 @@ end
 function countCards(zone, countFaceDown)
   local objects = zone.getObjects()
   local cardCount, faceDownCount = 0, 0
-  for _, obj in pairs(objects) do
+  for _, obj in ipairs(objects) do
     if obj.type == 'Deck' then
       cardCount = cardCount + obj.getQuantity()
       if countFaceDown then
@@ -457,7 +458,7 @@ end
 ---@param zone object
 function flipCards(zone)
   local cards = getLooseCards(zone)
-  for _, card in pairs(cards) do
+  for _, card in ipairs(cards) do
     if not card.is_face_down then
       card.flip()
     end
@@ -467,7 +468,7 @@ end
 ---Called to reset the game space<br>
 ---Removes all chips
 function resetBoard()
-  for _, obj in pairs(scriptZone.table.getObjects()) do
+  for _, obj in ipairs(scriptZone.table.getObjects()) do
     if obj.type == "Chip" then
       obj.destruct()
       pause(0.06)
@@ -632,7 +633,7 @@ end
 
 ---Deletes all rulebooks from table
 function hideRuleBook()
-  for _, tableObject in pairs(scriptZone.table.getObjects()) do
+  for _, tableObject in ipairs(scriptZone.table.getObjects()) do
     if tableObject.type == 'Tile' then
       tableObject.destruct()
     end
@@ -651,7 +652,7 @@ end
 function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(scriptZone.table)
   if tableLength(remainingTableCards) > 0 then
-    for _, card in pairs(remainingTableCards) do
+    for _, card in ipairs(remainingTableCards) do
       card.destruct()
     end
   end
@@ -1124,7 +1125,7 @@ end
 ---@param cardName string
 function doesPlayerPossessCard(player, cardName)
   local playerCards = getPlayerCards(player)
-  for _, name in pairs(playerCards) do
+  for _, name in ipairs(playerCards) do
     if name == cardName then
       return true
     end
@@ -1137,14 +1138,14 @@ end
 ---@return table card_list
 function getPlayerCards(player)
   local cards = {}
-  for _, card in pairs(getLooseCards(handZone[player.color])) do 
+  for _, card in ipairs(getLooseCards(handZone[player.color])) do 
     table.insert(cards, card.getName())
   end
-  for _, object in pairs(getLooseCards(trickZone[player.color])) do
+  for _, object in ipairs(getLooseCards(trickZone[player.color])) do
     if object.type == 'Card' then
       table.insert(cards, object.getName())
     else
-      for _, card in pairs(object.getObjects()) do
+      for _, card in ipairs(object.getObjects()) do
         table.insert(cards, card.name)
       end
     end
@@ -1167,8 +1168,8 @@ function filterPlayerCards(player, scheme, doNotInclude)
   }
   local playerCards = getPlayerCards(player)
   local filteredCards = {}
-  for _, name in pairs(playerCards) do
-    for _, findName in pairs(schemes[scheme]) do
+  for _, name in ipairs(playerCards) do
+    for _, findName in ipairs(schemes[scheme]) do
       if string.find(name, findName) and not string.find(name, doNotInclude) then
         table.insert(filteredCards, name)
       end
@@ -1210,13 +1211,13 @@ function pickBlindsCoroutine()
     pause(0.2)
   end
   blinds = getLooseCards(scriptZone.center)
-  for _, card in pairs(blinds) do
+  for _, card in ipairs(blinds) do
     card.setPositionSmooth(playerPosition)
     card.setRotationSmooth(playerRotation)
   end
   Wait.time(
     function()
-      for _, card in pairs(Player[pickingPlayer.color].getHandObjects()) do
+      for _, card in ipairs(Player[pickingPlayer.color].getHandObjects()) do
         if card.is_face_down then
           card.flip()
         end
@@ -1314,7 +1315,7 @@ function toggleCounterVisibility()
     --Card counter Loop starts here with setupGuidTable()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
   else
-    for _, tableObject in pairs(scriptZone.table.getObjects()) do
+    for _, tableObject in ipairs(scriptZone.table.getObjects()) do
       if tableObject.type == 'Counter' then
         tableObject.destruct()
       end
@@ -1336,7 +1337,7 @@ function setBuriedEvent(player)
     return
   end
   local buriedCards = getLooseCards(trickZone[pickingPlayer.color])
-  for _, card in pairs(buriedCards) do
+  for _, card in ipairs(buriedCards) do
     if not card.is_face_down then
       card.flip()
     end
@@ -1345,7 +1346,7 @@ function setBuriedEvent(player)
   Wait.time(
     function()
       getDeck(trickZone[pickingPlayer.color]).setInvisibleTo()
-      for _, card in pairs(Player[pickingPlayer.color].getHandObjects()) do
+      for _, card in ipairs(Player[pickingPlayer.color].getHandObjects()) do
         card.setInvisibleTo()
       end
     end,
@@ -1604,7 +1605,7 @@ end
 ---@param objectName string
 function isTrump(objectName)
   local trumpIdentifier = {"Diamonds", "Jack", "Queen"}
-  for _, word in pairs(trumpIdentifier) do
+  for _, word in ipairs(trumpIdentifier) do
     if string.find(objectName, word) then
       return true
     end
@@ -2015,10 +2016,10 @@ function toggleNotValid(id, state)
   return false
 end
 
----Toggle setting with id formatted as "turnOnSettingName or turnOffSettingName"
+---Toggle setting via formatted id
 ---@param player nil
 ---@param val nil
----@param id string
+---@param id string <"turnOnSettingName" | "turnOffSettingName">
 function toggleSetting(player, val, id)
   if not safeToContinue() then
     print("[DC0000]Please wait and try again[-]")
@@ -2252,7 +2253,7 @@ function findCardToCall(cards, name)
     return nil
   end
   local nextHigh = { "Diamonds", "Hearts", "Spades", "Clubs" }
-  for _, cardInHand in pairs(cards) do
+  for _, cardInHand in ipairs(cards) do
     for i, suit in ipairs(nextHigh) do
       if string.find(cardInHand, suit) then
         table.remove(nextHigh, i)
@@ -2275,7 +2276,7 @@ function buildPartnerChoices(player)
   local failSuits, holdCards, partnerChoices = {}, {}, {}
   if tableLength(failCards) > 0 then
     --failSuits = only unique suits in failCards
-    for _, cardName in pairs(failCards) do
+    for _, cardName in ipairs(failCards) do
       local cardSuit = getLastWord(cardName)
       if not tableContains(failSuits, cardSuit) then
         table.insert(failSuits, cardSuit)
@@ -2296,7 +2297,7 @@ function buildPartnerChoices(player)
       failSuits = {"Hearts", "Spades", "Clubs"}
     end
     if tableLength(notPartnerChoices) > 0 then
-      for _, cardToRemove in pairs(notPartnerChoices) do
+      for _, cardToRemove in ipairs(notPartnerChoices) do
         for i, suit in ipairs(failSuits) do
           if string.find(cardToRemove, suit) then
             table.remove(failSuits, i)
@@ -2306,11 +2307,11 @@ function buildPartnerChoices(player)
     end
     --compile list of valid partnerChoices and valid holdCards
     if tableLength(failSuits) > 0 then
-      for _, suit in pairs(failSuits) do
+      for _, suit in ipairs(failSuits) do
         table.insert(partnerChoices, card .. " of " .. suit)
       end
-      for _, cardName in pairs(failCards) do
-        for _, suit in pairs(failSuits) do
+      for _, cardName in ipairs(failCards) do
+        for _, suit in ipairs(failSuits) do
           if string.find(cardName, suit) and not tableContains(notPartnerChoices, cardName) then
             table.insert(holdCards, cardName)
           end
@@ -2338,7 +2339,7 @@ function setActivePartnerButtons(list)
   resetSelectPartnerWindow(selectPartnerWindow, xmlTable)
   xmlTable = UI.getXmlTable()
   local formattedList = {}
-  for _, cardName in pairs(list) do
+  for _, cardName in ipairs(list) do
     local formattedName = removeSpaces(cardName)
     table.insert(formattedList, formattedName)
   end
