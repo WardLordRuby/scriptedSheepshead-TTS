@@ -714,6 +714,17 @@ function printGameSettings()
     stateChangeDealerSitsOut(settings.dealerSitsOut)
   end
 
+  if playerCount == 3 then
+    updateRules("threeHanded", true)
+    broadcastToAll("[21AF21]Picker plays Alone, Leasters enabled by default")
+  end
+
+  if settings.threeHanded and playerCount ~= 3 then
+    updateRules("threeHanded", false)
+    UI.setAttribute("settingsButtonjdPartnerOn", "tooltip", "")
+    UI.setAttribute("settingsButtonjdPartnerOff", "tooltip", "")
+  end
+
   local deck = getDeck(scriptZone.table)
   if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
     rebuildDeck()
@@ -1209,7 +1220,7 @@ function pickBlindsCoroutine()
   staticObject.setBuriedButton.setRotation({0, pickerRotation, 0})
   staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 
-  if settings.jdPartner then
+  if settings.jdPartner == true then
     local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
     if pickingPlayer.color == dealer.color then
       if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
@@ -1224,7 +1235,7 @@ function pickBlindsCoroutine()
         end
       end
     end
-  else --Call an Ace
+  elseif settings.jdPartner == false then --Call an Ace
     pause(0.5)
     local holdCards = buildPartnerChoices(pickingPlayer)
     pause(0.25)
@@ -1834,6 +1845,7 @@ end
 settings = {
   dealerSitsOut = false,
   calls = false,
+  threeHanded = false,
   jdPartner = true
 }
 
@@ -1905,7 +1917,7 @@ function buildCallPanel()
   UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
 end
 
----@param rule string
+---@param rule string <"settings.rule">
 ---@param bool boolean
 function updateRules(rule, bool)
   local ruleTable = {
@@ -1921,6 +1933,11 @@ function updateRules(rule, bool)
       ruleIndex = 18,
       execute = stateChangeCalls
     },
+    threeHanded = {
+      [true] = "Picker Plays Alone         \n",
+      ruleIndex = 14,
+      execute = stateChangeThreeHanded
+    },
     jdPartner = {
       [true] = "Jack of Diamonds Partner    \n",
       [false] = "Call an Ace                \n",
@@ -1931,11 +1948,13 @@ function updateRules(rule, bool)
   if ruleTable[rule].execute then
     ruleTable[rule].execute(bool)
   end
-  currentRules[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
-  displayRules()
+  if ruleTable[rule][bool] then
+    currentRules[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
+    displayRules()
+  end
 end
 
----@param call string
+---@param call string <"callSettings.call">
 ---@param bool boolean
 function updateCalls(call, bool)
   local callTable = {
@@ -1974,6 +1993,9 @@ function toggleNotValid(id, state)
     if string.find(lowerID, "crack.") then
       return true
     end
+  end
+  if id == "jdPartner" and settings.jdPartner == nil then
+    return true
   end
   return false
 end
@@ -2048,6 +2070,30 @@ function stateChangeDealerSitsOut(bool)
   end
 end
 
+function stateChangeThreeHanded(bool)
+  local jdPartnerID = UI.getAttribute("settingsButtonjdPartnerOff", "active")
+  local jdPartner
+  if jdPartnerID == "false" then
+    jdPartner = true
+    jdPartnerID = "settingsButtonjdPartnerOn"
+  else
+    jdPartner = false
+    jdPartnerID = "settingsButtonjdPartnerOff"
+  end
+  if bool == true then
+    settings.jdPartner = nil
+    if not settings.calls then
+      Wait.time(function() toggleSetting(player, val, "turnOnCalls") end, 1.5)
+    end
+    if not callSettings.leaster then
+      Wait.time(function() toggleSetting(player, val, "turnOnLeaster") end, 1.5)
+    end
+    UI.setAttribute(jdPartnerID, "tooltip", "Can not change setting, No partner playing 3 handed")
+  else
+    updateRules("jdPartner", jdPartner)
+  end
+end
+
 ---@param bool boolean
 function stateChangeCrack(bool)
   if bool == true then
@@ -2114,7 +2160,7 @@ function callPartnerEvent(player)
   local player = player
   Wait.time(
     function() 
-      if settings.jdPartner then
+      if settings.jdPartner == true then
         local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
         if player.color == dealer.color and player.color == pickingPlayer.color then
           if doesPlayerPossessCard(player, "Jack of Diamonds") then
@@ -2125,7 +2171,7 @@ function callPartnerEvent(player)
         else
           broadcastToColor("[DC0000]You can only call up if you are forced to pick and have the Jack[-]", player.color)
         end
-      else --Call an Ace
+      elseif settings.jdPartner == false then --Call an Ace
         if player.color == pickingPlayer.color then
           toggleWindowVisibility(player, "selectPartnerWindow")
         else
