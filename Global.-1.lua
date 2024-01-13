@@ -1013,7 +1013,7 @@ function setUpHandEvent()
     staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
     flag.cardsToBeBuried = false
   end
-  pickingPlayer, leadOutPlayer = nil, nil
+  pickingPlayer, leadOutPlayer, holdCards = nil, nil, nil
   flag.trick.inProgress = false
   currentTrick = {}
   
@@ -1255,7 +1255,7 @@ function pickBlindsCoroutine()
     end
   elseif settings.jdPartner == false then --Call an Ace
     pause(0.5)
-    local holdCards = buildPartnerChoices(pickingPlayer)
+    holdCards = buildPartnerChoices(pickingPlayer)
     pause(0.25)
     if holdCards then
       --buryCardsEvent needs access to holdCards
@@ -2012,7 +2012,7 @@ function toggleNotValid(id, state)
       return true
     end
   end
-  if id == "jdPartner" or id == "dealerSitsOut" then
+  if id == "jdPartner" or lowerID == "dealersitsout" then
     if not safeToContinue() then
       print("[DC0000]Please wait and try again[-]")
       return true
@@ -2245,6 +2245,8 @@ end
 
 --[[End of functions and buttons for calls window]]--
 
+--[[Start of functions and buttons for playAloneWindow/selectPartnerWindow window]]--
+
 ---@param player object<event_Trigger>
 function callUpEvent(player)
   toggleWindowVisibility(player, "playAloneWindow")
@@ -2288,8 +2290,6 @@ function findCardToCall(cards, name)
   return callCard
 end
 
---[[Start of functions and buttons for playAloneWindow window]]--
-
 ---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
 ---and return holdCards | if no valid holdCards will return nil
 ---@param player object
@@ -2319,6 +2319,7 @@ function buildPartnerChoices(player)
     --calculate partnerChoices by removing held aces or tens from list(failSuits)
     if card == "Ten" then --player has 3 aces --Hold card must be the ace
       failSuits = {"Hearts", "Spades", "Clubs"}
+      holdCards = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
     end
     if tableLength(notPartnerChoices) > 0 then
       for _, cardToRemove in ipairs(notPartnerChoices) do
@@ -2334,10 +2335,12 @@ function buildPartnerChoices(player)
       for _, suit in ipairs(failSuits) do
         table.insert(partnerChoices, card .. " of " .. suit)
       end
-      for _, cardName in ipairs(failCards) do
-        for _, suit in ipairs(failSuits) do
-          if string.find(cardName, suit) and not tableContains(notPartnerChoices, cardName) then
-            table.insert(holdCards, cardName)
+      if card == "Ace" then
+        for _, cardName in ipairs(failCards) do
+          for _, suit in ipairs(failSuits) do
+            if string.find(cardName, suit) and not tableContains(notPartnerChoices, cardName) then
+              table.insert(holdCards, cardName)
+            end
           end
         end
       end
@@ -2364,7 +2367,7 @@ function setActivePartnerButtons(list)
   xmlTable = UI.getXmlTable()
   local formattedList = {}
   for _, cardName in ipairs(list) do
-    local formattedName = removeSpaces(cardName)
+    local formattedName = cardName:gsub(" ", "-")
     table.insert(formattedList, formattedName)
   end
   for _, childrenButtons in pairs(xmlTable[selectPartnerWindow].children[1].children) do
@@ -2396,10 +2399,34 @@ function resetSelectPartnerWindow(id, table)
   end
 end
 
+---@param player object<event_Trigger>
 function selectPartnerEvent(player, val, id)
-  --print choice
+  local formattedID = id:gsub("-", " ")
+  broadcastToAll("[21AF21]" .. player.steam_name .. " Picks " .. formattedID .. " as their parnter")
+  toggleWindowVisibility(player, "selectPartnerWindow")
+  Wait.time(
+    function ()
+      local validSuit = getLastWord(formattedID)
+      local validCards = {}
+      for _, cardName in ipairs(holdCards) do
+        if string.find(cardName, validSuit) then
+          table.insert(validCards, cardName)
+        end
+      end
+      local numOfValidCards = #validCards
+      if numOfValidCards > 1 then
+        table.insert(validCards, #validCards, "or")
+      end
+      validCards = table.concat(validCards, " ")
+      if numOfValidCards > 2 then
+        validCards = validCards:gsub(validSuit .. "([^,])", validSuit .. ",%1")
+      end
+      broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", pickingPlayer.color)
+    end,
+    2
+  )
 end
---[[End of functions and buttons for playAloneWindow window]]--
+--[[End of functions and buttons for playAloneWindow/selectPartnerWindow window]]--
 
 
 
