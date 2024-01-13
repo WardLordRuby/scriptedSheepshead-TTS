@@ -187,8 +187,8 @@ end
 
 ---Copys input table and removes input color, if color not found returns original table
 ---@param color string
----@param list table_colors
----@return table
+---@param list table<"colors">
+---@return table <"colors">
 function removeColorFromList(color, list)
   local currentIndex
   local json = JSON.encode(list)
@@ -242,7 +242,7 @@ end
 
 ---Used to ensure 0 is returned if table empty or nil,<br>
 ---or used if you want to get number of elements in table with non integer keys
----@param table table
+---@param table table<any>
 function tableLength(table)
   local count = 0
   if table == {} or table == nil then
@@ -254,8 +254,8 @@ function tableLength(table)
   return count
 end
 
----@param table table
----@param value table_value
+---@param table table<any>
+---@param value any
 function tableContains(table, value)
   for _, v in pairs(table) do
     if v == value then
@@ -306,7 +306,7 @@ function getDeck(zone, size)
 end
 
 ---@param zone object
----@return table_card_objects
+---@return table<card_Objects_and_deck_Objects>
 function getLooseCards(zone)
   local looseCards = {}
   for _, obj in ipairs(zone.getObjects()) do
@@ -317,8 +317,34 @@ function getLooseCards(zone)
   return looseCards
 end
 
+---Just checks to make sure cards are all there
+---@param type string<"table"|"deck">
+function verifyCardCount(type)
+  local cardCount
+  if type == "table" then
+    cardCount = countCards(scriptZone.table)
+  elseif getDeck(scriptZone.table) then
+    cardCount = getDeck(scriptZone.table).getQuantity()
+  else
+    respawnDeckCoroutine()
+    return false
+  end
+  if playerCount == 4 then
+    if cardCount ~= 30 then
+      respawnDeckCoroutine()
+      return false
+    end
+  else
+    if cardCount ~= 32 then
+      respawnDeckCoroutine()
+      return false
+    end
+  end
+  return true
+end
+
 ---@param colorOrVar string_color|integer_index
----@param list table_colors
+---@param list table <"colors">
 ---@return object_player
 function getPlayerObject(colorOrVar, list)
   if colorOrVar == 0 then
@@ -345,15 +371,15 @@ end
 
 ---Returns the index of the player seated clockwise from given index
 ---@param index integer
----@param list table_colors
----@return integer_index
+---@param list table <"colors">
+---@return integer <index>
 function getNextColorValInList(index, list)
   local listLength = #list
   for i = 1, listLength, 1 do
     if i == index then
-      local nextColorVal = (index + 1) % listLength + 1
+      local nextColorVal = (index % listLength) + 1
       while list[nextColorVal] == "Blinds" do
-        nextColorVal = (nextColorVal + 1) % listLength + 1
+        nextColorVal = (nextColorVal % listLength) + 1
       end
       return nextColorVal
     end
@@ -368,9 +394,9 @@ function getPreviousColorValInList(index, list)
   local listLength = #list
   for i = listLength, 1, -1 do
     if i == index then
-      local previousColorVal = (index - 2 + listLength) % listLength + 1
+      local previousColorVal = (index - 2) % listLength + 1
       while list[previousColorVal] == "Blinds" do
-        previousColorVal = (previousColorVal - 2 + listLength) % listLength + 1
+        previousColorVal = (previousColorVal - 2) % listLength + 1
       end
       return previousColorVal
     end
@@ -433,6 +459,63 @@ function checkCardCount(zone, count)
     return true
   end
   return false
+end
+
+---@param player object
+---@param cardName string
+function doesPlayerPossessCard(player, cardName)
+  local playerCards = getPlayerCards(player)
+  for _, name in ipairs(playerCards) do
+    if name == cardName then
+      return true
+    end
+  end
+  return false
+end
+
+---Searches player handZone and trickZone
+---@param player object
+---@return table <"cardNames">
+function getPlayerCards(player)
+  local cards = {}
+  for _, card in ipairs(getLooseCards(handZone[player.color])) do
+    table.insert(cards, card.getName())
+  end
+  for _, object in ipairs(getLooseCards(trickZone[player.color])) do
+    if object.type == 'Card' then
+      table.insert(cards, object.getName())
+    else
+      for _, card in ipairs(object.getObjects()) do
+        table.insert(cards, card.name)
+      end
+    end
+  end
+  return cards
+end
+
+---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
+---@param player object
+---@param scheme string <"suitableFail"|"Ace"|"Ten"|"Jack"|"Queen">
+---@param doNotInclude string
+---@return table <"cardNames">
+function filterPlayerCards(player, scheme, doNotInclude)
+  local schemes = {
+    suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
+    Ace = {"Ace"},
+    Ten = {"Ten"},
+    Jack = {"Jack"},
+    Queen = {"Queen"}
+  }
+  local playerCards = getPlayerCards(player)
+  local filteredCards = {}
+  for _, name in ipairs(playerCards) do
+    for _, findName in ipairs(schemes[scheme]) do
+      if string.find(name, findName) and not string.find(name, doNotInclude) then
+        table.insert(filteredCards, name)
+      end
+    end
+  end
+  return filteredCards
 end
 
 ---@param color string
@@ -681,7 +764,7 @@ function respawnDeckCoroutine()
     pause(0.2)
     blackSevens = removeBlackSevens(newDeck)
   end
-  if flag.gameSetup.ran then
+  if flag.gameSetup.ran and flag.firstDealOfGame then
     pause(0.4)
     moveDeckAndDealerChip()
   end
@@ -727,11 +810,8 @@ function printGameSettings()
     UI.setAttribute("settingsButtonjdPartnerOff", "tooltip", "")
   end
 
-  local deck = getDeck(scriptZone.table)
-  if not deck or deck.getQuantity() < 30 or deck.getQuantity() == 31 then
-    rebuildDeck()
-    pause(0.5)
-    isDeckAllThere()
+  while not verifyCardCount("deck") do
+    pause(1)
   end
 
   deck = getDeck(scriptZone.table)
@@ -747,20 +827,6 @@ function printGameSettings()
 
   moveDeckAndDealerChip()
   print("[21AF21]Sheepshead set up for [-]", #sortedSeatedPlayers, " players!")
-end
-
----Just checks to make sure cards are all there
-function isDeckAllThere()
-  local cardCount = countCards(scriptZone.table)
-  if playerCount == 4 then
-    if cardCount ~= 30 then
-      respawnDeckCoroutine()
-    end
-  else
-    if cardCount ~= 32 then
-      respawnDeckCoroutine()
-    end
-  end
 end
 
 ---Called to add the blackSevens to a given deck<br>
@@ -833,7 +899,7 @@ function spawnChips(rotationAngle, playerPos)
 end
 
 ---Start of game setup event
----@param player object_player_event_trigger
+---@param player object<event_Trigger>
 function setUpGameEvent(player)
   if not safeToContinue() then
     return
@@ -937,6 +1003,10 @@ function setUpHandEvent()
   if not safeToContinue() then
     return
   end
+  if not flag.gameSetup.ran then
+    print("[21AF21]Press Set Up Game First.[-]")
+    return
+  end
   flag.dealInProgress = true
   if flag.cardsToBeBuried then
     staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
@@ -946,44 +1016,36 @@ function setUpHandEvent()
   pickingPlayer, leadOutPlayer = nil, nil
   flag.trick.inProgress = false
   currentTrick = {}
+  
   startLuaCoroutine(self, 'dealCardsCoroutine')
 end
 
 ---Order of opperations for dealing
 function dealCardsCoroutine()
-  if flag.gameSetup.inProgress then
-    print("[21AF21]Setup Is Currently In Progress.[-]")
-    flag.dealInProgress = false
-    return 1
-  end
-  if not flag.gameSetup.ran then
-    print("[21AF21]Press Set Up Game First.[-]")
-    flag.dealInProgress = false
-    return 1
-  end
-
   if flag.counterVisible then
     toggleCounterVisibility()
   end
 
   if not flag.firstDealOfGame then
-    dealerColorVal = dealerColorVal + 1
-    if dealerColorVal > #sortedSeatedPlayers then
-      dealerColorVal = 1
+    while not verifyCardCount("table") do
+      pause(0.5)
     end
-
+    dealerColorVal = getNextColorValInList(dealerColorVal, sortedSeatedPlayers)
     if tableLength(getLooseCards(scriptZone.table)) > 1 then
       rebuildDeck()
     end
     pause(0.3)
+
     moveDeckAndDealerChip()
     pause(0.4)
   else
+    while not verifyCardCount("deck") do
+      pause(0.5)
+    end
     flag.firstDealOfGame = false
   end
 
   calculateDealOrder()
-  isDeckAllThere()
 
   flipDeck(scriptZone.table)
   pause(0.35)
@@ -1083,7 +1145,7 @@ end
 --[[End of functions used by New Hand event]]--
 
 ---Prints a message if player passes or is forced to pick
----@param player object_player_event_trigger
+---@param player object<event_Trigger>
 function passEvent(player)
   if not dealerColorVal then
     return
@@ -1121,66 +1183,9 @@ function passEvent(player)
   end
 end
 
----@param player object
----@param cardName string
-function doesPlayerPossessCard(player, cardName)
-  local playerCards = getPlayerCards(player)
-  for _, name in ipairs(playerCards) do
-    if name == cardName then
-      return true
-    end
-  end
-  return false
-end
-
----Searches player handZone and trickZone
----@param player object
----@return table card_list
-function getPlayerCards(player)
-  local cards = {}
-  for _, card in ipairs(getLooseCards(handZone[player.color])) do 
-    table.insert(cards, card.getName())
-  end
-  for _, object in ipairs(getLooseCards(trickZone[player.color])) do
-    if object.type == 'Card' then
-      table.insert(cards, object.getName())
-    else
-      for _, card in ipairs(object.getObjects()) do
-        table.insert(cards, card.name)
-      end
-    end
-  end
-  return cards
-end
-
----Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
----@param player object
----@param scheme string <"suitableFail"|"Ace"|"Ten"|"Jack"|"Queen">
----@param doNotInclude string
----@return table card_list
-function filterPlayerCards(player, scheme, doNotInclude)
-  local schemes = {
-    suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
-    Ace = {"Ace"},
-    Ten = {"Ten"},
-    Jack = {"Jack"},
-    Queen = {"Queen"}
-  }
-  local playerCards = getPlayerCards(player)
-  local filteredCards = {}
-  for _, name in ipairs(playerCards) do
-    for _, findName in ipairs(schemes[scheme]) do
-      if string.find(name, findName) and not string.find(name, doNotInclude) then
-        table.insert(filteredCards, name)
-      end
-    end
-  end
-  return filteredCards
-end
-
 ---Moves the blinds into the pickers hand, sets player to pickingPlayer
 ---Sets flag cardsToBeBuried to trigger buryCards logic
----@param player object_player_event_trigger
+---@param player object<event_Trigger>
 function pickBlindsEvent(player)
   if playerCount == 5 and #sortedSeatedPlayers == 6 then
     if player.color == getPlayerObject(dealerColorVal, sortedSeatedPlayers).color then
@@ -1328,7 +1333,7 @@ end
 
 ---Makes sure buried cards are face down and unhides blinds and pickingPlayers<br>
 ---hand objects. Calculates global leadOutPlayer, hides Set Buried button
----@param player object_player_event_trigger
+---@param player object<event_Trigger>
 function setBuriedEvent(player)
   if player.color ~= pickingPlayer.color then
     return
@@ -1353,10 +1358,7 @@ function setBuriedEvent(player)
     1.6
   )
   flag.cardsToBeBuried = false
-  local leadOutVal = dealerColorVal + 1
-  if leadOutVal > #sortedSeatedPlayers then
-    leadOutVal = 1
-  end
+  local leadOutVal = getNextColorValInList(dealerColorVal, sortedSeatedPlayers)
   leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
   if not DEBUG then
     broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
@@ -1702,7 +1704,7 @@ end
 
 ---Returns the color of the handposition located across the table from given color (pickingPlayer)
 ---@param color string
----@return string_color
+---@return string <"color">
 function findColorAcrossTable(color)
   for i, colors in ipairs(ALL_PLAYERS) do
     local acrossVal = 0
@@ -2010,6 +2012,12 @@ function toggleNotValid(id, state)
       return true
     end
   end
+  if id == "jdPartner" or id == "dealerSitsOut" then
+    if not safeToContinue() then
+      print("[DC0000]Please wait and try again[-]")
+      return true
+    end
+  end
   if id == "jdPartner" and settings.jdPartner == nil then
     return true
   end
@@ -2021,10 +2029,6 @@ end
 ---@param val nil
 ---@param id string <"turnOnSettingName" | "turnOffSettingName">
 function toggleSetting(player, val, id)
-  if not safeToContinue() then
-    print("[DC0000]Please wait and try again[-]")
-    return
-  end
   local idName, state
   if string.find(id, "turnOn") then
     idName = string.gsub(id, "turnOn", "")
@@ -2086,6 +2090,7 @@ function stateChangeDealerSitsOut(bool)
   end
 end
 
+---@param bool boolean
 function stateChangeThreeHanded(bool)
   local jdPartnerID = UI.getAttribute("settingsButtonjdPartnerOff", "active")
   local jdPartner
@@ -2099,13 +2104,27 @@ function stateChangeThreeHanded(bool)
   if bool == true then
     settings.jdPartner = nil
     if not settings.calls then
-      Wait.time(function() toggleSetting(player, val, "turnOnCalls") end, 1.5)
+      Wait.time(function() toggleSetting(player, val, "turnOnCalls") end, 3)
     end
     if not callSettings.leaster then
-      Wait.time(function() toggleSetting(player, val, "turnOnLeaster") end, 1.5)
+      Wait.time(function() toggleSetting(player, val, "turnOnLeaster") end, 3)
     end
     UI.setAttribute(jdPartnerID, "tooltip", "Can not change setting, No partner playing 3 handed")
   else
+    if settings.jdPartner == nil then
+      local callCount = 0
+      for _, bool in pairs(callSettings) do
+        if bool == true then
+          callCount = callCount + 1
+          if callCount > 1 then
+            break
+          end
+        end
+      end
+      if callCount == 1 then
+        Wait.time(function() toggleSetting(player, val, "turnOffCalls") end, 3)
+      end
+    end
     updateRules("jdPartner", jdPartner)
   end
 end
@@ -2144,8 +2163,8 @@ end
 
 --[[End of functions for settings window]]--
 
----@param player object_player_event_trigger
----@param window string
+---@param player object
+---@param window string<"widnowID">
 function toggleWindowVisibility(player, window)
   local visibility = UI.getAttribute(window, "visibility")
   if string.find(visibility, player.color) then
@@ -2169,6 +2188,7 @@ function showCallsEvent(player)
   toggleWindowVisibility(player, "callsWindow")
 end
 
+---@param player object<event_Trigger>
 function callPartnerEvent(player)
   if not pickingPlayer then
     return
@@ -2201,6 +2221,9 @@ function callPartnerEvent(player)
   --Show call partner window for selected parter mode
 end
 
+---@param player object<event_Trigger>
+---@param val nil
+---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
   if not pickingPlayer then
     return
@@ -2222,6 +2245,7 @@ end
 
 --[[End of functions and buttons for calls window]]--
 
+---@param player object<event_Trigger>
 function callUpEvent(player)
   toggleWindowVisibility(player, "playAloneWindow")
   local tryOrder = {"Jack", "Queen"}
@@ -2240,7 +2264,7 @@ function callUpEvent(player)
 end
 
 ---Finds next highest card that is not in passed in table
----@param cards table
+---@param cards table <"cardNames">
 ---@param name string <"Jack"|"Queen">
 ---@return string cardName
 function findCardToCall(cards, name)
@@ -2269,7 +2293,7 @@ end
 ---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
 ---and return holdCards | if no valid holdCards will return nil
 ---@param player object
----@return nil|table
+---@return nil|table<"cardNames">
 function buildPartnerChoices(player)
   --failCards = all suitableFail including ten's
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
@@ -2332,7 +2356,7 @@ function buildPartnerChoices(player)
 end
 
 
----@param list list_strings
+---@param list table <"cardNames">
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
