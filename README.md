@@ -5,7 +5,6 @@ This is my first large coding project, feedback is always appreciated. Work in p
 
 ### Next features to be added:  
 * Implement onSave to save players custom settings
-* Display number of chips won or lost to Picker at end of hand
 * New icons for deal, pick, and pass
 * Scripted event for leaster call
 
@@ -16,7 +15,8 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Automated take trick event  
 * Card counter for both teams  
 * Choose your preferred partner rules  
-* Choose what calls you want to enable to modify scoring  
+* Choose what calls you want to enable to modify scoring
+* Displays number of chips won or lost to Picker at end of hand  
 * Custom model "Schrute Silver" coins  
 * Custom Gameplay rules and tips booklet
 * UI windows for:  
