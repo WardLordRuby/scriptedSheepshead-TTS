@@ -1319,7 +1319,7 @@ function toggleCounterVisibility()
     end
     --Card counter Loop starts here with setupGuidTable()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
-    Wait.time(displayWonOrLossText, 3)
+    Wait.time(displayWonOrLossText, 1.35)
   else
     for _, tableObject in ipairs(scriptZone.table.getObjects()) do
       if tableObject.type == 'Counter' then
@@ -1853,11 +1853,12 @@ function trickCountStop()
   end
 end
 
-
----@param wonOrLoss object<text>
----@param text String<"toDisplay">
-function displayWonOrLossText(textObject)
-  --Button needs to be in timers scope
+---If no params function runs a setup to create params and feeds them back into itself<br>
+---runs while SheepsheadGlobalTimer loop is running
+---@param textObject object
+---@param score integer
+---@param cardCount integer
+function displayWonOrLossText(textObject, score, cardCount)
   local wonOrLoss
   if not textObject then
     local pickerColor = pickingPlayer.color
@@ -1868,40 +1869,49 @@ function displayWonOrLossText(textObject)
       position = textPosition,
       rotation = {90, pickerRotation, 0}
     })
+    wonOrLoss.interactable = false
     wonOrLoss.setValue("")
   else
     wonOrLoss = textObject
   end
   
   if SheepsheadGlobalTimer then
-    local text, totalCards
+    local pickerScore = objectSets[1].c.getValue()
+    local pickerTrickCardCount = countCards(objectSets[1].z)
+    local cardStateChange, totalCards = false
     if playerCount == 4 then
       totalCards = 30
     else
       totalCards = 32
     end
-    local pickerScore = objectSets[1].c.getValue()
-    local pickerTrickCardCount = countCards(objectSets[1].z)
-    if pickerScore == 120 and pickerTrickCardCount == totalCards then
-      text = "+3 Chips!"
-    elseif pickerScore > 90 then
-      text = "+2 Chips!"
-    elseif pickerScore > 60 then
-      text = "+1 Chip"
-    elseif pickerScore > 30 then
-      text = "-1 Chip"
-    elseif pickerScore < 31 then
-      text = "-2 Chips"
-    elseif pickerTrickCardCount == 0 then
-      text = "-3 Chips"
+    if cardCount and cardCount ~= pickerTrickCardCount then
+      if pickerTrickCardCount == totalCards or pickerTrickCardCount == (totalCards - 1) or pickerTrickCardCount == 3 or pickerTrickCardCount == 2 then
+        cardStateChange = true
+      end
     end
-    if text ~= wonOrLoss.getValue() then
-      wonOrLoss.setValue(text)
+    if not score or score ~= pickerScore or cardStateChange then
+      local text
+      if pickerScore == 120 and pickerTrickCardCount == totalCards then
+        text = "+3 Chips!"
+      elseif pickerScore > 90 then
+        text = "+2 Chips!"
+      elseif pickerScore > 60 then
+        text = "+1 Chip"
+      elseif pickerScore > 30 then
+        text = "-1 Chip"
+      elseif pickerScore < 31 and pickerTrickCardCount > 2 then
+        text = "-2 Chips"
+      else
+        text = "-3 Chips"
+      end
+      if text ~= wonOrLoss.getValue() then
+        wonOrLoss.setValue(text)
+      end
     end
     if displayWonOrLossTimer then
       Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
     end
-    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(wonOrLoss) end, 15)
+    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(wonOrLoss, pickerScore, pickerTrickCardCount) end, 15)
   else
     wonOrLoss.destruct()
     Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
