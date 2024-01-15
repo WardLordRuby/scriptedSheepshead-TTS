@@ -149,8 +149,8 @@ end
 ---Pauses script, must be called from within a coroutine
 ---@param time integer_seconds
 function pause(time)
-  local start = os.time()
-  repeat coroutine.yield(0) until os.time() > start + time
+  local start = Time.time
+  repeat coroutine.yield(0) until Time.time > start + time
 end
 
 --[[String manipulation]]--
@@ -1319,6 +1319,7 @@ function toggleCounterVisibility()
     end
     --Card counter Loop starts here with setupGuidTable()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
+    Wait.time(displayWonOrLossText, 3)
   else
     for _, tableObject in ipairs(scriptZone.table.getObjects()) do
       if tableObject.type == 'Counter' then
@@ -1670,7 +1671,7 @@ function giveTrickToWinner(player)
   currentTrick = {}
   local playerTrickZone = trickZone[player.color]
   trick = group(trick)[1]
-  Wait.time(function() trick.flip() end, 0.6)
+  Wait.time(function() trick.flip(); flag.trick.handOut = false end, 0.6)
   Wait.time(
     function()
       local oldTricks = getDeck(playerTrickZone, "big")
@@ -1688,15 +1689,10 @@ function giveTrickToWinner(player)
     end,
     1.5
   )
-  Wait.time(
-    function()
-      group(getLooseCards(playerTrickZone))
-      flag.trick.handOut = false
-    end,
-    2
-  )
+  Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
   if #player.getHandObjects() == 0 then
     Wait.time(function() toggleCounterVisibility() end, 2.2)
+    leadOutPlayer = nil
   end
 end
 
@@ -1854,6 +1850,61 @@ end
 function trickCountStop()
   if SheepsheadGlobalTimer then
     Wait.stop(SheepsheadGlobalTimer); SheepsheadGlobalTimer = nil
+  end
+end
+
+
+---@param wonOrLoss object<text>
+---@param text String<"toDisplay">
+function displayWonOrLossText(textObject)
+  --Button needs to be in timers scope
+  local wonOrLoss
+  if not textObject then
+    local pickerColor = pickingPlayer.color
+    local pickerRotation = ROTATION.color[pickerColor] --Shares the same positionData as setBuriedButton
+    local textPosition = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
+    wonOrLoss = spawnObject({
+      type = '3DText',
+      position = textPosition,
+      rotation = {90, pickerRotation, 0}
+    })
+    wonOrLoss.setValue("")
+  else
+    wonOrLoss = textObject
+  end
+  
+  if SheepsheadGlobalTimer then
+    local text, totalCards
+    if playerCount == 4 then
+      totalCards = 30
+    else
+      totalCards = 32
+    end
+    local pickerScore = objectSets[1].c.getValue()
+    local pickerTrickCardCount = countCards(objectSets[1].z)
+    if pickerScore == 120 and pickerTrickCardCount == totalCards then
+      text = "+3 Chips!"
+    elseif pickerScore > 90 then
+      text = "+2 Chips!"
+    elseif pickerScore > 60 then
+      text = "+1 Chip"
+    elseif pickerScore > 30 then
+      text = "-1 Chip"
+    elseif pickerScore < 31 then
+      text = "-2 Chips"
+    elseif pickerTrickCardCount == 0 then
+      text = "-3 Chips"
+    end
+    if text ~= wonOrLoss.getValue() then
+      wonOrLoss.setValue(text)
+    end
+    if displayWonOrLossTimer then
+      Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
+    end
+    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(wonOrLoss) end, 15)
+  else
+    wonOrLoss.destruct()
+    Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
   end
 end
 
