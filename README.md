@@ -7,6 +7,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 * Implement onSave to save players custom settings
 * New icons for deal, pick, and pass
 * Scripted event for leaster call
+* scripted event for 'unknown' situation when playing Call an Ace  
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
