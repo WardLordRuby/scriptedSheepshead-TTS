@@ -1885,7 +1885,9 @@ function displayWonOrLossText(textObject, score, cardCount)
       totalCards = 32
     end
     if cardCount and cardCount ~= pickerTrickCardCount then
-      if pickerTrickCardCount == totalCards or pickerTrickCardCount == (totalCards - 1) or pickerTrickCardCount == 3 or pickerTrickCardCount == 2 then
+      if cardCount == totalCards or (cardCount ~= totalCards and pickerScore == 120) or 
+      (cardCount > 2 and pickerTrickCardCount < 3) or (cardCount < 3 and pickerTrickCardCount > 2) then
+        print("count state that we care about has changed.")
         cardStateChange = true
       end
     end
