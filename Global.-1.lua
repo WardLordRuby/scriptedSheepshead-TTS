@@ -117,6 +117,7 @@ function onLoad()
       inProgress = false,
       handOut = false
     },
+    leasterHand = false,
     stopCoroutine = false,
     dealInProgress = false,
     lookForPlayerText = false,
@@ -131,6 +132,7 @@ function onLoad()
     UI.show("playerUp")
     UI.show("playerDown")
     UI.show("test")
+    UI.show("settingsWindow")
   end
 
   displayRules()
@@ -644,7 +646,7 @@ function onChat(message, player)
         UI.show("settingsWindow")
       end
     else
-      print("[DC0000]Command not found.[-]")
+      broadcastToColor("[DC0000]Command not found.[-]", player.color)
     end
     return false
   end
@@ -655,7 +657,7 @@ function adminCheck(player)
   if player.admin then
     return true
   else
-    print("[DC0000]You do not have permission to access this feature.[-]")
+    broadcastToColor("[DC0000]You do not have permission to access this feature.[-]", player.color)
     return false
   end
 end
@@ -787,7 +789,7 @@ end
 ---Will stop setUpGameCoroutine if there is less than 3 seated players
 function printGameSettings()
   if #sortedSeatedPlayers < 3 then
-    print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
+    broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
     flag.stopCoroutine = true
     return
   end
@@ -916,7 +918,7 @@ end
 ---Start of order of opperations for setUpGame
 function setUpGameCoroutine()
   if flag.gameSetup.ran and #sortedSeatedPlayers < 3 then
-    print("[DC0000]Sheepshead requires 3 to 6 players.[-]")
+    broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
     flag.gameSetup.inProgress = false
     return 1
   elseif flag.gameSetup.ran then
@@ -1241,6 +1243,7 @@ function pickBlindsCoroutine()
   if settings.jdPartner == true then
     local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
     if pickingPlayer.color == dealer.color then
+      pause(1.5)
       if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
         if not string.find(UI.getAttribute("playAloneWindow", "visibility"), pickingPlayer.color) then
           toggleWindowVisibility(pickingPlayer, "playAloneWindow")
@@ -1358,6 +1361,12 @@ function setBuriedEvent(player)
     end,
     1.6
   )
+  setLeadOutPlayer()
+  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
+  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+end
+
+function setLeadOutPlayer()
   flag.cardsToBeBuried = false
   local leadOutVal = getNextColorValInList(dealerColorVal, sortedSeatedPlayers)
   leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
@@ -1366,8 +1375,6 @@ function setBuriedEvent(player)
   else
     print("[21AF21]" .. leadOutPlayer.color .. " leads out.[-]")
   end
-  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
-  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
 
 ---Runs when an object tries to enter a container<br>
@@ -1691,7 +1698,21 @@ function giveTrickToWinner(player)
   )
   Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
   if #player.getHandObjects() == 0 then
-    Wait.time(function() toggleCounterVisibility() end, 2.2)
+    local delay = 2.2
+    if flag.leasterHand then
+      delay = delay + 3
+      flag.leasterHand = false
+      lastLeasterTrick.interactable = true
+      Wait.time(
+        function()
+          lastLeasterTrick.setPositionSmooth(getDeck(playerTrickZone).getPosition())
+          lastLeasterTrick.setRotationSmooth(getDeck(playerTrickZone).getRotation())
+          lastLeasterTrick = nil
+        end,
+        2
+      )
+    end
+    Wait.time(function() toggleCounterVisibility() end, delay)
     leadOutPlayer = nil
   end
 end
@@ -2287,15 +2308,36 @@ end
 ---@param val nil
 ---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
-  if not pickingPlayer then
+  if not safeToContinue() then
+    broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
     return
   end
   local player = player
-  Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   local id = string.gsub(id, "Button", "")
   id = upperFirstChar(id)
+  if id ~= "Leaster" then
+    local cardsOnTable = 0
+    for _, zone in pairs(trickZone) do
+      local count = countCards(zone)
+      cardsOnTable = cardsOnTable + count
+    end
+    if not pickingPlayer or cardsOnTable > 2 then
+      broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
+      return
+    end
+  end
+  Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   if id == "Leaster" then
-    broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
+    dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
+    if player.color == dealer.color and checkCardCount(scriptZone.center, 2) then
+      broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
+      pickingPlayer = player
+      startLuaCoroutine(self, 'startLeasterHandCoroutine')
+    elseif player.color == dealer.color and countCards(scriptZone.center) ~= 2 then
+      broadcastToColor("[DC0000] You can only call leaster before you pick the blinds[-]", player.color)
+    else
+      broadcastToColor("[DC0000] You can only call leaster if you are forced to pick[-]", player.color)
+    end
   elseif id:sub(1, 5) == "Crack" then
     id = insertSpaces(id)
     id = string.gsub(id, "Crack", "Crack's")
@@ -2420,7 +2462,6 @@ function buildPartnerChoices(player)
   return holdCards
 end
 
-
 ---@param list table <"cardNames">
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
@@ -2490,6 +2531,21 @@ function selectPartnerEvent(player, val, id)
 end
 --[[End of functions and buttons for playAloneWindow/selectPartnerWindow window]]--
 
+function startLeasterHandCoroutine()
+  group(getLooseCards(scriptZone.center))
+  pause(0.6)
+  lastLeasterTrick = getDeck(scriptZone.table)
+  if lastLeasterTrick.getQuantity() ~= 2 then
+    print("startLeasterHand Err: blinds wrong quanity")
+    return 1
+  end
+  lastLeasterTrick.setPositionSmooth({-3.84, 1, -6.63})
+  lastLeasterTrick.setRotationSmooth({0, 30, 180})
+  lastLeasterTrick.interactable = false
+  setLeadOutPlayer()
+  flag.leasterHand = true
+  return 1
+end
 
 
 --[[Start of graphic anamations]]--
