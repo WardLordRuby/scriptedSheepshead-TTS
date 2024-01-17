@@ -5,13 +5,12 @@ This is my first large coding project, feedback is always appreciated. Work in p
 
 ### Next features to be added:  
 * Implement onSave to save players custom settings
-* New icons for deal, pick, and pass
-* Scripted event for leaster call
+* New icons for deal, pick, and pass  
 * scripted event for 'unknown' situation when playing Call an Ace  
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
-* Scripted: Game Set Up, Dealing, Picking, Taking Tricks, and Burying
+* Scripted: Game Set Up, Dealing, Picking, Taking Tricks, Burying, and Leaster Hand  
 * Scripted calling partner for both JD partner and Call an Ace
 * Automated take trick event  
 * Card counter for both teams  
