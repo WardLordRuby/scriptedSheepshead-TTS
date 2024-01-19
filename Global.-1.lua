@@ -125,7 +125,8 @@ function onLoad()
     cardsToBeBuried = false,
     counterVisible = false,
     firstDealOfGame = false,
-    allowGrouping = true
+    allowGrouping = true,
+    fnRunning = false
   }
 
   if DEBUG then
@@ -140,9 +141,9 @@ end
 
 --[[Utility functions]]--
 
----Checks dealInProgress, trick.handOut, and gameSetup.inProgress
+---Checks dealInProgress, trick.handOut, gameSetup.inProgress, and fnRunning
 function safeToContinue()
-  if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress then
+  if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress or flag.fnRunning then
     return false
   end
   return true
@@ -1261,10 +1262,9 @@ function pickBlindsCoroutine()
     holdCards = buildPartnerChoices(pickingPlayer)
     pause(0.25)
     if holdCards then
-      --buryCardsEvent needs access to holdCards
+      --setBuriedEvent needs access to holdCards
       toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
-    else
-      --Unknown event
+    else --Unknown event
       print("Unknown event triggered")
     end
   end
@@ -1345,7 +1345,39 @@ function setBuriedEvent(player)
   if not checkCardCount(trickZone[pickingPlayer.color], 2) then
     return
   end
+  if settings.jdPartner == false then
+    local partnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
+    if partnerWindowOpen ~= "" then
+      broadcastToColor("[DC0000]Select Partner before burying cards", player.color)
+      return
+    end
+  end
   local buriedCards = getLooseCards(trickZone[pickingPlayer.color])
+  if holdCards then --callAnAce active
+    if #holdCards == 2 then
+      --make sure both holdCards are not in burried Cards
+      local count = 0
+      for _, card in ipairs(buriedCards) do
+        for _, cardName in ipairs(holdCards) do
+          if card.getName() == cardName then
+            count = count + 1
+          end
+        end
+      end
+      if count == 2 then
+        broadcastToColor("[DC0000]You can not bury both of your hold cards", player.color)
+        return
+      end
+    elseif #holdCards == 1 then
+      --make sure holdCard is not in burried cards
+      for _, card in ipairs(buriedCards) do
+        if card.getName() == holdCards[1] then
+          broadcastToColor("[DC0000]You can not bury your hold card", player.color)
+          return
+        end
+      end
+    end
+  end
   for _, card in ipairs(buriedCards) do
     if not card.is_face_down then
       card.flip()
@@ -1879,8 +1911,8 @@ end
 ---@param textObject object
 ---@param score integer
 ---@param cardCount integer
-function displayWonOrLossText(textObject, score, cardCount)
-  local wonOrLoss
+function displayWonOrLossText(textObject, score, cardCount, numCardInDeck)
+  local wonOrLoss, totalCards
   if not textObject then
     local pickerColor = pickingPlayer.color
     local pickerRotation = ROTATION.color[pickerColor] --Shares the same positionData as setBuriedButton
@@ -1892,19 +1924,20 @@ function displayWonOrLossText(textObject, score, cardCount)
     })
     wonOrLoss.interactable = false
     wonOrLoss.setValue("")
-  else
-    wonOrLoss = textObject
-  end
-  
-  if SheepsheadGlobalTimer then
-    local pickerScore = objectSets[1].c.getValue()
-    local pickerTrickCardCount = countCards(objectSets[1].z)
-    local cardStateChange, totalCards = false
     if playerCount == 4 then
       totalCards = 30
     else
       totalCards = 32
     end
+  else
+    wonOrLoss = textObject
+    totalCards = numCardInDeck
+  end
+  
+  if SheepsheadGlobalTimer then
+    local pickerScore = objectSets[1].c.getValue()
+    local pickerTrickCardCount = countCards(objectSets[1].z)
+    local cardStateChange = false
     if cardCount and cardCount ~= pickerTrickCardCount then
       if cardCount == totalCards or (cardCount ~= totalCards and pickerScore == 120) or 
       (cardCount > 2 and pickerTrickCardCount < 3) or (cardCount < 3 and pickerTrickCardCount > 2) then
@@ -1933,7 +1966,7 @@ function displayWonOrLossText(textObject, score, cardCount)
     if displayWonOrLossTimer then
       Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
     end
-    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(wonOrLoss, pickerScore, pickerTrickCardCount) end, 15)
+    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(wonOrLoss, pickerScore, pickerTrickCardCount, totalCards) end, 15)
   else
     wonOrLoss.destruct()
     Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
@@ -2278,7 +2311,7 @@ function callPartnerEvent(player)
   end
   local player = player
   Wait.time(
-    function() 
+    function() --Show call partner window for selected parter mode
       if settings.jdPartner == true then
         local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
         if player.color == dealer.color and player.color == pickingPlayer.color then
@@ -2301,7 +2334,6 @@ function callPartnerEvent(player)
     end, 
     0.13
   )
-  --Show call partner window for selected parter mode
 end
 
 ---@param player object<event_Trigger>
@@ -2504,16 +2536,30 @@ end
 
 ---@param player object<event_Trigger>
 function selectPartnerEvent(player, val, id)
+  flag.fnRunning = true
   local formattedID = id:gsub("-", " ")
   broadcastToAll("[21AF21]" .. player.steam_name .. " Picks " .. formattedID .. " as their parnter")
   toggleWindowVisibility(player, "selectPartnerWindow")
   Wait.time(
-    function ()
+    function()
       local validSuit = getLastWord(formattedID)
-      local validCards = {}
+      local nonValidSuits = {"Hearts", "Spades", "Clubs"}
+      for i, suit in ipairs(nonValidSuits) do
+        if string.find(suit, validSuit) then
+          table.remove(nonValidSuits, i)
+        end
+      end
+      local validCards = {} --build validCards for string format to player
       for _, cardName in ipairs(holdCards) do
         if string.find(cardName, validSuit) then
           table.insert(validCards, cardName)
+        end
+      end
+      for i, cardName in ipairs(holdCards) do --update global holdCards
+        for _, suit in ipairs(nonValidSuits) do
+          if string.find(cardName, suit) then
+            table.remove(holdCards, i)
+          end
         end
       end
       local numOfValidCards = #validCards
@@ -2525,6 +2571,10 @@ function selectPartnerEvent(player, val, id)
         validCards = validCards:gsub(validSuit .. "([^,])", validSuit .. ",%1")
       end
       broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", pickingPlayer.color)
+      if DEBUG then
+        print("Valid holdCards are: " .. table.concat(holdCards, ", "))
+      end
+      flag.fnRunning = false
     end,
     2
   )
