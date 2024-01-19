@@ -188,14 +188,18 @@ end
 
 --[[Table manipulation]]--
 
+function copyTable(list)
+  local json = JSON.encode(list)
+  return JSON.decode(json)
+end
+
 ---Copys input table and removes input color, if color not found returns original table
 ---@param color string
 ---@param list table<"colors">
 ---@return table <"colors">
 function removeColorFromList(color, list)
   local currentIndex
-  local json = JSON.encode(list)
-  local modifiedList = JSON.decode(json)
+  local modifiedList = copyTable(list)
   for i, colors in ipairs(modifiedList) do
     if colors == color then
       currentIndex = i
@@ -858,16 +862,20 @@ function removeBlackSevens(deck)
   deck.setPosition(centerPos)
   deck.setRotation({0, 0, 180})
   local cardsToRemove = {'Seven of Clubs', 'Seven of Spades'}
+  local guids = {}
   for _, card in ipairs(deck.getObjects()) do
     for _, cardName in ipairs(cardsToRemove) do
       if card.name == cardName then
-        deck.takeObject({
-          guid = card.guid,
-          position = centerPos + Vector(2.75, 1, 0),
-          smooth = false
-        })
+        table.insert(guids, card.guid)
       end
     end
+  end
+  for _, guid in ipairs(guids) do
+    deck.takeObject({
+      guid = guid,
+      position = centerPos + Vector(2.75, 1, 0),
+      smooth = false
+    })
   end
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.25)
@@ -949,8 +957,7 @@ function setUpGameCoroutine()
   --Happens in place of populatePlayers
   if DEBUG then
     if sortedSeatedPlayers == nil then
-      local json = JSON.encode(ALL_PLAYERS)
-      sortedSeatedPlayers = JSON.decode(json)
+      sortedSeatedPlayers = copyTable(ALL_PLAYERS)
       flag.gameSetup.inProgress = false
       return 1
     end
@@ -986,8 +993,7 @@ end
 ---Adds "Blinds" to the dealOrder table in the position directly after the current dealer<br>
 ---If dealer sits out replaces dealer with blinds
 function calculateDealOrder()
-  local json = JSON.encode(sortedSeatedPlayers)
-  dealOrder = JSON.decode(json)
+  dealOrder = copyTable(sortedSeatedPlayers)
   local blinds = "Blinds"
   if playerCount == #sortedSeatedPlayers then
     blindVal = dealerColorVal + 1
@@ -1019,6 +1025,17 @@ function setUpHandEvent()
   pickingPlayer, leadOutPlayer, holdCards = nil, nil, nil
   flag.trick.inProgress = false
   currentTrick = {}
+  
+  local selectPartnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
+  local playAloneWindowOpen = UI.getAttribute("playAloneWindow", "visibility")
+  if selectPartnerWindowOpen ~= "" then
+    UI.hide("selectPartnerWindow")
+    UI.setAttribute("selectPartnerWindow", "visibility", "")
+  end
+  if playAloneWindowOpen ~= "" then
+    UI.hide("playAloneWindow")
+    UI.setAttribute("playAloneWindow", "visibility", "")
+  end
   
   startLuaCoroutine(self, 'dealCardsCoroutine')
 end
@@ -1324,7 +1341,9 @@ function toggleCounterVisibility()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
     Wait.time(displayWonOrLossText, 1.35)
   else
-    for _, tableObject in ipairs(scriptZone.table.getObjects()) do
+    local zoneObjects = scriptZone.table.getObjects()
+    for i = #zoneObjects, 1, -1 do
+      local tableObject = zoneObjects[i]
       if tableObject.type == 'Counter' then
         tableObject.destruct()
       end
@@ -2416,7 +2435,8 @@ function findCardToCall(cards, name)
   end
   local nextHigh = { "Diamonds", "Hearts", "Spades", "Clubs" }
   for _, cardInHand in ipairs(cards) do
-    for i, suit in ipairs(nextHigh) do
+    for i = #nextHigh, 1, -1 do
+      local suit = nextHigh[i]
       if string.find(cardInHand, suit) then
         table.remove(nextHigh, i)
       end
@@ -2459,7 +2479,8 @@ function buildPartnerChoices(player)
     end
     if tableLength(notPartnerChoices) > 0 then
       for _, cardToRemove in ipairs(notPartnerChoices) do
-        for i, suit in ipairs(failSuits) do
+        for i = #failSuits, 1, -1 do
+          local suit = failSuits[i]
           if string.find(cardToRemove, suit) then
             table.remove(failSuits, i)
           end
@@ -2547,21 +2568,21 @@ function selectPartnerEvent(player, val, id)
       for i, suit in ipairs(nonValidSuits) do
         if string.find(suit, validSuit) then
           table.remove(nonValidSuits, i)
+          break
         end
       end
-      local validCards = {} --build validCards for string format to player
-      for _, cardName in ipairs(holdCards) do
-        if string.find(cardName, validSuit) then
-          table.insert(validCards, cardName)
-        end
-      end
-      for i, cardName in ipairs(holdCards) do --update global holdCards
-        for _, suit in ipairs(nonValidSuits) do
-          if string.find(cardName, suit) then
-            table.remove(holdCards, i)
+      for _, suit in ipairs(nonValidSuits) do --update global holdCards
+        for i, cardName in ipairs(holdCards) do
+          for i = #holdCards, 1, -1 do
+            local cardName = holdCards[i]
+            if string.find(cardName, suit) then
+              print("Removed:", cardName, "from holdCards")
+              table.remove(holdCards, i)
+            end
           end
         end
       end
+      local validCards = copyTable(holdCards) --build validCards for string format to player
       local numOfValidCards = #validCards
       if numOfValidCards > 1 then
         table.insert(validCards, #validCards, "or")
