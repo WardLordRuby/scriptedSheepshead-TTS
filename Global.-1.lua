@@ -188,6 +188,8 @@ end
 
 --[[Table manipulation]]--
 
+---@param list table
+---@return table
 function copyTable(list)
   local json = JSON.encode(list)
   return JSON.decode(json)
@@ -555,12 +557,15 @@ function flipCards(zone)
   end
 end
 
----Called to reset the game space<br>
----Removes all chips
-function resetBoard()
-  for _, obj in ipairs(scriptZone.table.getObjects()) do
-    if obj.type == "Chip" then
-      obj.destruct()
+---Called to remove items from a zone. Must be called from within a coroutine
+---@param zone Object
+---@param item string
+function resetBoard(zone, item)
+  local zoneObjects = zone.getObjects()
+  for i = #zoneObjects, 1 , -1 do
+    local object = zoneObjects[i]
+    if object.type == item then
+      object.destruct()
       pause(0.06)
     end
   end
@@ -723,7 +728,9 @@ end
 
 ---Deletes all rulebooks from table
 function hideRuleBook()
-  for _, tableObject in ipairs(scriptZone.table.getObjects()) do
+  local tableObjects = scriptZone.table.getObjects()
+  for i = #tableObjects, 1, -1 do
+    local tableObject = tableObjects[i]
     if tableObject.type == 'Tile' then
       tableObject.destruct()
     end
@@ -742,7 +749,8 @@ end
 function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(scriptZone.table)
   if tableLength(remainingTableCards) > 0 then
-    for _, card in ipairs(remainingTableCards) do
+    for i = #remainingTableCards, 1, -1 do
+      local card = remainingTableCards[i]
       card.destruct()
     end
   end
@@ -939,7 +947,7 @@ function setUpGameCoroutine()
     pause(6)
     if flag.continue then
       flag.lookForPlayerText, flag.continue = false, false
-      resetBoard()
+      resetBoard(scriptZone.table, 'Chip')
     else
       print("[21AF21]New game was not selected.[-]")
       flag.lookForPlayerText, flag.continue = false, false
