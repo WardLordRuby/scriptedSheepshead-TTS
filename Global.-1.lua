@@ -1032,6 +1032,7 @@ function setUpHandEvent()
   end
   pickingPlayer, leadOutPlayer, holdCards = nil, nil, nil
   flag.trick.inProgress = false
+  flag.leasterHand = false
   currentTrick = {}
   
   local selectPartnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
@@ -1347,7 +1348,9 @@ function toggleCounterVisibility()
     end
     --Card counter Loop starts here with setupGuidTable()
     Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
-    Wait.time(displayWonOrLossText, 1.35)
+    if not flag.leasterHand then
+      Wait.time(displayWonOrLossText, 1.35)      
+    end
   else
     local zoneObjects = scriptZone.table.getObjects()
     for i = #zoneObjects, 1, -1 do
@@ -1759,8 +1762,7 @@ function giveTrickToWinner(player)
   if #player.getHandObjects() == 0 then
     local delay = 2.2
     if flag.leasterHand then
-      delay = delay + 3
-      flag.leasterHand = false
+      delay = delay + 3.5
       lastLeasterTrick.interactable = true
       Wait.time(
         function()
@@ -1768,7 +1770,7 @@ function giveTrickToWinner(player)
           lastLeasterTrick.setRotationSmooth(getDeck(playerTrickZone).getRotation())
           lastLeasterTrick = nil
         end,
-        2
+        2.5
       )
     end
     Wait.time(function() toggleCounterVisibility() end, delay)
@@ -2623,7 +2625,14 @@ function startLeasterHandCoroutine()
   lastLeasterTrick.interactable = false
   setLeadOutPlayer()
   flag.leasterHand = true
+  printLeasterRules()
   return 1
+end
+
+function printLeasterRules()
+  Wait.time(function() broadcastToAll("[21AF21]No teams, everyone for themselves![-]") end, 1)
+  Wait.time(function() broadcastToAll("[21AF21]Player with least ammount of points wins +1 from all[-]") end, 3)
+  Wait.time(function() broadcastToAll("[21AF21]Player who takes the last trick gets the blinds[-]") end, 5)
 end
 
 
