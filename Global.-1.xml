@@ -230,7 +230,7 @@
 <Panel id="settingsWindow"
   width="372"
   height="563"
-  offsetXY="400 -100"
+  offsetXY="110 -30"
   color="rgba(0,0,0,0)"
   rectAlignment="UpperLeft"
   allowDragging="true"
@@ -777,7 +777,7 @@
     childForceExpandWidth="false"
     >
 
-    <Button id="AceofHearts"
+    <Button id="Ace-of-Hearts"
       image="AceOfHearts"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -785,7 +785,7 @@
       >
     </Button>
 
-    <Button id="AceofSpades"
+    <Button id="Ace-of-Spades"
       image="AceOfSpades"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -793,7 +793,7 @@
       >
     </Button>
 
-    <Button id="AceofClubs"
+    <Button id="Ace-of-Clubs"
       image="AceOfClubs"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -801,7 +801,7 @@
       >
     </Button>
 
-    <Button id="TenofHearts"
+    <Button id="Ten-of-Hearts"
       image="TenOfHearts"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -809,7 +809,7 @@
       >
     </Button>
 
-    <Button id="TenofSpades"
+    <Button id="Ten-of-Spades"
       image="TenOfSpades"
       preferredWidth="72"
       onClick="selectPartnerEvent"
@@ -817,8 +817,32 @@
       >
     </Button>
 
-    <Button id="TenofClubs"
+    <Button id="Ten-of-Clubs"
       image="TenOfClubs"
+      preferredWidth="72"
+      onClick="selectPartnerEvent"
+      active="false"
+      >
+    </Button>
+    
+    <Button id="King-of-Hearts"
+      image="KingOfHearts"
+      preferredWidth="72"
+      onClick="selectPartnerEvent"
+      active="false"
+      >
+    </Button>
+
+    <Button id="King-of-Spades"
+      image="KingOfSpades"
+      preferredWidth="72"
+      onClick="selectPartnerEvent"
+      active="false"
+      >
+    </Button>
+
+    <Button id="King-of-Clubs"
+      image="KingOfClubs"
       preferredWidth="72"
       onClick="selectPartnerEvent"
       active="false"
