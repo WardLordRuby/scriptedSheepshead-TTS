@@ -33,6 +33,7 @@ SPAWN_POS = {
   tableBlock = Vector(0, 3.96, 0),
   pickerCounter = Vector(0, 1.83, -4.04),
   tableCounter = Vector(0, 1.83, 4.04),
+  leasterCards = Vector(-3.84, 1, -6.63),
   ruleBook = Vector(0, 0.96, -9.5),
   dealerChip = Vector(4, -2.58, 7),
   deck = Vector(2, -2.5, 5),
@@ -504,12 +505,13 @@ end
 
 ---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
 ---@param player object
----@param scheme string <"suitableFail"|"Ace"|"Ten"|"Jack"|"Queen">
+---@param scheme string <"suitableFail"|"King"|"Ace"|"Ten"|"Jack"|"Queen">
 ---@param doNotInclude string
 ---@return table <"cardNames">
 function filterPlayerCards(player, scheme, doNotInclude)
   local schemes = {
     suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
+    King = {"King"},
     Ace = {"Ace"},
     Ten = {"Ten"},
     Jack = {"Jack"},
@@ -559,12 +561,16 @@ end
 
 ---Called to remove items from a zone. Must be called from within a coroutine
 ---@param zone Object
----@param item string
-function resetBoard(zone, item)
+---@param item string<'Type'>
+---@param item2 string<'Type'>
+function resetBoard(zone, item, item2)
+  if not item2 then
+    item2 = item
+  end
   local zoneObjects = zone.getObjects()
   for i = #zoneObjects, 1 , -1 do
     local object = zoneObjects[i]
-    if object.type == item then
+    if object.type == item or object.type == item2 then
       object.destruct()
       pause(0.06)
     end
@@ -749,10 +755,7 @@ end
 function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(scriptZone.table)
   if tableLength(remainingTableCards) > 0 then
-    for i = #remainingTableCards, 1, -1 do
-      local card = remainingTableCards[i]
-      card.destruct()
-    end
+    resetBoard(scriptZone.table, 'Card', 'Deck')
   end
   staticObject.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
@@ -1031,8 +1034,10 @@ function setUpHandEvent()
     flag.cardsToBeBuried = false
   end
   pickingPlayer, leadOutPlayer, holdCards = nil, nil, nil
-  flag.trick.inProgress = false
-  flag.leasterHand = false
+  flag.trick.inProgress, flag.leasterHand = false, false
+  if unknownText then
+    unknownText.destruct(); unknownText = nil
+  end
   currentTrick = {}
   
   local selectPartnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
@@ -1276,22 +1281,27 @@ function pickBlindsCoroutine()
           toggleWindowVisibility(pickingPlayer, "playAloneWindow")
         end
       end
-      if callSettings.leaster then
-        if not string.find(UI.getAttribute("callsWindow", "visibility"), pickingPlayer.color) then
-          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", pickingPlayer.color)
-          toggleWindowVisibility(pickingPlayer, "callsWindow")
-        end
-      end
     end
   elseif settings.jdPartner == false then --Call an Ace
     pause(0.5)
     holdCards = buildPartnerChoices(pickingPlayer)
     pause(0.25)
     if holdCards then
-      --setBuriedEvent needs access to holdCards
       toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
     else --Unknown event
-      print("Unknown event triggered")
+      unknownPartnerChoices(pickingPlayer)
+      pause(0.25)
+      local unknownTextPos = SPAWN_POS.leasterCards:copy():rotateOver('y', pickerRotation)
+      unknownText = spawnObject({
+        type = '3DText',
+        position = unknownTextPos,
+        rotation = {90, pickerRotation - 60, 0}
+      })
+      unknownText.interactable = false
+      unknownText.TextTool.setFontSize(10)
+      unknownText.TextTool.setFontColor("Green")
+      unknownText.setValue("Place Unknown Card\nFacedown Here")
+      toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
     end
   end
   return 1
@@ -1383,9 +1393,8 @@ function setBuriedEvent(player)
     end
   end
   local buriedCards = getLooseCards(trickZone[pickingPlayer.color])
-  if holdCards then --callAnAce active
+  if holdCards then --callAnAce active, make sure holdCard(s) is not in burried cards
     if #holdCards == 2 then
-      --make sure both holdCards are not in burried Cards
       local count = 0
       for _, card in ipairs(buriedCards) do
         for _, cardName in ipairs(holdCards) do
@@ -1399,7 +1408,6 @@ function setBuriedEvent(player)
         return
       end
     elseif #holdCards == 1 then
-      --make sure holdCard is not in burried cards
       for _, card in ipairs(buriedCards) do
         if card.getName() == holdCards[1] then
           broadcastToColor("[DC0000]You can not bury your hold card", player.color)
@@ -1407,6 +1415,9 @@ function setBuriedEvent(player)
         end
       end
     end
+  end
+  if unknownText then
+    unknownText.destruct(); unknownText = nil
   end
   for _, card in ipairs(buriedCards) do
     if not card.is_face_down then
@@ -1416,8 +1427,7 @@ function setBuriedEvent(player)
   Wait.time(function() group(buriedCards) end, 0.8)
   Wait.time(
     function()
-      getDeck(trickZone[pickingPlayer.color]).setInvisibleTo()
-      for _, card in ipairs(Player[pickingPlayer.color].getHandObjects()) do
+      for _, card in ipairs(getLooseCards(scriptZone.table)) do
         card.setInvisibleTo()
       end
     end,
@@ -1528,7 +1538,11 @@ function onObjectDrop(playerColor, object)
             if not DEBUG and playerColor ~= leadOutPlayer.color then
               broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
             else
-              addCardDataToCurrentTrick(playerColor, object)
+              local faceDown = false
+              if object.is_face_down then
+                faceDown = true
+              end
+              addCardDataToCurrentTrick(playerColor, object, faceDown)
               if #currentTrick == playerCount + 1 then
                 calculateTrickWinner()
               end
@@ -1584,7 +1598,7 @@ end
 
 ---@param playerColor string
 ---@param object object
-function addCardDataToCurrentTrick(playerColor, object)
+function addCardDataToCurrentTrick(playerColor, object, isFaceDown)
   --Check if object is trump
   local objectName = object.getName()
   local objectIsTrump = isTrump(objectName)
@@ -1606,13 +1620,13 @@ function addCardDataToCurrentTrick(playerColor, object)
       print("[21AF21]" .. currentTrick[#currentTrick].cardName .. " added to trick[-]")
     end
   end
-  calculateCardData(#currentTrick, objectIsTrump)
+  calculateCardData(#currentTrick, objectIsTrump, isFaceDown)
 end
 
 ---Function will return early if card does not need to be compared to currentHighStrength
 ---@param cardIndex integer
 ---@param objectIsTrump boolean
-function calculateCardData(cardIndex, objectIsTrump)
+function calculateCardData(cardIndex, objectIsTrump, isFaceDown)
   if not currentTrick[1].trump then --No trump in currentTrick
     if not objectIsTrump then       --Not trump and not suit led out
       if getLastWord(currentTrick[cardIndex].cardName) ~= currentTrick[1].ledSuit then
@@ -1626,7 +1640,12 @@ function calculateCardData(cardIndex, objectIsTrump)
       return
     end
   end
-  local strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
+  local strengthVal
+  if isFaceDown then
+    strengthVal = 0
+  else
+    strengthVal = quickSearch(currentTrick[cardIndex].cardName, objectIsTrump)
+  end
   if strengthVal > currentTrick[1].currentHighStrength then
     updateCurrentTrickProperties(objectIsTrump, strengthVal, cardIndex)
   end
@@ -2465,37 +2484,15 @@ function buildPartnerChoices(player)
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
   local failSuits, holdCards, partnerChoices = {}, {}, {}
   if tableLength(failCards) > 0 then
-    --failSuits = only unique suits in failCards
-    for _, cardName in ipairs(failCards) do
-      local cardSuit = getLastWord(cardName)
-      if not tableContains(failSuits, cardSuit) then
-        table.insert(failSuits, cardSuit)
-      end
-    end
-    local tryOrder = {"Ace", "Ten"}
-    --notPartnerChoices = Aces or Tens player has
-    local notPartnerChoices, card
-    for _, tryCard in ipairs(tryOrder) do
-      card = tryCard
-      notPartnerChoices = filterPlayerCards(player, tryCard, "Diamonds")
-      if tableLength(notPartnerChoices) < 3 then
-        break
-      end
-    end
-    --calculate partnerChoices by removing held aces or tens from list(failSuits)
-    if card == "Ten" then --player has 3 aces --Hold card must be the ace
+    failSuits = uniqueFailSuits(failCards)
+    local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player)
+
+    if card == "Ten" then --player has 3 aces, Hold card must be the ace
       failSuits = {"Hearts", "Spades", "Clubs"}
       holdCards = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
     end
     if tableLength(notPartnerChoices) > 0 then
-      for _, cardToRemove in ipairs(notPartnerChoices) do
-        for i = #failSuits, 1, -1 do
-          local suit = failSuits[i]
-          if string.find(cardToRemove, suit) then
-            table.remove(failSuits, i)
-          end
-        end
-      end
+      failSuits = removeHeldCards(notPartnerChoices, failSuits)
     end
     --compile list of valid partnerChoices and valid holdCards
     if tableLength(failSuits) > 0 then
@@ -2517,12 +2514,78 @@ function buildPartnerChoices(player)
       end
     end
   end 
-  --nil = unknown mode 
   if tableLength(failCards) == 0 or tableLength(failSuits) == 0 then
-    return nil
+    return nil --nil = unknown mode 
   end
   setActivePartnerButtons(partnerChoices)
   return holdCards
+end
+
+---filters a list of card names down to one of each fail suit
+---@param failCards table<"cardName">
+---@return table<"suitName">
+function uniqueFailSuits(failCards)
+  local failSuits = {}
+  for _, cardName in ipairs(failCards) do
+    local cardSuit = getLastWord(cardName)
+    if not tableContains(failSuits, cardSuit) then
+      table.insert(failSuits, cardSuit)
+    end
+  end
+  return failSuits
+end
+
+---returns the fail aces a player holds, if player holds 3 fail aces returns the fail 10's a player holds
+---@param player object
+---@return table<"cardNames">
+---@return string<"Ace"|"Ten">
+function aceOrTenOfNotPartnerChoices(player, unknown)
+  local tryOrder = {"Ace", "Ten"}
+  if unknown == "unknown" then
+    table.insert(tryOrder, "King")
+  end
+  local notPartnerChoices, card
+  for _, tryCard in ipairs(tryOrder) do
+    card = tryCard
+    notPartnerChoices = filterPlayerCards(player, tryCard, "Diamonds")
+    if tableLength(notPartnerChoices) < 3 then
+      break
+    end
+  end
+  return notPartnerChoices, card
+end
+
+---Removes suits from failSuits if they share the same suit with cards found in notPartnerChoices
+---@param notPartnerChoices table<"cardNames">
+---@param failSuits table<"suitName">
+---@return table<"suitName">
+function removeHeldCards(notPartnerChoices, failSuits)
+  for _, cardToRemove in ipairs(notPartnerChoices) do
+    for i = #failSuits, 1, -1 do
+      local suit = failSuits[i]
+      if string.find(cardToRemove, suit) then
+        table.remove(failSuits, i)
+      end
+    end
+  end
+  return failSuits
+end
+
+---Finds the valid partnerChoices for when unknown event is triggered and passes them to setActivePartnerButtons
+---@param player object
+function unknownPartnerChoices(player)
+  local failSuits = {"Hearts", "Spades", "Clubs"}
+  local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player, "unknown")
+  failSuits = removeHeldCards(notPartnerChoices, failSuits)
+  local partnerChoices = {}
+  for _, suit in ipairs(failSuits) do
+    table.insert(partnerChoices, card .. " of " .. suit)
+  end
+  setActivePartnerButtons(partnerChoices)
+  if DEBUG then
+    print("Unknown event triggered")
+    print(table.concat(partnerChoices, ", "))
+  end
 end
 
 ---@param list table <"cardNames">
@@ -2569,20 +2632,24 @@ end
 function selectPartnerEvent(player, val, id)
   flag.fnRunning = true
   local formattedID = id:gsub("-", " ")
-  broadcastToAll("[21AF21]" .. player.steam_name .. " Picks " .. formattedID .. " as their parnter")
+  local unknownFormat = ""
+  if unknownText then
+    unknownFormat = " - Unknown"
+  end
+  broadcastToAll("[21AF21]" .. player.steam_name .. " Picks " .. formattedID .. unknownFormat .. " as their parnter")
   toggleWindowVisibility(player, "selectPartnerWindow")
+  local validSuit = getLastWord(formattedID)
   Wait.time(
     function()
-      local validSuit = getLastWord(formattedID)
-      local nonValidSuits = {"Hearts", "Spades", "Clubs"}
-      for i, suit in ipairs(nonValidSuits) do
-        if string.find(suit, validSuit) then
-          table.remove(nonValidSuits, i)
-          break
+      if not unknownText then --Unknown event off
+        local nonValidSuits = {"Hearts", "Spades", "Clubs"}
+        for i, suit in ipairs(nonValidSuits) do
+          if string.find(suit, validSuit) then
+            table.remove(nonValidSuits, i)
+            break
+          end
         end
-      end
-      for _, suit in ipairs(nonValidSuits) do --update global holdCards
-        for i, cardName in ipairs(holdCards) do
+        for _, suit in ipairs(nonValidSuits) do --update global holdCards
           for i = #holdCards, 1, -1 do
             local cardName = holdCards[i]
             if string.find(cardName, suit) then
@@ -2591,19 +2658,21 @@ function selectPartnerEvent(player, val, id)
             end
           end
         end
-      end
-      local validCards = copyTable(holdCards) --build validCards for string format to player
-      local numOfValidCards = #validCards
-      if numOfValidCards > 1 then
-        table.insert(validCards, #validCards, "or")
-      end
-      validCards = table.concat(validCards, " ")
-      if numOfValidCards > 2 then
-        validCards = validCards:gsub(validSuit .. "([^,])", validSuit .. ",%1")
-      end
-      broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", pickingPlayer.color)
-      if DEBUG then
-        print("Valid holdCards are: " .. table.concat(holdCards, ", "))
+        local validCards = copyTable(holdCards) --build validCards for string format to player
+        local numOfValidCards = #validCards
+        if numOfValidCards > 1 then
+          table.insert(validCards, #validCards, "or")
+        end
+        validCards = table.concat(validCards, " ")
+        if numOfValidCards > 2 then
+          validCards = validCards:gsub(validSuit .. "([^,])", validSuit .. ",%1")
+        end
+        broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", pickingPlayer.color)
+        if DEBUG then
+          print("Valid holdCards are: " .. table.concat(holdCards, ", "))
+        end
+      else --Unknown event on
+        broadcastToColor("[21AF21]Remember to play your unknown card the first time ".. validSuit .. " is played[-]", pickingPlayer.color)
       end
       flag.fnRunning = false
     end,
@@ -2620,8 +2689,10 @@ function startLeasterHandCoroutine()
     print("startLeasterHand Err: blinds wrong quanity")
     return 1
   end
-  lastLeasterTrick.setPositionSmooth({-3.84, 1, -6.63})
-  lastLeasterTrick.setRotationSmooth({0, 30, 180})
+  local playerRotation = ROTATION.color[pickingPlayer.color]
+  local leasterPos = SPAWN_POS.leasterCards:copy():rotateOver('y', playerRotation)
+  lastLeasterTrick.setPositionSmooth(leasterPos)
+  lastLeasterTrick.setRotationSmooth({0, playerRotation + 30, 180})
   lastLeasterTrick.interactable = false
   setLeadOutPlayer()
   flag.leasterHand = true
