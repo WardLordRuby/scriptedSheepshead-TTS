@@ -276,11 +276,11 @@ function tableContains(table, value)
 end
 
 ---Returns the deck from given zone
----If you are aware of more than one deck in a given zone
----getDeck() can return the smaller or larger of the decks found
+---If you are aware of more than one deck in a given zone getDeck()<br> can return the smaller or larger
+---of the decks found. This function has the possibility to error if not ran within a coroutine
 ---@param zone object
 ---@param size optional_string <"big"|"small">
----@return object_deck
+---@return object_deck|nil
 function getDeck(zone, size)
   local decks = {}
   for _, obj in ipairs(zone.getObjects()) do
@@ -315,19 +315,30 @@ function getDeck(zone, size)
   end
 end
 
+---getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine
 ---@param zone object
+---@param arg String<"Deck1">
 ---@return table<card_Objects_and_deck_Objects>
-function getLooseCards(zone)
+function getLooseCards(zone, arg)
   local looseCards = {}
   for _, obj in ipairs(zone.getObjects()) do
     if obj.type == "Deck" or obj.type == "Card" then
       table.insert(looseCards, obj)
     end
   end
-  return looseCards
+  if arg == 'Deck1' then
+    for i, obj in ipairs(looseCards) do
+      if obj.type == "Deck" then
+        return looseCards[i]
+      end
+    end
+  else
+    return looseCards
+  end
 end
 
----Just checks to make sure cards are all there
+---Just checks to make sure cards are all there<br>
+---Recomended to be ran from within a coroutine
 ---@param type string<"table"|"deck">
 function verifyCardCount(type)
   local cardCount
@@ -413,7 +424,8 @@ function getPreviousColorValInList(index, list)
   end
 end
 
----Checks if a deck exists on the table
+---Checks if a deck exists on the table<br>
+---Recomended to be ran from within a coroutine
 function deckExists()
   return getDeck(scriptZone.table) ~= nil
 end
@@ -539,7 +551,8 @@ end
 
 --[[Object manipulation]]--
 
----Checks if a deck in the given zone is face up, if so it flips the deck
+---Checks if a deck in the given zone is face up, if so it flips the deck<br>
+---Recomended to be ran from within a coroutine
 ---@param zone object
 function flipDeck(zone)
   local deck = getDeck(zone)
@@ -577,7 +590,8 @@ function resetBoard(zone, item, item2)
   end
 end
 
----Moves deck and dealer chip in front of a given color
+---Moves deck and dealer chip in front of a given color<br>
+---Needs to be ran from within a coroutine
 ---@param color string
 function moveDeckAndDealerChip()
   local rotationAngle, playerPos = getItemMoveData(sortedSeatedPlayers[dealerColorVal])
@@ -802,7 +816,8 @@ end
 
 ---Prints the current game settings<br>
 ---Gets the correct deck for the number of seated players<br>
----Will stop setUpGameCoroutine if there is less than 3 seated players
+---Will stop setUpGameCoroutine if there is less than 3 seated players<br>
+---Must be ran from within a coroutine
 function printGameSettings()
   if #sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
@@ -865,7 +880,8 @@ end
 
 ---Called to remove the blackSevens from a given deck<br>
 ---Finds the blackSevens inside the given deck and moves them into staticObject.hiddenBag<br>
----Returns the guid of a deck the blackSevens are located in inside staticObject.hiddenBag
+---Returns the guid of a deck the blackSevens are located in inside staticObject.hiddenBag<br>
+---Must be ran from within a coroutine
 ---@param deck object
 ---@return string_guid
 function removeBlackSevens(deck)
@@ -1254,17 +1270,13 @@ function pickBlindsCoroutine()
     card.setPositionSmooth(playerPosition)
     card.setRotationSmooth(playerRotation)
   end
-  Wait.time(
-    function()
-      for _, card in ipairs(Player[pickingPlayer.color].getHandObjects()) do
-        if card.is_face_down then
-          card.flip()
-        end
-        flag.cardsToBeBuried = true
-      end
-    end,
-    0.35
-  )
+  pause(0.35)
+  for _, card in ipairs(Player[pickingPlayer.color].getHandObjects()) do
+    if card.is_face_down then
+      card.flip()
+    end
+    flag.cardsToBeBuried = true
+  end
   local pickerRotation = ROTATION.color[pickingPlayer.color]
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
   staticObject.setBuriedButton.setPosition(setBuriedButtonPos)
@@ -1292,7 +1304,7 @@ function pickBlindsCoroutine()
       unknownPartnerChoices(pickingPlayer)
       pause(0.25)
       local unknownTextPos = SPAWN_POS.leasterCards:copy():rotateOver('y', pickerRotation)
-      unknownText = spawnObject({
+      unknownText = spawnObject({ --Shares position data with leasterCards
         type = '3DText',
         position = unknownTextPos,
         rotation = {90, pickerRotation - 60, 0}
@@ -1311,6 +1323,7 @@ end
 ---a counter in front of pickingPlayer<br> and player accross from color.
 ---Flips over pickers tricks to see score of hand
 function toggleCounterVisibility()
+  flag.fnRunning = true
   if not flag.counterVisible then
     local pickerColor = pickingPlayer.color
     local pickerRotation = ROTATION.color[pickerColor]
@@ -1349,7 +1362,7 @@ function toggleCounterVisibility()
       group(pickerCards)
       Wait.time(
         function()
-          local pickerTricks = getDeck(pickerZone)
+          local pickerTricks = getLooseCards(pickerZone, "Deck1")
           pickerTricks.setPositionSmooth({pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z})
           pickerTricks.setRotationSmooth({0, pickerTricks.getRotation().y, 0})
         end,
@@ -1357,7 +1370,7 @@ function toggleCounterVisibility()
       )
     end
     --Card counter Loop starts here with setupGuidTable()
-    Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid) end, 22)
+    Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid); flag.fnRunning = false end, 22)
     if not flag.leasterHand then
       Wait.time(displayWonOrLossText, 1.35)      
     end
@@ -1372,6 +1385,7 @@ function toggleCounterVisibility()
     staticObject.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
     flag.counterVisible = false
     trickCountStop()
+    flag.fnRunning = false
   end
 end
 
@@ -1740,60 +1754,65 @@ end
 ---Calculates player to give trick to. Sets global leadOutPlayer
 function calculateTrickWinner()
   flag.trick.handOut = true
-  flag.trick.inProgress = false
+  flag.trick.inProgress, flag.allowGrouping = false, false
   local trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
   leadOutPlayer = trickWinner
   broadcastToAll("[21AF21]" ..
   trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
-  Wait.time(function() giveTrickToWinner(trickWinner) end, 1.75)
+  startLuaCoroutine(self, 'giveTrickToWinnerCoroutine')
 end
 
 ---Resets trick flag and data then moves Trick to trickZone of trickWinner
 ---Shows card counters if hand is over
 ---@param player object
-function giveTrickToWinner(player)
+function giveTrickToWinnerCoroutine()
+  local lastTrick = false
+  if #leadOutPlayer.getHandObjects() == 0 then
+    lastTrick = true
+  end
+  pause(1.75)
+  flag.allowGrouping = true
   local trick = {}
   for i = 2, #currentTrick do
     table.insert(trick, getObjectFromGUID(currentTrick[i].guid))
   end
   currentTrick = {}
-  local playerTrickZone = trickZone[player.color]
+  local playerTrickZone = trickZone[leadOutPlayer.color]
   trick = group(trick)[1]
-  Wait.time(function() trick.flip(); flag.trick.handOut = false end, 0.6)
-  Wait.time(
-    function()
-      local oldTricks = getDeck(playerTrickZone, "big")
-      if oldTricks then
-        local oldTricksPos = oldTricks.getPosition()
-        local oldTricksRot = oldTricks.getRotation()
-        trick.setPositionSmooth({oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z})
-        trick.setRotationSmooth({oldTricksRot.x, oldTricksRot.y, 180})
-      else
-        local zoneRotation = playerTrickZone.getRotation()
-        local zonePos = playerTrickZone.getPosition()
-        trick.setPositionSmooth({zonePos.x, zonePos.y - 2.7, zonePos.z})
-        trick.setRotationSmooth({zoneRotation.x, zoneRotation.y + 180, 180})
-      end
-    end,
-    1.5
-  )
-  Wait.time(function() group(getLooseCards(playerTrickZone)) end, 2)
-  if #player.getHandObjects() == 0 then
-    local delay = 2.2
+  pause(0.6)
+  trick.flip(); flag.trick.handOut = false
+  pause(0.9)
+  local oldTricks = getDeck(playerTrickZone, "big")
+  if oldTricks then
+    local oldTricksPos = oldTricks.getPosition()
+    local oldTricksRot = oldTricks.getRotation()
+    trick.setPositionSmooth({oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z})
+    trick.setRotationSmooth({oldTricksRot.x, oldTricksRot.y, 180})
+  else
+    local zoneRotation = playerTrickZone.getRotation()
+    local zonePos = playerTrickZone.getPosition()
+    trick.setPositionSmooth({zonePos.x, zonePos.y - 2.7, zonePos.z})
+    trick.setRotationSmooth({zoneRotation.x, zoneRotation.y + 180, 180})
+  end
+  pause(0.5)
+  group(getLooseCards(playerTrickZone))
+  if lastTrick then
+    local delay = 0
     if flag.leasterHand then
-      delay = delay + 3.5
+      delay = delay + 1.5
       lastLeasterTrick.interactable = true
-      Wait.time(
-        function()
-          lastLeasterTrick.setPositionSmooth(getDeck(playerTrickZone).getPosition())
-          lastLeasterTrick.setRotationSmooth(getDeck(playerTrickZone).getRotation())
-          lastLeasterTrick = nil
-        end,
-        2.5
-      )
+      pause(0.5)
+      lastLeasterTrick.setPositionSmooth(getDeck(playerTrickZone).getPosition())
+      lastLeasterTrick.setRotationSmooth(getDeck(playerTrickZone).getRotation())
+      lastLeasterTrick = nil
     end
-    Wait.time(function() toggleCounterVisibility() end, delay)
+    pause(delay)
     leadOutPlayer = nil
+    toggleCounterVisibility()
+    return 1
+  else
+    flag.fnRunning = false
+    return 1
   end
 end
 
@@ -2358,8 +2377,12 @@ function callPartnerEvent(player)
     return
   end
   local player = player
-  Wait.time(
+  Wait.time( --0.13s delay allows button click sound to be played
     function() --Show call partner window for selected parter mode
+      if leadOutPlayer then
+        broadcastToColor("[DC0000]You can not do this now[-]", player.color)
+        return
+      end
       if settings.jdPartner == true then
         local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
         if player.color == dealer.color and player.color == pickingPlayer.color then
@@ -2653,7 +2676,6 @@ function selectPartnerEvent(player, val, id)
           for i = #holdCards, 1, -1 do
             local cardName = holdCards[i]
             if string.find(cardName, suit) then
-              print("Removed:", cardName, "from holdCards")
               table.remove(holdCards, i)
             end
           end
