@@ -5,6 +5,7 @@ This is my first large coding project, feedback is always appreciated. Work in p
 
 ### Next features to be added:  
 * Implement onSave to save players custom settings
+* Chat command for admin to spawn in more chips  
 * New icons for deal, pick, and pass  
 
 ### Current features:  
