@@ -69,8 +69,8 @@ ROTATION = {
 }
 
 COIN_PRAM = {
-  mesh = "http://cloud-3.steamusercontent.com/ugc/2205135744307283952/DEF0BF91642CF5636724CA3A37083385C810BA06/",
-  diffuse = "http://cloud-3.steamusercontent.com/ugc/2288456143464578824/E739670FE62B8267C90E54D4B786C1C83BA7CC22/",
+  mesh = "https://steamusercontent-a.akamaihd.net/ugc/2205135744307283952/DEF0BF91642CF5636724CA3A37083385C810BA06/",
+  diffuse = "https://steamusercontent-a.akamaihd.net/ugc/2288456143464578824/E739670FE62B8267C90E54D4B786C1C83BA7CC22/",
   type = 5,
   material = 2,
   specular_sharpness = 5
@@ -729,7 +729,7 @@ function getRuleBook(color)
     "HideWhenFaceDown": false,
     "Hands": false,
     "CustomPDF": {
-      "PDFUrl": "http://cloud-3.steamusercontent.com/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/",
+      "PDFUrl": "https://steamusercontent-a.akamaihd.net/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/",
       "PDFPassword": "",
       "PDFPage": 0,
       "PDFPageOffset": 0
