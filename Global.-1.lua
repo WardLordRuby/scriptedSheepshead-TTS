@@ -675,6 +675,8 @@ function onChat(message, player)
       if adminCheck(player) then
         UI.show("settingsWindow")
       end
+    elseif command == "spawnchips" then
+      startChipSpawn(player)
     else
       broadcastToColor("[DC0000]Command not found.[-]", player.color)
     end
@@ -684,12 +686,11 @@ end
 
 ---@param player object
 function adminCheck(player)
-  if player.admin then
-    return true
-  else
+  if not player.admin then
     broadcastToColor("[DC0000]You do not have permission to access this feature.[-]", player.color)
     return false
   end
+  return true
 end
 
 ---Spawns a rule book in front of player color
@@ -913,27 +914,42 @@ function removeBlackSevens(deck)
   return smallDeck.guid
 end
 
----Called during New Game Set Up event to deal chips to all seated players
----@param rotationAngle integer
----@param playerPos vector
-function spawnChips(rotationAngle, playerPos)
-  local rotatedOffset
-  for c = 1, 15 do
-    if c % 5 == 1 then
-      local offsetIndex = math.floor((c - 1) / 5) + 1
-      rotatedOffset = SPAWN_POS.chips[offsetIndex]:copy():rotateOver('y', rotationAngle)
-    end
-    local customCoin = spawnObject({
-      type = "Custom_Model",
-      position = playerPos + rotatedOffset,
-      rotation = {0, rotationAngle + 180, 0},
-      scale = {0.6, 0.6, 0.6},
-      sound = false
-    })
-    customCoin.setCustomObject(COIN_PRAM)
-    customCoin.reload()
-    pause(0.02)
+---Helper function for spawning chips from outside a coroutine
+---@param player object<command_trigger>
+function startChipSpawn(player)
+  if not adminCheck(player) then
+    return
+  end  
+  if not flag.gameSetup.ran then
+    broadcastToColor("[DC0000]Setup game before spawning extra chips.[-]", player.color)
   end
+  startLuaCoroutine(self, 'spawnChips')
+end
+
+---Deals specified number of chips to all seated players<br>
+---Requires: game is already setup & is ran from within a coroutine
+function spawnChips()
+  for _, color in ipairs(sortedSeatedPlayers) do
+    local rotatedOffset
+    local rotationAngle, playerPos = getItemMoveData(color)
+    for c = 1, 15 do
+      if c % 5 == 1 then
+        local offsetIndex = math.floor((c - 1) / 5) + 1
+        rotatedOffset = SPAWN_POS.chips[offsetIndex]:copy():rotateOver('y', rotationAngle)
+      end
+      local customCoin = spawnObject({
+        type = "Custom_Model",
+        position = playerPos + rotatedOffset,
+        rotation = {0, rotationAngle + 180, 0},
+        scale = {0.6, 0.6, 0.6},
+        sound = false
+      })
+      customCoin.setCustomObject(COIN_PRAM)
+      customCoin.reload()
+      pause(0.02)
+    end
+  end
+  return 1
 end
 
 ---Start of game setup event
@@ -1000,10 +1016,7 @@ function setUpGameCoroutine()
     return 1
   end
 
-  for _, color in ipairs(sortedSeatedPlayers) do
-    local rotationAngle, playerPos = getItemMoveData(color)
-    spawnChips(rotationAngle, playerPos)
-  end
+  spawnChips()
 
   flag.gameSetup.inProgress = false
   flag.gameSetup.ran, flag.firstDealOfGame = true, true
