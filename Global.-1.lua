@@ -77,7 +77,7 @@ COIN_PRAM = {
 }
 
 function onLoad()
-  trickZone = {
+  TRICK_ZONE = {
     White = getObjectFromGUID(GUID.TRICK_ZONE_WHITE),
     Red = getObjectFromGUID(GUID.TRICK_ZONE_RED),
     Yellow = getObjectFromGUID(GUID.TRICK_ZONE_YELLOW),
@@ -85,7 +85,7 @@ function onLoad()
     Blue = getObjectFromGUID(GUID.TRICK_ZONE_BLUE),
     Pink = getObjectFromGUID(GUID.TRICK_ZONE_PINK)
   }
-  handZone = {
+  HAND_ZONE = {
     White = getObjectFromGUID(GUID.HAND_ZONE_WHITE),
     Red = getObjectFromGUID(GUID.HAND_ZONE_RED),
     Yellow = getObjectFromGUID(GUID.HAND_ZONE_YELLOW),
@@ -93,23 +93,23 @@ function onLoad()
     Blue = getObjectFromGUID(GUID.HAND_ZONE_BLUE),
     Pink = getObjectFromGUID(GUID.HAND_ZONE_PINK)
   }
-  scriptZone = {
+  SCRIPT_ZONE = {
     center = getObjectFromGUID(GUID.CENTER_ZONE),
     table = getObjectFromGUID(GUID.TABLE_ZONE),
     drop = getObjectFromGUID(GUID.DROP_ZONE)
   }
-  staticObject = {
+  STATIC_OBJECT = {
     hiddenBag = getObjectFromGUID(GUID.HIDDEN_BAG),
     dealerChip = getObjectFromGUID(GUID.DEALER_CHIP),
     setBuriedButton = getObjectFromGUID(GUID.SET_BURIED_BUTTON)
   }
-  staticObject.hiddenBag.interactable = false
-  staticObject.dealerChip.interactable = false
-  staticObject.setBuriedButton.interactable = false
-  staticObject.hiddenBag.setInvisibleTo(ALL_PLAYERS)
-  staticObject.setBuriedButton.setInvisibleTo(ALL_PLAYERS)
+  STATIC_OBJECT.hiddenBag.interactable = false
+  STATIC_OBJECT.dealerChip.interactable = false
+  STATIC_OBJECT.setBuriedButton.interactable = false
+  STATIC_OBJECT.hiddenBag.setInvisibleTo(ALL_PLAYERS)
+  STATIC_OBJECT.setBuriedButton.setInvisibleTo(ALL_PLAYERS)
 
-  flag = {
+  FLAG = {
     gameSetup = {
       inProgress = false,
       ran = false
@@ -144,7 +144,7 @@ end
 
 ---Checks dealInProgress, trick.handOut, gameSetup.inProgress, and fnRunning
 function safeToContinue()
-  if flag.dealInProgress or flag.trick.handOut or flag.gameSetup.inProgress or flag.fnRunning then
+  if FLAG.dealInProgress or FLAG.trick.handOut or FLAG.gameSetup.inProgress or FLAG.fnRunning then
     return false
   end
   return true
@@ -343,9 +343,9 @@ end
 function verifyCardCount(type)
   local cardCount
   if type == "table" then
-    cardCount = countCards(scriptZone.table)
-  elseif getDeck(scriptZone.table) then
-    cardCount = getDeck(scriptZone.table).getQuantity()
+    cardCount = countCards(SCRIPT_ZONE.table)
+  elseif getDeck(SCRIPT_ZONE.table) then
+    cardCount = getDeck(SCRIPT_ZONE.table).getQuantity()
   else
     respawnDeckCoroutine()
     return false
@@ -427,7 +427,7 @@ end
 ---Checks if a deck exists on the table<br>
 ---Recomended to be ran from within a coroutine
 function deckExists()
-  return getDeck(scriptZone.table) ~= nil
+  return getDeck(SCRIPT_ZONE.table) ~= nil
 end
 
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
@@ -495,15 +495,15 @@ function doesPlayerPossessCard(player, cardName)
   return false
 end
 
----Searches player handZone and trickZone
+---Searches player HAND_ZONE and TRICK_ZONE
 ---@param player object
 ---@return table <"cardNames">
 function getPlayerCards(player)
   local cards = {}
-  for _, card in ipairs(getLooseCards(handZone[player.color])) do
+  for _, card in ipairs(getLooseCards(HAND_ZONE[player.color])) do
     table.insert(cards, card.getName())
   end
-  for _, object in ipairs(getLooseCards(trickZone[player.color])) do
+  for _, object in ipairs(getLooseCards(TRICK_ZONE[player.color])) do
     if object.type == 'Card' then
       table.insert(cards, object.getName())
     else
@@ -597,20 +597,20 @@ function moveDeckAndDealerChip()
   local rotationAngle, playerPos = getItemMoveData(sortedSeatedPlayers[dealerColorVal])
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
-  local chipRotation = staticObject.dealerChip.getRotation()
-  repeat coroutine.yield(0) until getDeck(scriptZone.table) ~= nil
-  local deck = getDeck(scriptZone.table)
-  staticObject.dealerChip.setRotationSmooth({ chipRotation.x, rotationAngle - 90, chipRotation.z })
-  staticObject.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
+  local chipRotation = STATIC_OBJECT.dealerChip.getRotation()
+  repeat coroutine.yield(0) until getDeck(SCRIPT_ZONE.table) ~= nil
+  local deck = getDeck(SCRIPT_ZONE.table)
+  STATIC_OBJECT.dealerChip.setRotationSmooth({ chipRotation.x, rotationAngle - 90, chipRotation.z })
+  STATIC_OBJECT.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
   deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, 180 })
   deck.setPositionSmooth(playerPos + rotatedDeckOffset)
 end
 
 ---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
 function rebuildDeck()
-  flag.allowGrouping = false
-  local faceRotation = moreFaceUpOrDown(scriptZone.table)
-  for _, object in ipairs(getLooseCards(scriptZone.table)) do
+  FLAG.allowGrouping = false
+  local faceRotation = moreFaceUpOrDown(SCRIPT_ZONE.table)
+  for _, object in ipairs(getLooseCards(SCRIPT_ZONE.table)) do
     if object.type == 'Deck' then
       for _, card in ipairs(object.getObjects()) do
         object.takeObject({
@@ -627,12 +627,12 @@ function rebuildDeck()
     end
   end
   pause(0.25)
-  flipCards(scriptZone.table)
-  flag.allowGrouping = true
+  flipCards(SCRIPT_ZONE.table)
+  FLAG.allowGrouping = true
   pause(0.5)
-  group(getLooseCards(scriptZone.table))
+  group(getLooseCards(SCRIPT_ZONE.table))
   pause(0.5)
-  group(getLooseCards(scriptZone.table))
+  group(getLooseCards(SCRIPT_ZONE.table))
   pause(0.5)
 end
 
@@ -644,13 +644,13 @@ end
 ---@param player object_of_player
 function onChat(message, player)
   --Sets flags for determining if to reset gameboard
-  if flag.lookForPlayerText then
+  if FLAG.lookForPlayerText then
     local lowerMessage = string.lower(message)
     if lowerMessage == "y" then
       if player.steam_name == gameSetupPlayer.steam_name then
         print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
         print("[21AF21]New game is being set up.[-]")
-        flag.continue = true
+        FLAG.continue = true
         return false
       end
     else
@@ -749,7 +749,7 @@ end
 
 ---Deletes all rulebooks from table
 function hideRuleBook()
-  local tableObjects = scriptZone.table.getObjects()
+  local tableObjects = SCRIPT_ZONE.table.getObjects()
   for i = #tableObjects, 1, -1 do
     local tableObject = tableObjects[i]
     if tableObject.type == 'Tile' then
@@ -768,11 +768,11 @@ function respawnDeck()
 end
 
 function respawnDeckCoroutine()
-  local remainingTableCards = getLooseCards(scriptZone.table)
+  local remainingTableCards = getLooseCards(SCRIPT_ZONE.table)
   if tableLength(remainingTableCards) > 0 then
-    resetBoard(scriptZone.table, 'Card', 'Deck')
+    resetBoard(SCRIPT_ZONE.table, 'Card', 'Deck')
   end
-  staticObject.hiddenBag.takeObject({
+  STATIC_OBJECT.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
     position = {3, 2, 0},
     rotation = {0, 0, 180},
@@ -783,9 +783,9 @@ function respawnDeckCoroutine()
   local newDeck = deckCopy.clone({
     position = {0, -3, 0}
   })
-  staticObject.hiddenBag.putObject(deckCopy)
+  STATIC_OBJECT.hiddenBag.putObject(deckCopy)
   if blackSevens then
-    staticObject.hiddenBag.takeObject({
+    STATIC_OBJECT.hiddenBag.takeObject({
       guid = blackSevens,
       position = {5, 2, 0},
       rotation = {0, 0, 180},
@@ -797,7 +797,7 @@ function respawnDeckCoroutine()
     pause(0.2)
     blackSevens = removeBlackSevens(newDeck)
   end
-  if flag.gameSetup.ran and flag.firstDealOfGame then
+  if FLAG.gameSetup.ran and FLAG.firstDealOfGame then
     pause(0.4)
     moveDeckAndDealerChip()
   end
@@ -822,15 +822,15 @@ end
 function printGameSettings()
   if #sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    flag.stopCoroutine = true
+    FLAG.stopCoroutine = true
     return
   end
 
   playerCount = #sortedSeatedPlayers
   dealerColorVal = getColorVal(gameSetupPlayer.color, sortedSeatedPlayers)
 
-  if settings.dealerSitsOut and playerCount == 6 then
-    stateChangeDealerSitsOut(settings.dealerSitsOut)
+  if SETTINGS.dealerSitsOut and playerCount == 6 then
+    stateChangeDealerSitsOut(SETTINGS.dealerSitsOut)
   end
 
   if playerCount == 3 then
@@ -838,7 +838,7 @@ function printGameSettings()
     broadcastToAll("[21AF21]Picker plays Alone, Leasters enabled by default")
   end
 
-  if settings.threeHanded and playerCount ~= 3 then
+  if SETTINGS.threeHanded and playerCount ~= 3 then
     updateRules("threeHanded", false)
     UI.setAttribute("settingsButtonjdPartnerOn", "tooltip", "")
     UI.setAttribute("settingsButtonjdPartnerOff", "tooltip", "")
@@ -848,7 +848,7 @@ function printGameSettings()
     pause(1)
   end
 
-  deck = getDeck(scriptZone.table)
+  local deck = getDeck(SCRIPT_ZONE.table)
   if playerCount == 4 then
     if deck.getQuantity() == 32 then
       blackSevens = removeBlackSevens(deck)
@@ -865,10 +865,10 @@ end
 
 ---Called to add the blackSevens to a given deck<br>
 ---Function uses global string blackSevens provided by removeBlackSevens() to locate<br>
----blackSevens.guid within staticObject.hiddenBag, then moves them to the current deck position
+---blackSevens.guid within STATIC_OBJECT.hiddenBag, then moves them to the current deck position
 ---@param deck object
 function returnDecktoPiquet(deck)
-  staticObject.hiddenBag.takeObject({
+  STATIC_OBJECT.hiddenBag.takeObject({
     guid = blackSevens,
     position = deck.getPosition(),
     rotation = deck.getRotation(),
@@ -880,8 +880,8 @@ function returnDecktoPiquet(deck)
 end
 
 ---Called to remove the blackSevens from a given deck<br>
----Finds the blackSevens inside the given deck and moves them into staticObject.hiddenBag<br>
----Returns the guid of a deck the blackSevens are located in inside staticObject.hiddenBag<br>
+---Finds the blackSevens inside the given deck and moves them into STATIC_OBJECT.hiddenBag<br>
+---Returns the guid of a deck the blackSevens are located in inside STATIC_OBJECT.hiddenBag<br>
 ---Must be ran from within a coroutine
 ---@param deck object
 ---@return string_guid
@@ -907,9 +907,9 @@ function removeBlackSevens(deck)
   end
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.25)
-  local smallDeck = getDeck(scriptZone.table, "small")
+  local smallDeck = getDeck(SCRIPT_ZONE.table, "small")
   smallDeck.setInvisibleTo(ALL_PLAYERS)
-  staticObject.hiddenBag.putObject(smallDeck)
+  STATIC_OBJECT.hiddenBag.putObject(smallDeck)
   pause(0.25)
   return smallDeck.guid
 end
@@ -919,9 +919,10 @@ end
 function startChipSpawn(player)
   if not adminCheck(player) then
     return
-  end  
-  if not flag.gameSetup.ran then
+  end
+  if not FLAG.gameSetup.ran then
     broadcastToColor("[DC0000]Setup game before spawning extra chips.[-]", player.color)
+    return
   end
   startLuaCoroutine(self, 'spawnChips')
 end
@@ -959,7 +960,7 @@ function setUpGameEvent(player)
     return
   end
   if player.admin then
-    flag.gameSetup.inProgress = true
+    FLAG.gameSetup.inProgress = true
     gameSetupPlayer = player
     startLuaCoroutine(self, 'setUpGameCoroutine')
   else
@@ -969,29 +970,29 @@ end
 
 ---Start of order of opperations for setUpGame
 function setUpGameCoroutine()
-  if flag.gameSetup.ran and #sortedSeatedPlayers < 3 then
+  if FLAG.gameSetup.ran and #sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    flag.gameSetup.inProgress = false
+    FLAG.gameSetup.inProgress = false
     return 1
-  elseif flag.gameSetup.ran then
+  elseif FLAG.gameSetup.ran then
     Player[gameSetupPlayer.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
       .. #sortedSeatedPlayers .. " players.")
     pause(1.5)
     Player[gameSetupPlayer.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
-    flag.lookForPlayerText = true
+    FLAG.lookForPlayerText = true
     pause(6)
-    if flag.continue then
-      flag.lookForPlayerText, flag.continue = false, false
-      resetBoard(scriptZone.table, 'Chip')
+    if FLAG.continue then
+      FLAG.lookForPlayerText, FLAG.continue = false, false
+      resetBoard(SCRIPT_ZONE.table, 'Chip')
     else
       print("[21AF21]New game was not selected.[-]")
-      flag.lookForPlayerText, flag.continue = false, false
-      flag.gameSetup.inProgress = false
+      FLAG.lookForPlayerText, FLAG.continue = false, false
+      FLAG.gameSetup.inProgress = false
       return 1
     end
   end
 
-  if flag.counterVisible then
+  if FLAG.counterVisible then
     toggleCounterVisibility()
   end
 
@@ -1001,7 +1002,7 @@ function setUpGameCoroutine()
   if DEBUG then
     if sortedSeatedPlayers == nil then
       sortedSeatedPlayers = copyTable(ALL_PLAYERS)
-      flag.gameSetup.inProgress = false
+      FLAG.gameSetup.inProgress = false
       return 1
     end
   else
@@ -1011,15 +1012,15 @@ function setUpGameCoroutine()
 
   printGameSettings()
 
-  if flag.stopCoroutine then
-    flag.stopCoroutine, flag.gameSetup.inProgress = false, false
+  if FLAG.stopCoroutine then
+    FLAG.stopCoroutine, FLAG.gameSetup.inProgress = false, false
     return 1
   end
 
   spawnChips()
 
-  flag.gameSetup.inProgress = false
-  flag.gameSetup.ran, flag.firstDealOfGame = true, true
+  FLAG.gameSetup.inProgress = false
+  FLAG.gameSetup.ran, FLAG.firstDealOfGame = true, true
   return 1
 end
 
@@ -1052,18 +1053,18 @@ function setUpHandEvent()
   if not safeToContinue() then
     return
   end
-  if not flag.gameSetup.ran then
+  if not FLAG.gameSetup.ran then
     print("[21AF21]Press Set Up Game First.[-]")
     return
   end
-  flag.dealInProgress = true
-  if flag.cardsToBeBuried then
-    staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
-    staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
-    flag.cardsToBeBuried = false
+  FLAG.dealInProgress = true
+  if FLAG.cardsToBeBuried then
+    STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
+    STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+    FLAG.cardsToBeBuried = false
   end
-  pickingPlayer, leadOutPlayer, holdCards = nil, nil, nil
-  flag.trick.inProgress, flag.leasterHand = false, false
+  PICKING_PLAYER, LEAD_OUT_PLAYER, HOLD_CARDS = nil, nil, nil
+  FLAG.trick.inProgress, FLAG.leasterHand = false, false
   if unknownText then
     unknownText.destruct(); unknownText = nil
   end
@@ -1085,16 +1086,16 @@ end
 
 ---Order of opperations for dealing
 function dealCardsCoroutine()
-  if flag.counterVisible then
+  if FLAG.counterVisible then
     toggleCounterVisibility()
   end
 
-  if not flag.firstDealOfGame then
+  if not FLAG.firstDealOfGame then
     while not verifyCardCount("table") do
       pause(0.5)
     end
     dealerColorVal = getNextColorValInList(dealerColorVal, sortedSeatedPlayers)
-    if tableLength(getLooseCards(scriptZone.table)) > 1 then
+    if tableLength(getLooseCards(SCRIPT_ZONE.table)) > 1 then
       rebuildDeck()
     end
     pause(0.3)
@@ -1105,12 +1106,12 @@ function dealCardsCoroutine()
     while not verifyCardCount("deck") do
       pause(0.5)
     end
-    flag.firstDealOfGame = false
+    FLAG.firstDealOfGame = false
   end
 
   calculateDealOrder()
 
-  flipDeck(scriptZone.table)
+  flipDeck(SCRIPT_ZONE.table)
   pause(0.35)
 
   local count = getNextColorValInList(dealerColorVal, dealOrder)
@@ -1118,10 +1119,10 @@ function dealCardsCoroutine()
   local round = 1
   local target = dealOrder[count]
 
-  local deck = getDeck(scriptZone.table)
+  local deck = getDeck(SCRIPT_ZONE.table)
   local rotationVal = deck.getRotation()
 
-  flipDeck(scriptZone.table)
+  flipDeck(SCRIPT_ZONE.table)
   pause(0.15)
   deck.randomize()
   pause(0.35)
@@ -1145,7 +1146,7 @@ function dealCardsCoroutine()
     target = dealOrder[count]
   end
 
-  flag.dealInProgress = false
+  FLAG.dealInProgress = false
   return 1
 end
 
@@ -1220,10 +1221,10 @@ function passEvent(player)
       return
     end
   end
-  if not flag.dealInProgress and checkCardCount(scriptZone.center, 2) then
+  if not FLAG.dealInProgress and checkCardCount(SCRIPT_ZONE.center, 2) then
     if player.color == dealer.color then
       if not DEBUG then
-        if callSettings.leaster then
+        if CALL_SETTINGS.leaster then
           broadcastToColor("[DC0000]Dealer can not pass. Pick your own or Call a Leaster.[-]", player.color)
         else
           broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", player.color)
@@ -1235,7 +1236,7 @@ function passEvent(player)
       broadcastToAll(player.steam_name .. " passed")
       local rightOfDealerColor = sortedSeatedPlayers[getPreviousColorValInList(dealerColorVal, sortedSeatedPlayers)]
       if player.color == rightOfDealerColor then
-        if callSettings.leaster then
+        if CALL_SETTINGS.leaster then
           broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealer.color)
           if not string.find(UI.getAttribute("callsWindow", "visibility"), dealer.color) then
             toggleWindowVisibility(dealer, "callsWindow")
@@ -1246,8 +1247,8 @@ function passEvent(player)
   end
 end
 
----Moves the blinds into the pickers hand, sets player to pickingPlayer
----Sets flag cardsToBeBuried to trigger buryCards logic
+---Moves the blinds into the pickers hand, sets player to PICKING_PLAYER
+---Sets FLAG cardsToBeBuried to trigger buryCards logic
 ---@param player object<event_Trigger>
 function pickBlindsEvent(player)
   if playerCount == 5 and #sortedSeatedPlayers == 6 then
@@ -1256,21 +1257,21 @@ function pickBlindsEvent(player)
       return
     end
   end
-  if flag.dealInProgress then
+  if FLAG.dealInProgress then
     return
   end
-  if countCards(scriptZone.center) ~= 2 then
+  if countCards(SCRIPT_ZONE.center) ~= 2 then
     return
   end
-  pickingPlayer = player
+  PICKING_PLAYER = player
   startLuaCoroutine(self, 'pickBlindsCoroutine')
 end
 
 function pickBlindsCoroutine()
-  broadcastToAll("[21AF21]" .. pickingPlayer.steam_name .. " Picks![-]")
-  local blinds = getLooseCards(scriptZone.center)
-  local playerPosition = Player[pickingPlayer.color].getHandTransform().position
-  local playerRotation = Player[pickingPlayer.color].getHandTransform().rotation
+  broadcastToAll("[21AF21]" .. PICKING_PLAYER.steam_name .. " Picks![-]")
+  local blinds = getLooseCards(SCRIPT_ZONE.center)
+  local playerPosition = Player[PICKING_PLAYER.color].getHandTransform().position
+  local playerRotation = Player[PICKING_PLAYER.color].getHandTransform().rotation
   if blinds[1].type == 'Deck' then
     blinds[1].takeObject({
       position = playerPosition,
@@ -1278,43 +1279,43 @@ function pickBlindsCoroutine()
     })
     pause(0.2)
   end
-  blinds = getLooseCards(scriptZone.center)
+  blinds = getLooseCards(SCRIPT_ZONE.center)
   for _, card in ipairs(blinds) do
     card.setPositionSmooth(playerPosition)
     card.setRotationSmooth(playerRotation)
   end
   pause(0.35)
-  for _, card in ipairs(Player[pickingPlayer.color].getHandObjects()) do
+  for _, card in ipairs(Player[PICKING_PLAYER.color].getHandObjects()) do
     if card.is_face_down then
       card.flip()
     end
-    flag.cardsToBeBuried = true
+    FLAG.cardsToBeBuried = true
   end
-  local pickerRotation = ROTATION.color[pickingPlayer.color]
+  local pickerRotation = ROTATION.color[PICKING_PLAYER.color]
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
-  staticObject.setBuriedButton.setPosition(setBuriedButtonPos)
-  staticObject.setBuriedButton.setRotation({0, pickerRotation, 0})
-  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", pickingPlayer.color)
-  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
+  STATIC_OBJECT.setBuriedButton.setPosition(setBuriedButtonPos)
+  STATIC_OBJECT.setBuriedButton.setRotation({0, pickerRotation, 0})
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", PICKING_PLAYER.color)
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 
-  if settings.jdPartner == true then
+  if SETTINGS.jdPartner then
     local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
-    if pickingPlayer.color == dealer.color then
+    if PICKING_PLAYER.color == dealer.color then
       pause(1.5)
-      if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
-        if not string.find(UI.getAttribute("playAloneWindow", "visibility"), pickingPlayer.color) then
-          toggleWindowVisibility(pickingPlayer, "playAloneWindow")
+      if doesPlayerPossessCard(PICKING_PLAYER, "Jack of Diamonds") then
+        if not string.find(UI.getAttribute("playAloneWindow", "visibility"), PICKING_PLAYER.color) then
+          toggleWindowVisibility(PICKING_PLAYER, "playAloneWindow")
         end
       end
     end
-  elseif settings.jdPartner == false then --Call an Ace
+  else --Call an Ace
     pause(0.5)
-    holdCards = buildPartnerChoices(pickingPlayer)
+    HOLD_CARDS = buildPartnerChoices(PICKING_PLAYER)
     pause(0.25)
-    if holdCards then
-      toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
+    if HOLD_CARDS then
+      toggleWindowVisibility(PICKING_PLAYER, "selectPartnerWindow")
     else --Unknown event
-      unknownPartnerChoices(pickingPlayer)
+      unknownPartnerChoices(PICKING_PLAYER)
       pause(0.25)
       local unknownTextPos = SPAWN_POS.leasterCards:copy():rotateOver('y', pickerRotation)
       unknownText = spawnObject({ --Shares position data with leasterCards
@@ -1326,26 +1327,26 @@ function pickBlindsCoroutine()
       unknownText.TextTool.setFontSize(10)
       unknownText.TextTool.setFontColor("Green")
       unknownText.setValue("Place Unknown Card\nFacedown Here")
-      toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
+      toggleWindowVisibility(PICKING_PLAYER, "selectPartnerWindow")
     end
   end
   return 1
 end
 
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
----a counter in front of pickingPlayer<br> and player accross from color.
+---a counter in front of PICKING_PLAYER<br> and player accross from color.
 ---Flips over pickers tricks to see score of hand
 function toggleCounterVisibility()
-  flag.fnRunning = true
-  if not flag.counterVisible then
-    local pickerColor = pickingPlayer.color
+  FLAG.fnRunning = true
+  if not FLAG.counterVisible then
+    local pickerColor = PICKING_PLAYER.color
     local pickerRotation = ROTATION.color[pickerColor]
     local blockRotation = ROTATION.block[pickerColor]
     local tCounter, pCounter
     local tCounterPos = SPAWN_POS.tableCounter:copy():rotateOver('y', pickerRotation)
     local pCounterPos = SPAWN_POS.pickerCounter:copy():rotateOver('y', pickerRotation)
     local blockPos = SPAWN_POS.tableBlock:copy():rotateOver('y', blockRotation)
-    local block = staticObject.hiddenBag.takeObject({
+    local block = STATIC_OBJECT.hiddenBag.takeObject({
       position = blockPos,
       rotation = {0, blockRotation, 0},
       smooth = false,
@@ -1365,11 +1366,11 @@ function toggleCounterVisibility()
           position = pCounterPos,
           rotation = {295, pickerRotation, 0},
         })
-        flag.counterVisible = true
+        FLAG.counterVisible = true
       end,
       3
     )
-    local pickerZone = trickZone[pickerColor]
+    local pickerZone = TRICK_ZONE[pickerColor]
     local pickerCards = getLooseCards(pickerZone)
     if pickerCards then
       group(pickerCards)
@@ -1383,48 +1384,48 @@ function toggleCounterVisibility()
       )
     end
     --Card counter Loop starts here with setupGuidTable()
-    Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid); flag.fnRunning = false end, 22)
-    if not flag.leasterHand then
+    Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid); FLAG.fnRunning = false end, 22)
+    if not FLAG.leasterHand then
       Wait.time(displayWonOrLossText, 1.35)      
     end
   else
-    local zoneObjects = scriptZone.table.getObjects()
+    local zoneObjects = SCRIPT_ZONE.table.getObjects()
     for i = #zoneObjects, 1, -1 do
       local tableObject = zoneObjects[i]
       if tableObject.type == 'Counter' then
         tableObject.destruct()
       end
     end
-    staticObject.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
-    flag.counterVisible = false
+    STATIC_OBJECT.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
+    FLAG.counterVisible = false
     trickCountStop()
-    flag.fnRunning = false
+    FLAG.fnRunning = false
   end
 end
 
----Makes sure buried cards are face down and unhides blinds and pickingPlayers<br>
----hand objects. Calculates global leadOutPlayer, hides Set Buried button
+---Makes sure buried cards are face down and unhides blinds and PICKING_PLAYERs<br>
+---hand objects. Calculates global LEAD_OUT_PLAYER, hides Set Buried button
 ---@param player object<event_Trigger>
 function setBuriedEvent(player)
-  if player.color ~= pickingPlayer.color then
+  if player.color ~= PICKING_PLAYER.color then
     return
   end
-  if not checkCardCount(trickZone[pickingPlayer.color], 2) then
+  if not checkCardCount(TRICK_ZONE[PICKING_PLAYER.color], 2) then
     return
   end
-  if settings.jdPartner == false then
+  if not SETTINGS.jdPartner then
     local partnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
     if partnerWindowOpen ~= "" then
       broadcastToColor("[DC0000]Select Partner before burying cards", player.color)
       return
     end
   end
-  local buriedCards = getLooseCards(trickZone[pickingPlayer.color])
-  if holdCards then --callAnAce active, make sure holdCard(s) is not in burried cards
-    if #holdCards == 2 then
+  local buriedCards = getLooseCards(TRICK_ZONE[PICKING_PLAYER.color])
+  if HOLD_CARDS then --callAnAce active, make sure holdCard(s) is not in burried cards
+    if #HOLD_CARDS == 2 then
       local count = 0
       for _, card in ipairs(buriedCards) do
-        for _, cardName in ipairs(holdCards) do
+        for _, cardName in ipairs(HOLD_CARDS) do
           if card.getName() == cardName then
             count = count + 1
           end
@@ -1434,9 +1435,9 @@ function setBuriedEvent(player)
         broadcastToColor("[DC0000]You can not bury both of your hold cards", player.color)
         return
       end
-    elseif #holdCards == 1 then
+    elseif #HOLD_CARDS == 1 then
       for _, card in ipairs(buriedCards) do
-        if card.getName() == holdCards[1] then
+        if card.getName() == HOLD_CARDS[1] then
           broadcastToColor("[DC0000]You can not bury your hold card", player.color)
           return
         end
@@ -1454,25 +1455,25 @@ function setBuriedEvent(player)
   Wait.time(function() group(buriedCards) end, 0.8)
   Wait.time(
     function()
-      for _, card in ipairs(getLooseCards(scriptZone.table)) do
+      for _, card in ipairs(getLooseCards(SCRIPT_ZONE.table)) do
         card.setInvisibleTo()
       end
     end,
     1.6
   )
   setLeadOutPlayer()
-  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
-  staticObject.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
 end
 
 function setLeadOutPlayer()
-  flag.cardsToBeBuried = false
+  FLAG.cardsToBeBuried = false
   local leadOutVal = getNextColorValInList(dealerColorVal, sortedSeatedPlayers)
-  leadOutPlayer = getPlayerObject(leadOutVal, sortedSeatedPlayers)
+  LEAD_OUT_PLAYER = getPlayerObject(leadOutVal, sortedSeatedPlayers)
   if not DEBUG then
-    broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
+    broadcastToAll("[21AF21]" .. LEAD_OUT_PLAYER.steam_name .. " leads out.[-]")
   else
-    print("[21AF21]" .. leadOutPlayer.color .. " leads out.[-]")
+    print("[21AF21]" .. LEAD_OUT_PLAYER.color .. " leads out.[-]")
   end
 end
 
@@ -1482,16 +1483,16 @@ end
 ---@param container type_object
 ---@param object object_item
 function tryObjectEnterContainer(container, object)
-  if not flag.allowGrouping then
+  if not FLAG.allowGrouping then
     return false
   end
-  if flag.cardsToBeBuried then
-    if isInZone(object, trickZone[pickingPlayer.color]) then
+  if FLAG.cardsToBeBuried then
+    if isInZone(object, TRICK_ZONE[PICKING_PLAYER.color]) then
       return false
     end
   end
-  if flag.trick.inProgress then
-    if isInZone(object, scriptZone.center) then
+  if FLAG.trick.inProgress then
+    if isInZone(object, SCRIPT_ZONE.center) then
       return false
     end
   end
@@ -1503,13 +1504,13 @@ end
 ---@param object object_item
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
-  if zone == scriptZone.drop then
+  if zone == SCRIPT_ZONE.drop then
     object.setPosition({0, 3, 0})
   end
   --Makes sure other players can not see what cards the picker is burying
-  if flag.cardsToBeBuried then
-    if zone == trickZone[pickingPlayer.color] and object.type == 'Card' then
-      local hideFrom = removeColorFromList(pickingPlayer.color, sortedSeatedPlayers)
+  if FLAG.cardsToBeBuried then
+    if zone == TRICK_ZONE[PICKING_PLAYER.color] and object.type == 'Card' then
+      local hideFrom = removeColorFromList(PICKING_PLAYER.color, sortedSeatedPlayers)
       object.setInvisibleTo(hideFrom)
     end
   end
@@ -1520,10 +1521,10 @@ end
 ---@param object object_item
 function onObjectLeaveZone(zone, object)
   --Starts trick
-  if safeToContinue() and not flag.cardsToBeBuried then
-    if leadOutPlayer then
-      if zone == handZone[leadOutPlayer.color] then
-        flag.trick.inProgress = true
+  if safeToContinue() and not FLAG.cardsToBeBuried then
+    if LEAD_OUT_PLAYER then
+      if zone == HAND_ZONE[LEAD_OUT_PLAYER.color] then
+        FLAG.trick.inProgress = true
       end
     end
   end
@@ -1535,8 +1536,8 @@ end
 ---@param playerColor string
 ---@param object object_item
 function onObjectPickUp(playerColor, object)
-  if flag.trick.inProgress then
-    if object.type == 'Card' and isInZone(object, scriptZone.center) then
+  if FLAG.trick.inProgress then
+    if object.type == 'Card' and isInZone(object, SCRIPT_ZONE.center) then
       if tableLength(currentTrick) > 1 then
         local objectName = object.getName()
         for i = 2, #currentTrick do
@@ -1552,24 +1553,20 @@ end
 
 ---Runs when a player drops an object<br>
 ---Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
----Builds the table currentTrick to keep track of cardNames and player color who laid them in the scriptZone.center
+---Builds the table currentTrick to keep track of cardNames and player color who laid them in the SCRIPT_ZONE.center
 ---@param playerColor string
 ---@param object object_item
 function onObjectDrop(playerColor, object)
-  if flag.trick.inProgress then
+  if FLAG.trick.inProgress then
     if object.type == 'Card' then
-      --Wait function allows script to continue in the case of a player throwing a card into scriptZone.center
+      --Wait function allows script to continue in the case of a player throwing a card into SCRIPT_ZONE.center
       Wait.time(
         function()
-          if isInZone(object, scriptZone.center) then
-            if not DEBUG and playerColor ~= leadOutPlayer.color then
-              broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
+          if isInZone(object, SCRIPT_ZONE.center) then
+            if not DEBUG and playerColor ~= LEAD_OUT_PLAYER.color then
+              broadcastToAll("[21AF21]" .. LEAD_OUT_PLAYER.steam_name .. " leads out.[-]")
             else
-              local faceDown = false
-              if object.is_face_down then
-                faceDown = true
-              end
-              addCardDataToCurrentTrick(playerColor, object, faceDown)
+              addCardDataToCurrentTrick(playerColor, object)
               if #currentTrick == playerCount + 1 then
                 calculateTrickWinner()
               end
@@ -1625,7 +1622,7 @@ end
 
 ---@param playerColor string
 ---@param object object
-function addCardDataToCurrentTrick(playerColor, object, isFaceDown)
+function addCardDataToCurrentTrick(playerColor, object)
   --Check if object is trump
   local objectName = object.getName()
   local objectIsTrump = isTrump(objectName)
@@ -1647,12 +1644,13 @@ function addCardDataToCurrentTrick(playerColor, object, isFaceDown)
       print("[21AF21]" .. currentTrick[#currentTrick].cardName .. " added to trick[-]")
     end
   end
-  calculateCardData(#currentTrick, objectIsTrump, isFaceDown)
+  calculateCardData(#currentTrick, objectIsTrump, object.is_face_down)
 end
 
 ---Function will return early if card does not need to be compared to currentHighStrength
 ---@param cardIndex integer
 ---@param objectIsTrump boolean
+---@param isFaceDown boolean
 function calculateCardData(cardIndex, objectIsTrump, isFaceDown)
   if not currentTrick[1].trump then --No trump in currentTrick
     if not objectIsTrump then       --Not trump and not suit led out
@@ -1717,7 +1715,8 @@ function updateCurrentTrickProperties(isTrump, strengthVal, index)
   currentTrick[1].highStrengthIndex = index
 
   if DEBUG then print("[21AF21]Current high Card is: " ..
-    currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]") end
+    currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
+  end
 end
 
 ---@param objectName string
@@ -1764,36 +1763,36 @@ function quickSearch(objectName, isTrump)
   return 1
 end
 
----Calculates player to give trick to. Sets global leadOutPlayer
+---Calculates player to give trick to. Sets global LEAD_OUT_PLAYER
 function calculateTrickWinner()
-  flag.trick.handOut = true
-  flag.trick.inProgress, flag.allowGrouping = false, false
+  FLAG.trick.handOut = true
+  FLAG.trick.inProgress, FLAG.allowGrouping = false, false
   local trickWinner = getPlayerObject(currentTrick[currentTrick[1].highStrengthIndex].playedByColor, sortedSeatedPlayers)
-  leadOutPlayer = trickWinner
+  LEAD_OUT_PLAYER = trickWinner
   broadcastToAll("[21AF21]" ..
   trickWinner.steam_name .. " takes the trick with " .. currentTrick[currentTrick[1].highStrengthIndex].cardName .. "[-]")
   startLuaCoroutine(self, 'giveTrickToWinnerCoroutine')
 end
 
----Resets trick flag and data then moves Trick to trickZone of trickWinner
+---Resets trick FLAG and data then moves Trick to TRICK_ZONE of trickWinner
 ---Shows card counters if hand is over
 ---@param player object
 function giveTrickToWinnerCoroutine()
   local lastTrick = false
-  if #leadOutPlayer.getHandObjects() == 0 then
+  if #LEAD_OUT_PLAYER.getHandObjects() == 0 then
     lastTrick = true
   end
   pause(1.75)
-  flag.allowGrouping = true
+  FLAG.allowGrouping = true
   local trick = {}
   for i = 2, #currentTrick do
     table.insert(trick, getObjectFromGUID(currentTrick[i].guid))
   end
   currentTrick = {}
-  local playerTrickZone = trickZone[leadOutPlayer.color]
+  local playerTrickZone = TRICK_ZONE[LEAD_OUT_PLAYER.color]
   trick = group(trick)[1]
   pause(0.6)
-  trick.flip(); flag.trick.handOut = false
+  trick.flip(); FLAG.trick.handOut = false
   pause(0.9)
   local oldTricks = getDeck(playerTrickZone, "big")
   if oldTricks then
@@ -1811,7 +1810,7 @@ function giveTrickToWinnerCoroutine()
   group(getLooseCards(playerTrickZone))
   if lastTrick then
     local delay = 0
-    if flag.leasterHand then
+    if FLAG.leasterHand then
       delay = delay + 1.5
       lastLeasterTrick.interactable = true
       pause(0.5)
@@ -1820,18 +1819,18 @@ function giveTrickToWinnerCoroutine()
       lastLeasterTrick = nil
     end
     pause(delay)
-    leadOutPlayer = nil
+    LEAD_OUT_PLAYER = nil
     toggleCounterVisibility()
     return 1
   else
-    flag.fnRunning = false
+    FLAG.fnRunning = false
     return 1
   end
 end
 
 --[[New functions to adapt Blackjack Card Counter]]--
 
----Returns the color of the handposition located across the table from given color (pickingPlayer)
+---Returns the color of the handposition located across the table from given color (PICKING_PLAYER)
 ---@param color string
 ---@return string <"color">
 function findColorAcrossTable(color)
@@ -1853,9 +1852,9 @@ end
 ---@param tCounterGUID string
 ---@param pCounterGUID string
 function setupGuidTable(tCounterGUID, pCounterGUID)
-  local pickerZoneGuid = trickZone[pickingPlayer.color].guid
-  local colorAcrossFromPicker = findColorAcrossTable(pickingPlayer.color)
-  local tableGuid = trickZone[colorAcrossFromPicker].guid
+  local pickerZoneGuid = TRICK_ZONE[PICKING_PLAYER.color].guid
+  local colorAcrossFromPicker = findColorAcrossTable(PICKING_PLAYER.color)
+  local tableGuid = TRICK_ZONE[colorAcrossFromPicker].guid
 
   guidTable = {
     [pickerZoneGuid] = pCounterGUID,
@@ -1994,7 +1993,7 @@ end
 function displayWonOrLossText(textObject, score, cardCount, numCardInDeck)
   local wonOrLoss, totalCards
   if not textObject then
-    local pickerColor = pickingPlayer.color
+    local pickerColor = PICKING_PLAYER.color
     local pickerRotation = ROTATION.color[pickerColor] --Shares the same positionData as setBuriedButton
     local textPosition = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
     wonOrLoss = spawnObject({
@@ -2056,14 +2055,14 @@ end
 --[[END OF CARD SCORING]]--
 
 --Settings flags and associated outputs to user
-settings = {
+SETTINGS = {
   dealerSitsOut = false,
   calls = false,
   threeHanded = false,
   jdPartner = true
 }
 
-callSettings = {
+CALL_SETTINGS = {
   sheepshead = false,
   blitz = false,
   leaster = false,
@@ -2071,7 +2070,7 @@ callSettings = {
   crackBack = false,
   crackAroundTheCorner = false
 }
-currentRules = {
+CURRENT_RULES = {
   "\n\n\n\n\n\n\n",
   "[21AF21]Welcome to Scripted Sheepshead!\n",
   "By: WardLordRuby           [-]\n",
@@ -2097,12 +2096,13 @@ CHAT_COMMANDS = {
   "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]\n",
   "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]\n",
   "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck][-]\n",
+  "[21AF21].spawnchips[-] [Gives all seated players 15 additional chips][-]\n",
   "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
 }
 
----Prints currentRules to the screen
+---Prints CURRENT_RULES to the screen
 function displayRules()
-  setNotes(table.concat(currentRules, ""))
+  setNotes(table.concat(CURRENT_RULES, ""))
 end
 
 --[[Start of functions used by settings window]]--
@@ -2113,9 +2113,9 @@ function buildCallPanel()
   local numOfCallsEnabled = 0
   local currentoffsetY = -5
   local buttonoffsetY = -53
-  for key, value in pairs(callSettings) do
+  for key, value in pairs(CALL_SETTINGS) do
     local attributeID = key .. "Button"
-    if value == true then
+    if value then
       numOfCallsEnabled = numOfCallsEnabled + 1
       currentoffsetY = currentoffsetY + buttonoffsetY
       local currentoffsetXY = "00 " .. currentoffsetY
@@ -2131,7 +2131,7 @@ function buildCallPanel()
   UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
 end
 
----@param rule string <"settings.rule">
+---@param rule string <"SETTINGS.rule">
 ---@param bool boolean
 function updateRules(rule, bool)
   local ruleTable = {
@@ -2158,17 +2158,17 @@ function updateRules(rule, bool)
       ruleIndex = 14
     },
   }
-  settings[rule] = bool
+  SETTINGS[rule] = bool
   if ruleTable[rule].execute then
     ruleTable[rule].execute(bool)
   end
   if ruleTable[rule][bool] then
-    currentRules[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
+    CURRENT_RULES[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
     displayRules()
   end
 end
 
----@param call string <"callSettings.call">
+---@param call string <"CALL_SETTINGS.call">
 ---@param bool boolean
 function updateCalls(call, bool)
   local callTable = {
@@ -2182,7 +2182,7 @@ function updateCalls(call, bool)
       execute = stateChangeCrackSubSet
     }
   }
-  callSettings[call] = bool
+  CALL_SETTINGS[call] = bool
   if callTable[call] then
     callTable[call].execute(bool, call)
   end
@@ -2195,15 +2195,15 @@ end
 ---@return boolean
 function toggleNotValid(id, state)
   local lowerID = string.lower(id)
-  if not settings.calls and state then
-    for key in pairs(callSettings) do
+  if not SETTINGS.calls and state then
+    for key in pairs(CALL_SETTINGS) do
       local lowerKey = string.lower(key)
       if string.find(lowerID, lowerKey) then
         return true
       end
     end
   end
-  if not callSettings.crack and state then
+  if not CALL_SETTINGS.crack and state then
     if string.find(lowerID, "crack.") then
       return true
     end
@@ -2214,7 +2214,7 @@ function toggleNotValid(id, state)
       return true
     end
   end
-  if id == "jdPartner" and settings.jdPartner == nil then
+  if id == "jdPartner" and SETTINGS.jdPartner == nil then
     return true
   end
   return false
@@ -2239,12 +2239,12 @@ function toggleSetting(player, val, id)
   local parentID1 = "settingsButton" .. idName .. "On"
   local parentID2 = "settingsButton" .. idName .. "Off"
   idName = lowerFirstChar(idName)
-  for key in pairs(settings) do
+  for key in pairs(SETTINGS) do
     if key == idName then
       updateRules(idName, state)
     end
   end
-  for key in pairs(callSettings) do
+  for key in pairs(CALL_SETTINGS) do
     if key == idName then
       updateCalls(idName, state)
     end
@@ -2255,12 +2255,12 @@ end
 
 ---@param bool boolean
 function stateChangeCalls(bool)
-  if bool == true then
+  if bool then
     UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
   else
     UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
-    for key, value in pairs(callSettings) do
-      if value == true then
+    for key, value in pairs(CALL_SETTINGS) do
+      if value then
         local formatKey = "turnOff" .. key
         toggleSetting(player, val, formatKey)
       end
@@ -2273,7 +2273,7 @@ function stateChangeDealerSitsOut(bool)
   if sortedSeatedPlayers == nil then
     return
   end
-  if bool == true then
+  if bool then
     if #sortedSeatedPlayers == 6 then
       playerCount = 5
       print("[21AF21]Dealer will sit out every hand.[-]")
@@ -2297,20 +2297,20 @@ function stateChangeThreeHanded(bool)
     jdPartner = false
     jdPartnerID = "settingsButtonjdPartnerOff"
   end
-  if bool == true then
-    settings.jdPartner = nil
-    if not settings.calls then
+  if bool then
+    SETTINGS.jdPartner = nil
+    if not SETTINGS.calls then
       Wait.time(function() toggleSetting(player, val, "turnOnCalls") end, 3)
     end
-    if not callSettings.leaster then
+    if not CALL_SETTINGS.leaster then
       Wait.time(function() toggleSetting(player, val, "turnOnLeaster") end, 3)
     end
     UI.setAttribute(jdPartnerID, "tooltip", "Can not change setting, No partner playing 3 handed")
   else
-    if settings.jdPartner == nil then
+    if SETTINGS.jdPartner == nil then
       local callCount = 0
-      for _, bool in pairs(callSettings) do
-        if bool == true then
+      for _, bool in pairs(CALL_SETTINGS) do
+        if bool then
           callCount = callCount + 1
           if callCount > 1 then
             break
@@ -2327,15 +2327,15 @@ end
 
 ---@param bool boolean
 function stateChangeCrack(bool)
-  if bool == true then
+  if bool then
     UI.setAttribute("callSettingsBackground", "image", "callPanel")
   else
-    if settings.calls then
+    if SETTINGS.calls then
       UI.setAttribute("callSettingsBackground", "image", "crackDisabled")
     end
-    for key, value in pairs(callSettings) do
+    for key, value in pairs(CALL_SETTINGS) do
       local lowerKey = string.lower(key)
-      if value == true and string.find(lowerKey, "crack.") then
+      if value and string.find(lowerKey, "crack.") then
         local formatKey = "turnOff" .. key
         toggleSetting(player, val, formatKey)
       end
@@ -2346,10 +2346,10 @@ end
 ---@param bool boolean
 ---@param call string
 function stateChangeCrackSubSet(bool, call)
-  if bool == true then
-    for key, value in pairs(callSettings) do
+  if bool then
+    for key, value in pairs(CALL_SETTINGS) do
       local lowerKey = string.lower(key)
-      if value == true and string.find(lowerKey, "crack.") and key ~= call then
+      if value and string.find(lowerKey, "crack.") and key ~= call then
         local formatKey = "turnOff" .. key
         toggleSetting(player, val, formatKey)
       end
@@ -2386,19 +2386,19 @@ end
 
 ---@param player object<event_Trigger>
 function callPartnerEvent(player)
-  if not pickingPlayer then
+  if not PICKING_PLAYER then
     return
   end
   local player = player
   Wait.time( --0.13s delay allows button click sound to be played
     function() --Show call partner window for selected parter mode
-      if leadOutPlayer then
+      if LEAD_OUT_PLAYER then
         broadcastToColor("[DC0000]You can not do this now[-]", player.color)
         return
       end
-      if settings.jdPartner == true then
+      if SETTINGS.jdPartner then
         local dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
-        if player.color == dealer.color and player.color == pickingPlayer.color then
+        if player.color == dealer.color and player.color == PICKING_PLAYER.color then
           if doesPlayerPossessCard(player, "Jack of Diamonds") then
             toggleWindowVisibility(player, "playAloneWindow")
           else
@@ -2407,8 +2407,8 @@ function callPartnerEvent(player)
         else
           broadcastToColor("[DC0000]You can only call up if you are forced to pick and have the Jack[-]", player.color)
         end
-      elseif settings.jdPartner == false then --Call an Ace
-        if player.color == pickingPlayer.color then
+      else --Call an Ace
+        if player.color == PICKING_PLAYER.color then
           toggleWindowVisibility(player, "selectPartnerWindow")
         else
           broadcastToColor("[DC0000]Only the picker can call their partner[-]", player.color)
@@ -2433,11 +2433,11 @@ function playerCallsEvent(player, val, id)
   id = upperFirstChar(id)
   if id ~= "Leaster" then
     local cardsOnTable = 0
-    for _, zone in pairs(trickZone) do
+    for _, zone in pairs(TRICK_ZONE) do
       local count = countCards(zone)
       cardsOnTable = cardsOnTable + count
     end
-    if not pickingPlayer or cardsOnTable > 2 then
+    if not PICKING_PLAYER or cardsOnTable > 2 then
       broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
       return
     end
@@ -2445,11 +2445,11 @@ function playerCallsEvent(player, val, id)
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   if id == "Leaster" then
     dealer = getPlayerObject(dealerColorVal, sortedSeatedPlayers)
-    if player.color == dealer.color and checkCardCount(scriptZone.center, 2) then
+    if player.color == dealer.color and checkCardCount(SCRIPT_ZONE.center, 2) then
       broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
-      pickingPlayer = player
+      PICKING_PLAYER = player
       startLuaCoroutine(self, 'startLeasterHandCoroutine')
-    elseif player.color == dealer.color and countCards(scriptZone.center) ~= 2 then
+    elseif player.color == dealer.color and countCards(SCRIPT_ZONE.center) ~= 2 then
       broadcastToColor("[DC0000] You can only call leaster before you pick the blinds[-]", player.color)
     else
       broadcastToColor("[DC0000] You can only call leaster if you are forced to pick[-]", player.color)
@@ -2511,26 +2511,26 @@ function findCardToCall(cards, name)
   return callCard
 end
 
----if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
----and return holdCards | if no valid holdCards will return nil
+---if valid HOLD_CARDS found in player hand will enable corresponding buttons in selectPartnerWindow<br>
+---and return HOLD_CARDS | if no valid HOLD_CARDS will return nil
 ---@param player object
 ---@return nil|table<"cardNames">
 function buildPartnerChoices(player)
   --failCards = all suitableFail including ten's
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
-  local failSuits, holdCards, partnerChoices = {}, {}, {}
+  local failSuits, HOLD_CARDS, partnerChoices = {}, {}, {}
   if tableLength(failCards) > 0 then
     failSuits = uniqueFailSuits(failCards)
     local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player)
 
     if card == "Ten" then --player has 3 aces, Hold card must be the ace
       failSuits = {"Hearts", "Spades", "Clubs"}
-      holdCards = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
+      HOLD_CARDS = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
     end
     if tableLength(notPartnerChoices) > 0 then
       failSuits = removeHeldCards(notPartnerChoices, failSuits)
     end
-    --compile list of valid partnerChoices and valid holdCards
+    --compile list of valid partnerChoices and valid HOLD_CARDS
     if tableLength(failSuits) > 0 then
       for _, suit in ipairs(failSuits) do
         table.insert(partnerChoices, card .. " of " .. suit)
@@ -2539,14 +2539,14 @@ function buildPartnerChoices(player)
         for _, cardName in ipairs(failCards) do
           for _, suit in ipairs(failSuits) do
             if string.find(cardName, suit) and not tableContains(notPartnerChoices, cardName) then
-              table.insert(holdCards, cardName)
+              table.insert(HOLD_CARDS, cardName)
             end
           end
         end
       end
       if DEBUG then
         print("Valid cards for player to call: " .. table.concat(partnerChoices, ", "))
-        print("Valid holdCards are: " .. table.concat(holdCards, ", "))
+        print("Valid holdCards are: " .. table.concat(HOLD_CARDS, ", "))
       end
     end
   end 
@@ -2554,7 +2554,7 @@ function buildPartnerChoices(player)
     return nil --nil = unknown mode 
   end
   setActivePartnerButtons(partnerChoices)
-  return holdCards
+  return HOLD_CARDS
 end
 
 ---filters a list of card names down to one of each fail suit
@@ -2666,7 +2666,7 @@ end
 
 ---@param player object<event_Trigger>
 function selectPartnerEvent(player, val, id)
-  flag.fnRunning = true
+  FLAG.fnRunning = true
   local formattedID = id:gsub("-", " ")
   local unknownFormat = ""
   if unknownText then
@@ -2685,15 +2685,15 @@ function selectPartnerEvent(player, val, id)
             break
           end
         end
-        for _, suit in ipairs(nonValidSuits) do --update global holdCards
-          for i = #holdCards, 1, -1 do
-            local cardName = holdCards[i]
+        for _, suit in ipairs(nonValidSuits) do --update global HOLD_CARDS
+          for i = #HOLD_CARDS, 1, -1 do
+            local cardName = HOLD_CARDS[i]
             if string.find(cardName, suit) then
-              table.remove(holdCards, i)
+              table.remove(HOLD_CARDS, i)
             end
           end
         end
-        local validCards = copyTable(holdCards) --build validCards for string format to player
+        local validCards = copyTable(HOLD_CARDS) --build validCards for string format to player
         local numOfValidCards = #validCards
         if numOfValidCards > 1 then
           table.insert(validCards, #validCards, "or")
@@ -2702,14 +2702,14 @@ function selectPartnerEvent(player, val, id)
         if numOfValidCards > 2 then
           validCards = validCards:gsub(validSuit .. "([^,])", validSuit .. ",%1")
         end
-        broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", pickingPlayer.color)
+        broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", PICKING_PLAYER.color)
         if DEBUG then
-          print("Valid holdCards are: " .. table.concat(holdCards, ", "))
+          print("Valid holdCards are: " .. table.concat(HOLD_CARDS, ", "))
         end
       else --Unknown event on
-        broadcastToColor("[21AF21]Remember to play your unknown card the first time ".. validSuit .. " is played[-]", pickingPlayer.color)
+        broadcastToColor("[21AF21]Remember to play your unknown card the first time ".. validSuit .. " is played[-]", PICKING_PLAYER.color)
       end
-      flag.fnRunning = false
+      FLAG.fnRunning = false
     end,
     2
   )
@@ -2717,20 +2717,20 @@ end
 --[[End of functions and buttons for playAloneWindow/selectPartnerWindow window]]--
 
 function startLeasterHandCoroutine()
-  group(getLooseCards(scriptZone.center))
+  group(getLooseCards(SCRIPT_ZONE.center))
   pause(0.6)
-  lastLeasterTrick = getDeck(scriptZone.table)
+  lastLeasterTrick = getDeck(SCRIPT_ZONE.table)
   if lastLeasterTrick.getQuantity() ~= 2 then
     print("startLeasterHand Err: blinds wrong quanity")
     return 1
   end
-  local playerRotation = ROTATION.color[pickingPlayer.color]
+  local playerRotation = ROTATION.color[PICKING_PLAYER.color]
   local leasterPos = SPAWN_POS.leasterCards:copy():rotateOver('y', playerRotation)
   lastLeasterTrick.setPositionSmooth(leasterPos)
   lastLeasterTrick.setRotationSmooth({0, playerRotation + 30, 180})
   lastLeasterTrick.interactable = false
   setLeadOutPlayer()
-  flag.leasterHand = true
+  FLAG.leasterHand = true
   printLeasterRules()
   return 1
 end
