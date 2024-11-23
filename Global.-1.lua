@@ -192,8 +192,7 @@ end
 ---@param list table
 ---@return table
 function copyTable(list)
-  local json = JSON.encode(list)
-  return JSON.decode(json)
+  return JSON.decode(JSON.encode(list))
 end
 
 ---Copys input table and removes input color, if color not found returns original table
@@ -279,7 +278,7 @@ end
 ---If you are aware of more than one deck in a given zone getDeck()<br> can return the smaller or larger
 ---of the decks found. This function has the possibility to error if not ran within a coroutine
 ---@param zone object
----@param size optional_string <"big"|"small">
+---@param size option_string <"big"|"small">
 ---@return object_deck|nil
 function getDeck(zone, size)
   local decks = {}
@@ -308,33 +307,28 @@ function getDeck(zone, size)
       end
     end
     return bigDeck
-  else
-    group(decks)
-    pause(1)
-    return getDeck(zone)
   end
+  group(decks)
+  pause(1)
+  return getDeck(zone)
 end
 
----getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine
+---getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine<br>
+---"Deck1" will return the first deck found
 ---@param zone object
----@param arg String<"Deck1">
+---@param arg option_string<"Deck1">
 ---@return table<card_Objects_and_deck_Objects>
 function getLooseCards(zone, arg)
   local looseCards = {}
   for _, obj in ipairs(zone.getObjects()) do
     if obj.type == "Deck" or obj.type == "Card" then
+      if arg == "Deck1" then
+        return obj
+      end
       table.insert(looseCards, obj)
     end
   end
-  if arg == 'Deck1' then
-    for i, obj in ipairs(looseCards) do
-      if obj.type == "Deck" then
-        return looseCards[i]
-      end
-    end
-  else
-    return looseCards
-  end
+  return looseCards
 end
 
 ---Just checks to make sure cards are all there<br>
@@ -365,7 +359,7 @@ function verifyCardCount(type)
 end
 
 ---@param colorOrVar string_color|integer_index
----@param list table <"colors">
+---@param list table<"colors">
 ---@return object_player
 function getPlayerObject(colorOrVar, list)
   if colorOrVar == 0 then
@@ -374,14 +368,13 @@ function getPlayerObject(colorOrVar, list)
     return Player[list[1]]
   elseif tonumber(colorOrVar) then
     return Player[list[colorOrVar]]
-  else
-    return Player[colorOrVar]
   end
+  return Player[colorOrVar]
 end
 
 ---Returns the index location of a color in a list
 ---@param color string
----@param list table_colors
+---@param list table<"colors">
 function getColorVal(color, list)
   for i, colors in ipairs(list) do
     if colors == color then
@@ -392,8 +385,8 @@ end
 
 ---Returns the index of the player seated clockwise from given index
 ---@param index integer
----@param list table <"colors">
----@return integer <index>
+---@param list table<"colors">
+---@return integer<index>
 function getNextColorValInList(index, list)
   local listLength = #list
   for i = 1, listLength, 1 do
@@ -410,7 +403,7 @@ end
 ---Returns the index of the player seated counter-clockwise from given index
 ---@param index integer
 ---@param list table_colors
----@return integer_index
+---@return integer<index>
 function getPreviousColorValInList(index, list)
   local listLength = #list
   for i = listLength, 1, -1 do
@@ -432,21 +425,20 @@ end
 
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
 ---@param zone object
----@return integer_0|integer_180
+---@return integer<0|180>
 function moreFaceUpOrDown(zone)
   local total, faceDownCount = countCards(zone, true)
   local halfOfTotal = math.floor(total / 2)
   if halfOfTotal >= faceDownCount then
     return 0
-  else
-    return 180
   end
+  return 180
 end
 
 ---Returns the number of cards in a given zone, can also return faceDownCount
 ---@param zone object
 ---@param countFaceDown boolean
----@return integer <numCards | numCards_and_numFaceDown>
+---@return integer<numCards|numCards_and_numFaceDown>
 function countCards(zone, countFaceDown)
   local objects = zone.getObjects()
   local cardCount, faceDownCount = 0, 0
@@ -465,19 +457,14 @@ function countCards(zone, countFaceDown)
       end
     end
   end
-  if countFaceDown then
-    return cardCount, faceDownCount
-  else
-    return cardCount
-  end
+  return cardCount, faceDownCount
 end
 
 ---Checks the given card count of a given zone, returns true or false
 ---@param zone object
 ---@param count integer
 function checkCardCount(zone, count)
-  local cardCount = countCards(zone)
-  if cardCount == count then
+  if countCards(zone) == count then
     return true
   end
   return false
@@ -517,9 +504,9 @@ end
 
 ---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
 ---@param player object
----@param scheme string <"suitableFail"|"King"|"Ace"|"Ten"|"Jack"|"Queen">
+---@param scheme string<"suitableFail"|"King"|"Ace"|"Ten"|"Jack"|"Queen">
 ---@param doNotInclude string
----@return table <"cardNames">
+---@return table<"cardNames">
 function filterPlayerCards(player, scheme, doNotInclude)
   local schemes = {
     suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
@@ -574,8 +561,8 @@ end
 
 ---Called to remove items from a zone. Must be called from within a coroutine
 ---@param zone Object
----@param item string<'Type'>
----@param item2 string<'Type'>
+---@param item string<"Type">
+---@param item2 string<"Type">
 function resetBoard(zone, item, item2)
   if not item2 then
     item2 = item
@@ -2434,8 +2421,7 @@ function playerCallsEvent(player, val, id)
   if id ~= "Leaster" then
     local cardsOnTable = 0
     for _, zone in pairs(TRICK_ZONE) do
-      local count = countCards(zone)
-      cardsOnTable = cardsOnTable + count
+      cardsOnTable = cardsOnTable + countCards(zone)
     end
     if not PICKING_PLAYER or cardsOnTable > 2 then
       broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
@@ -2571,8 +2557,10 @@ function uniqueFailSuits(failCards)
   return failSuits
 end
 
----returns the fail aces a player holds, if player holds 3 fail aces returns the fail 10's a player holds
+---returns the fail aces a player holds, if player holds 3 fail aces returns the fail 10's a player holds<br>
+---"unknown" will include the King
 ---@param player object
+---@param unknown option_string<"unknown">
 ---@return table<"cardNames">
 ---@return string<"Ace"|"Ten">
 function aceOrTenOfNotPartnerChoices(player, unknown)
