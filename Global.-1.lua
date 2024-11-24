@@ -314,15 +314,14 @@ function getDeck(zone, size)
 end
 
 ---getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine<br>
----"Deck1" will return the first deck found
 ---@param zone object
----@param arg option_string<"Deck1">
+---@param returnFirstDeck option_bool
 ---@return table<card_Objects_and_deck_Objects>
-function getLooseCards(zone, arg)
+function getLooseCards(zone, returnFirstDeck)
   local looseCards = {}
   for _, obj in ipairs(zone.getObjects()) do
     if obj.type == "Deck" or obj.type == "Card" then
-      if arg == "Deck1" then
+      if returnFirstDeck and obj.type == "Deck" then
         return obj
       end
       table.insert(looseCards, obj)
@@ -1363,7 +1362,7 @@ function toggleCounterVisibility()
       group(pickerCards)
       Wait.time(
         function()
-          local pickerTricks = getLooseCards(pickerZone, "Deck1")
+          local pickerTricks = getLooseCards(pickerZone, true)
           pickerTricks.setPositionSmooth({pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z})
           pickerTricks.setRotationSmooth({0, pickerTricks.getRotation().y, 0})
         end,
@@ -2210,7 +2209,7 @@ end
 ---Toggle setting via formatted id
 ---@param player nil
 ---@param val nil
----@param id string <"turnOnSettingName" | "turnOffSettingName">
+---@param id string <"turnOnSettingName"|"turnOffSettingName">
 function toggleSetting(player, val, id)
   local idName, state
   if string.find(id, "turnOn") then
@@ -2558,14 +2557,14 @@ function uniqueFailSuits(failCards)
 end
 
 ---returns the fail aces a player holds, if player holds 3 fail aces returns the fail 10's a player holds<br>
----"unknown" will include the King
+---setting unknown will include the King
 ---@param player object
----@param unknown option_string<"unknown">
+---@param unknown option_bool
 ---@return table<"cardNames">
 ---@return string<"Ace"|"Ten">
 function aceOrTenOfNotPartnerChoices(player, unknown)
   local tryOrder = {"Ace", "Ten"}
-  if unknown == "unknown" then
+  if unknown then
     table.insert(tryOrder, "King")
   end
   local notPartnerChoices, card
@@ -2599,7 +2598,7 @@ end
 ---@param player object
 function unknownPartnerChoices(player)
   local failSuits = {"Hearts", "Spades", "Clubs"}
-  local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player, "unknown")
+  local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player, true)
   failSuits = removeHeldCards(notPartnerChoices, failSuits)
   local partnerChoices = {}
   for _, suit in ipairs(failSuits) do
