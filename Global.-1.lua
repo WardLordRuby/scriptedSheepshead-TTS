@@ -237,8 +237,8 @@ end
 
 --[[Data retrieval]]--
 
----@param object object_item
----@param zone object
+---@param object object
+---@param zone object<zone>
 function isInZone(object, zone)
   local occupiedZones = object.getZones()
   for _, zoneObject in ipairs(occupiedZones) do
@@ -277,9 +277,9 @@ end
 ---Returns the deck from given zone
 ---If you are aware of more than one deck in a given zone getDeck()<br> can return the smaller or larger
 ---of the decks found. This function has the possibility to error if not ran within a coroutine
----@param zone object
+---@param zone object<zone>
 ---@param size option_string <"big"|"small">
----@return object_deck|nil
+---@return object<deck>|nil
 function getDeck(zone, size)
   local decks = {}
   for _, obj in ipairs(zone.getObjects()) do
@@ -314,7 +314,7 @@ function getDeck(zone, size)
 end
 
 ---getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine<br>
----@param zone object
+---@param zone object<zone>
 ---@param returnFirstDeck option_bool
 ---@return table<card_Objects_and_deck_Objects>
 function getLooseCards(zone, returnFirstDeck)
@@ -350,7 +350,7 @@ end
 
 ---@param colorOrVar string_color|integer_index
 ---@param list table<"colors">
----@return object_player
+---@return object<player>
 function getPlayerObject(colorOrVar, list)
   if colorOrVar == 0 then
     return Player[list[#list]]
@@ -392,7 +392,7 @@ end
 
 ---Returns the index of the player seated counter-clockwise from given index
 ---@param index integer
----@param list table_colors
+---@param list table<"colors">
 ---@return integer<index>
 function getPreviousColorValInList(index, list)
   local listLength = #list
@@ -414,7 +414,7 @@ function deckExists()
 end
 
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
----@param zone object
+---@param zone object<zone>
 ---@return integer<0|180>
 function moreFaceUpOrDown(zone)
   local total, faceDownCount = countCards(zone, true)
@@ -426,9 +426,9 @@ function moreFaceUpOrDown(zone)
 end
 
 ---Returns the number of cards in a given zone, can also return faceDownCount
----@param zone object
+---@param zone object<zone>
 ---@param countFaceDown boolean
----@return integer<numCards|numCards_and_numFaceDown>
+---@return integer<numCards>, integer<numCardsFaceDown>
 function countCards(zone, countFaceDown)
   local objects = zone.getObjects()
   local cardCount, faceDownCount = 0, 0
@@ -451,7 +451,7 @@ function countCards(zone, countFaceDown)
 end
 
 ---Checks the given card count of a given zone, returns true or false
----@param zone object
+---@param zone object<zone>
 ---@param count integer
 function checkCardCount(zone, count)
   if countCards(zone) == count then
@@ -460,7 +460,7 @@ function checkCardCount(zone, count)
   return false
 end
 
----@param player object
+---@param player object<player>
 ---@param cardName string
 function doesPlayerPossessCard(player, cardName)
   local playerCards = getPlayerCards(player)
@@ -474,7 +474,7 @@ end
 
 ---Searches player HAND_ZONE and TRICK_ZONE
 ---@param player object
----@return table <"cardNames">
+---@return table<"cardNames">
 function getPlayerCards(player)
   local cards = {}
   for _, card in ipairs(getLooseCards(HAND_ZONE[player.color])) do
@@ -519,7 +519,7 @@ function filterPlayerCards(player, scheme, doNotInclude)
 end
 
 ---@param color string
----@return integer_rotationAngle, vector_playerPosition
+---@return integer<rotationAngle>, vector<playerPosition>
 function getItemMoveData(color)
   local rotationAngle = ROTATION.color[color]
   local playerPos = Player[color].getHandTransform().position
@@ -530,7 +530,7 @@ end
 
 ---Checks if a deck in the given zone is face up, if so it flips the deck<br>
 ---Recomended to be ran from within a coroutine
----@param zone object
+---@param zone object<zone>
 function flipDeck(zone)
   local deck = getDeck(zone)
   if not deck.is_face_down then
@@ -539,7 +539,7 @@ function flipDeck(zone)
 end
 
 ---Checks if cards in the given zone are face up, if so it flips cards
----@param zone object
+---@param zone object<zone>
 function flipCards(zone)
   local cards = getLooseCards(zone)
   for _, card in ipairs(cards) do
@@ -550,7 +550,7 @@ function flipCards(zone)
 end
 
 ---Called to remove items from a zone. Must be called from within a coroutine
----@param zone Object
+---@param zone object<zone>
 ---@param item string<"Type">
 ---@param item2 string<"Type">
 function resetBoard(zone, item, item2)
@@ -617,8 +617,8 @@ end
 
 ---Runs everytime a chat occurs.
 ---<br>Return: true, hides player msg | false, shows player msg
----@param message string_from_player
----@param player object_of_player
+---@param message string<playerInput>
+---@param player object<player>
 function onChat(message, player)
   --Sets flags for determining if to reset gameboard
   if FLAG.lookForPlayerText then
@@ -842,7 +842,7 @@ end
 ---Called to add the BLACK_SEVENS to a given deck<br>
 ---Function uses global string BLACK_SEVENS provided by removeBlackSevens() to locate<br>
 ---BLACK_SEVENS.guid within STATIC_OBJECT.hiddenBag, then moves them to the current deck position
----@param deck object
+---@param deck object<deck>
 function returnDecktoPiquet(deck)
   STATIC_OBJECT.hiddenBag.takeObject({
     guid = BLACK_SEVENS,
@@ -859,7 +859,7 @@ end
 ---Finds the BLACK_SEVENS inside the given deck and moves them into STATIC_OBJECT.hiddenBag<br>
 ---Sets BLACK_SEVENS deck guid inside STATIC_OBJECT.hiddenBag<br>
 ---Must be ran from within a coroutine
----@param deck object
+---@param deck object<deck>
 function removeBlackSevens(deck)
   local centerPos = Vector(0, 1.5, 0)
   deck.setPosition(centerPos)
@@ -890,7 +890,7 @@ function removeBlackSevens(deck)
 end
 
 ---Helper function for spawning chips from outside a coroutine
----@param player object<command_trigger>
+---@param player object<commandTrigger>
 function startChipSpawn(player)
   if not adminCheck(player) then
     return
@@ -929,7 +929,7 @@ function spawnChips()
 end
 
 ---Start of game setup event
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function setUpGameEvent(player)
   if not safeToContinue() then
     return
@@ -1127,10 +1127,10 @@ end
 
 ---Contains the logic to deal correctly based on the number of
 ---players seated and the number of times players have recieved cards
----@param p integer_number_of_players
----@param t string_target_color
----@param r integer_round_number
----@param deck object
+---@param p integer<numPlayers>
+---@param t string<"targetColor">
+---@param r integer<roundNumber>
+---@param deck object<deck>
 ---@param rotationVal vector
 function dealLogic(p, t, r, deck, rotationVal)
   if p == 3 then
@@ -1167,7 +1167,7 @@ function dealLogic(p, t, r, deck, rotationVal)
 end
 
 ---Deals 2 cards to the blinds
----@param deck object
+---@param deck object<deck>
 ---@param rotationVal vector
 function dealToBlinds(deck, rotationVal)
   for i = 1, 2 do
@@ -1182,7 +1182,7 @@ end
 --[[End of functions used by New Hand event]]--
 
 ---Prints a message if player passes or is forced to pick
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function passEvent(player)
   if not DEALER_COLOR_VAL then
     return
@@ -1222,7 +1222,7 @@ end
 
 ---Moves the blinds into the pickers hand, sets player to PICKING_PLAYER
 ---Sets FLAG cardsToBeBuried to trigger buryCards logic
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function pickBlindsEvent(player)
   if PLAYER_COUNT == 5 and #SORTED_SEATED_PLAYERS == 6 then
     if player.color == getPlayerObject(DEALER_COLOR_VAL, SORTED_SEATED_PLAYERS).color then
@@ -1378,7 +1378,7 @@ end
 
 ---Makes sure buried cards are face down and unhides blinds and PICKING_PLAYERs<br>
 ---hand objects. Calculates global LEAD_OUT_PLAYER, hides Set Buried button
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function setBuriedEvent(player)
   if player.color ~= PICKING_PLAYER.color then
     return
@@ -1453,8 +1453,8 @@ end
 ---Runs when an object tries to enter a container<br>
 ---Doesn't allow card grouping during trickInProgress or cardsToBeBuried<br>
 ---Return: true, allows object to enter | false, does not allow object to enter
----@param container type_object
----@param object object_item
+---@param container object<container>
+---@param object object
 function tryObjectEnterContainer(container, object)
   if not FLAG.allowGrouping then
     return false
@@ -1473,8 +1473,8 @@ function tryObjectEnterContainer(container, object)
 end
 
 ---Runs when an object enters a zone
----@param zone object
----@param object object_item
+---@param zone object<zone>
+---@param object object
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
   if zone == SCRIPT_ZONE.drop then
@@ -1490,8 +1490,8 @@ function onObjectEnterZone(zone, object)
 end
 
 ---Runs when an object leaves a zone
----@param zone object
----@param object object_item
+---@param zone object<zone>
+---@param object object
 function onObjectLeaveZone(zone, object)
   --Starts trick
   if safeToContinue() and not FLAG.cardsToBeBuried then
@@ -1507,7 +1507,7 @@ end
 ---If someone plays the wrong card, Ex. Player didn't see they have to follow suit
 ---and needs to remove a card from the CURRENT_TRICK
 ---@param playerColor string
----@param object object_item
+---@param object object
 function onObjectPickUp(playerColor, object)
   if FLAG.trick.inProgress then
     if object.type == 'Card' and isInZone(object, SCRIPT_ZONE.center) then
@@ -1528,7 +1528,7 @@ end
 ---Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
 ---Builds the table CURRENT_TRICK to keep track of cardNames and player color who laid them in the SCRIPT_ZONE.center
 ---@param playerColor string
----@param object object_item
+---@param object object
 function onObjectDrop(playerColor, object)
   if FLAG.trick.inProgress then
     if object.type == 'Card' then
@@ -1553,7 +1553,7 @@ function onObjectDrop(playerColor, object)
 end
 
 ---@param indexToRemove integer
----@param indexToUpdate optional <integer>
+---@param indexToUpdate option_integer
 function removeCardFromTrick(indexToRemove, indexToUpdate)
   local highCardName
   if indexToUpdate then
@@ -1594,7 +1594,7 @@ function reCalculateCurrentTrick(indexToRemove)
 end
 
 ---@param playerColor string
----@param object object
+---@param object object<card>
 function addCardDataToCurrentTrick(playerColor, object)
   --Check if object is trump
   local objectName = object.getName()
@@ -1794,18 +1794,17 @@ function giveTrickToWinnerCoroutine()
     pause(delay)
     LEAD_OUT_PLAYER = nil
     toggleCounterVisibility()
-    return 1
   else
     FLAG.fnRunning = false
-    return 1
   end
+  return 1
 end
 
 --[[New functions to adapt Blackjack Card Counter]]--
 
 ---Returns the color of the handposition located across the table from given color (PICKING_PLAYER)
 ---@param color string
----@return string <"color">
+---@return string<"color">
 function findColorAcrossTable(color)
   for i, colors in ipairs(ALL_PLAYERS) do
     local acrossVal = 0
@@ -2393,7 +2392,7 @@ function callPartnerEvent(player)
   )
 end
 
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 ---@param val nil
 ---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
@@ -2439,7 +2438,7 @@ end
 
 --[[Start of functions and buttons for playAloneWindow/selectPartnerWindow window]]--
 
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function callUpEvent(player)
   toggleWindowVisibility(player, "playAloneWindow")
   local tryOrder = {"Jack", "Queen"}
@@ -2485,7 +2484,7 @@ end
 
 ---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
 ---and updates the global HOLD_CARDS | if no valid holdCards will update as nil
----@param player object
+---@param player object<player>
 function buildPartnerChoices(player)
   --failCards = all suitableFail including ten's
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
@@ -2598,7 +2597,7 @@ function unknownPartnerChoices(player)
   end
 end
 
----@param list table <"cardNames">
+---@param list table<"cardNames">
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
@@ -2638,7 +2637,7 @@ function resetSelectPartnerWindow(id, table)
   end
 end
 
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function selectPartnerEvent(player, val, id)
   FLAG.fnRunning = true
   local formattedID = id:gsub("-", " ")
@@ -2661,8 +2660,7 @@ function selectPartnerEvent(player, val, id)
         end
         for _, suit in ipairs(nonValidSuits) do --update global HOLD_CARDS
           for i = #HOLD_CARDS, 1, -1 do
-            local cardName = HOLD_CARDS[i]
-            if string.find(cardName, suit) then
+            if string.find(HOLD_CARDS[i], suit) then
               table.remove(HOLD_CARDS, i)
             end
           end
