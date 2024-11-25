@@ -1005,21 +1005,21 @@ end
 
 --[[Start of functions used by New Hand event]]--
 
----Called to build dealOrder correctly<br>
----Adds "Blinds" to the dealOrder table in the position directly after the current dealer<br>
+---Called to build DEAL_ORDER correctly<br>
+---Adds "Blinds" to the DEAL_ORDER table in the position directly after the current dealer<br>
 ---If dealer sits out replaces dealer with blinds
 function calculateDealOrder()
-  dealOrder = copyTable(SORTED_SEATED_PLAYERS)
+  DEAL_ORDER = copyTable(SORTED_SEATED_PLAYERS)
   local blinds = "Blinds"
   if PLAYER_COUNT == #SORTED_SEATED_PLAYERS then
     blindVal = DEALER_COLOR_VAL + 1
-    if blindVal > #dealOrder + 1 then
+    if blindVal > #DEAL_ORDER + 1 then
       blindVal = 1
     end
-    table.insert(dealOrder, blindVal, blinds)
+    table.insert(DEAL_ORDER, blindVal, blinds)
   else
-    table.remove(dealOrder, DEALER_COLOR_VAL)
-    table.insert(dealOrder, DEALER_COLOR_VAL, blinds)
+    table.remove(DEAL_ORDER, DEALER_COLOR_VAL)
+    table.insert(DEAL_ORDER, DEALER_COLOR_VAL, blinds)
   end
 end
 
@@ -1040,8 +1040,8 @@ function setUpHandEvent()
   end
   PICKING_PLAYER, LEAD_OUT_PLAYER, HOLD_CARDS = nil, nil, nil
   FLAG.trick.inProgress, FLAG.leasterHand = false, false
-  if unknownText then
-    unknownText.destruct(); unknownText = nil
+  if UNKNOWN_TEXT then
+    UNKNOWN_TEXT.destruct(); UNKNOWN_TEXT = nil
   end
   CURRENT_TRICK = {}
   
@@ -1087,10 +1087,10 @@ function dealCardsCoroutine()
   flipDeck(SCRIPT_ZONE.table)
   pause(0.35)
 
-  local count = getNextColorValInList(DEALER_COLOR_VAL, dealOrder)
+  local count = getNextColorValInList(DEALER_COLOR_VAL, DEAL_ORDER)
   local roundTrigger = 1
   local round = 1
-  local target = dealOrder[count]
+  local target = DEAL_ORDER[count]
 
   local deck = getDeck(SCRIPT_ZONE.table)
   local rotationVal = deck.getRotation()
@@ -1101,11 +1101,11 @@ function dealCardsCoroutine()
   pause(0.35)
 
   while deckExists() do
-    if count > #dealOrder then
+    if count > #DEAL_ORDER then
       count = 1
-      target = dealOrder[count]
+      target = DEAL_ORDER[count]
     end
-    if roundTrigger > #dealOrder then
+    if roundTrigger > #DEAL_ORDER then
       roundTrigger = 1
       round = round + 1
     end
@@ -1116,7 +1116,7 @@ function dealCardsCoroutine()
     pause(0.25)
     count = count + 1
     roundTrigger = roundTrigger + 1
-    target = dealOrder[count]
+    target = DEAL_ORDER[count]
   end
 
   FLAG.dealInProgress = false
@@ -1283,7 +1283,7 @@ function pickBlindsCoroutine()
     end
   else --Call an Ace
     pause(0.5)
-    HOLD_CARDS = buildPartnerChoices(PICKING_PLAYER)
+    buildPartnerChoices(PICKING_PLAYER)
     pause(0.25)
     if HOLD_CARDS then
       toggleWindowVisibility(PICKING_PLAYER, "selectPartnerWindow")
@@ -1291,15 +1291,15 @@ function pickBlindsCoroutine()
       unknownPartnerChoices(PICKING_PLAYER)
       pause(0.25)
       local unknownTextPos = SPAWN_POS.leasterCards:copy():rotateOver('y', pickerRotation)
-      unknownText = spawnObject({ --Shares position data with leasterCards
+      UNKNOWN_TEXT = spawnObject({ --Shares position data with leasterCards
         type = '3DText',
         position = unknownTextPos,
         rotation = {90, pickerRotation - 60, 0}
       })
-      unknownText.interactable = false
-      unknownText.TextTool.setFontSize(10)
-      unknownText.TextTool.setFontColor("Green")
-      unknownText.setValue("Place Unknown Card\nFacedown Here")
+      UNKNOWN_TEXT.interactable = false
+      UNKNOWN_TEXT.TextTool.setFontSize(10)
+      UNKNOWN_TEXT.TextTool.setFontColor("Green")
+      UNKNOWN_TEXT.setValue("Place Unknown Card\nFacedown Here")
       toggleWindowVisibility(PICKING_PLAYER, "selectPartnerWindow")
     end
   end
@@ -1417,8 +1417,8 @@ function setBuriedEvent(player)
       end
     end
   end
-  if unknownText then
-    unknownText.destruct(); unknownText = nil
+  if UNKNOWN_TEXT then
+    UNKNOWN_TEXT.destruct(); UNKNOWN_TEXT = nil
   end
   for _, card in ipairs(buriedCards) do
     if not card.is_face_down then
@@ -1785,11 +1785,11 @@ function giveTrickToWinnerCoroutine()
     local delay = 0
     if FLAG.leasterHand then
       delay = delay + 1.5
-      lastLeasterTrick.interactable = true
+      LAST_LEASTER_TRICK.interactable = true
       pause(0.5)
-      lastLeasterTrick.setPositionSmooth(getDeck(playerTrickZone).getPosition())
-      lastLeasterTrick.setRotationSmooth(getDeck(playerTrickZone).getRotation())
-      lastLeasterTrick = nil
+      LAST_LEASTER_TRICK.setPositionSmooth(getDeck(playerTrickZone).getPosition())
+      LAST_LEASTER_TRICK.setRotationSmooth(getDeck(playerTrickZone).getRotation())
+      LAST_LEASTER_TRICK = nil
     end
     pause(delay)
     LEAD_OUT_PLAYER = nil
@@ -2483,26 +2483,25 @@ function findCardToCall(cards, name)
   return callCard
 end
 
----if valid HOLD_CARDS found in player hand will enable corresponding buttons in selectPartnerWindow<br>
----and return HOLD_CARDS | if no valid HOLD_CARDS will return nil
+---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
+---and updates the global HOLD_CARDS | if no valid holdCards will update as nil
 ---@param player object
----@return nil|table<"cardNames">
 function buildPartnerChoices(player)
   --failCards = all suitableFail including ten's
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
-  local failSuits, HOLD_CARDS, partnerChoices = {}, {}, {}
+  local failSuits, holdCards, partnerChoices = {}, {}, {}
   if tableLength(failCards) > 0 then
     failSuits = uniqueFailSuits(failCards)
     local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player)
 
     if card == "Ten" then --player has 3 aces, Hold card must be the ace
       failSuits = {"Hearts", "Spades", "Clubs"}
-      HOLD_CARDS = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
+      holdCards = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
     end
     if tableLength(notPartnerChoices) > 0 then
       failSuits = removeHeldCards(notPartnerChoices, failSuits)
     end
-    --compile list of valid partnerChoices and valid HOLD_CARDS
+    --compile list of valid partnerChoices and valid holdCards
     if tableLength(failSuits) > 0 then
       for _, suit in ipairs(failSuits) do
         table.insert(partnerChoices, card .. " of " .. suit)
@@ -2511,22 +2510,23 @@ function buildPartnerChoices(player)
         for _, cardName in ipairs(failCards) do
           for _, suit in ipairs(failSuits) do
             if string.find(cardName, suit) and not tableContains(notPartnerChoices, cardName) then
-              table.insert(HOLD_CARDS, cardName)
+              table.insert(holdCards, cardName)
             end
           end
         end
       end
       if DEBUG then
         print("Valid cards for player to call: " .. table.concat(partnerChoices, ", "))
-        print("Valid holdCards are: " .. table.concat(HOLD_CARDS, ", "))
+        print("Valid holdCards are: " .. table.concat(holdCards, ", "))
       end
     end
-  end 
+  end
   if tableLength(failCards) == 0 or tableLength(failSuits) == 0 then
-    return nil --nil = unknown mode 
+    HOLD_CARDS = nil --nil = unknown mode
+    return
   end
   setActivePartnerButtons(partnerChoices)
-  return HOLD_CARDS
+  HOLD_CARDS = holdCards
 end
 
 ---filters a list of card names down to one of each fail suit
@@ -2643,7 +2643,7 @@ function selectPartnerEvent(player, val, id)
   FLAG.fnRunning = true
   local formattedID = id:gsub("-", " ")
   local unknownFormat = ""
-  if unknownText then
+  if UNKNOWN_TEXT then
     unknownFormat = " - Unknown"
   end
   broadcastToAll("[21AF21]" .. player.steam_name .. " Picks " .. formattedID .. unknownFormat .. " as their parnter")
@@ -2651,7 +2651,7 @@ function selectPartnerEvent(player, val, id)
   local validSuit = getLastWord(formattedID)
   Wait.time(
     function()
-      if not unknownText then --Unknown event off
+      if not UNKNOWN_TEXT then --Unknown event off
         local nonValidSuits = {"Hearts", "Spades", "Clubs"}
         for i, suit in ipairs(nonValidSuits) do
           if string.find(suit, validSuit) then
@@ -2693,16 +2693,16 @@ end
 function startLeasterHandCoroutine()
   group(getLooseCards(SCRIPT_ZONE.center))
   pause(0.6)
-  lastLeasterTrick = getDeck(SCRIPT_ZONE.table)
-  if lastLeasterTrick.getQuantity() ~= 2 then
+  LAST_LEASTER_TRICK = getDeck(SCRIPT_ZONE.table)
+  if LAST_LEASTER_TRICK.getQuantity() ~= 2 then
     print("startLeasterHand Err: blinds wrong quanity")
     return 1
   end
   local playerRotation = ROTATION.color[PICKING_PLAYER.color]
   local leasterPos = SPAWN_POS.leasterCards:copy():rotateOver('y', playerRotation)
-  lastLeasterTrick.setPositionSmooth(leasterPos)
-  lastLeasterTrick.setRotationSmooth({0, playerRotation + 30, 180})
-  lastLeasterTrick.interactable = false
+  LAST_LEASTER_TRICK.setPositionSmooth(leasterPos)
+  LAST_LEASTER_TRICK.setRotationSmooth({0, playerRotation + 30, 180})
+  LAST_LEASTER_TRICK.interactable = false
   setLeadOutPlayer()
   FLAG.leasterHand = true
   printLeasterRules()
