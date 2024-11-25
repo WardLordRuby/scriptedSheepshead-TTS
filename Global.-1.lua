@@ -348,7 +348,7 @@ function verifyCardCount()
   end
 end
 
----@param colorOrVar string_color|integer_index
+---@param colorOrVar string<"color">|integer<index>
 ---@param list table<"colors">
 ---@return object<player>
 function getPlayerObject(colorOrVar, list)
@@ -521,9 +521,7 @@ end
 ---@param color string
 ---@return integer<rotationAngle>, vector<playerPosition>
 function getItemMoveData(color)
-  local rotationAngle = ROTATION.color[color]
-  local playerPos = Player[color].getHandTransform().position
-  return rotationAngle, playerPos
+  return ROTATION.color[color], Player[color].getHandTransform().position
 end
 
 --[[Object manipulation]]--
@@ -541,8 +539,7 @@ end
 ---Checks if cards in the given zone are face up, if so it flips cards
 ---@param zone object<zone>
 function flipCards(zone)
-  local cards = getLooseCards(zone)
-  for _, card in ipairs(cards) do
+  for _, card in ipairs(getLooseCards(zone)) do
     if not card.is_face_down then
       card.flip()
     end
@@ -552,7 +549,7 @@ end
 ---Called to remove items from a zone. Must be called from within a coroutine
 ---@param zone object<zone>
 ---@param item string<"Type">
----@param item2 string<"Type">
+---@param item2 option_string<"Type">
 function resetBoard(zone, item, item2)
   if not item2 then
     item2 = item
@@ -567,9 +564,8 @@ function resetBoard(zone, item, item2)
   end
 end
 
----Moves deck and dealer chip in front of a given color<br>
+---Moves deck and dealer chip in front of the next clockwise seated player<br>
 ---Needs to be ran from within a coroutine
----@param color string
 function moveDeckAndDealerChip()
   local rotationAngle, playerPos = getItemMoveData(SORTED_SEATED_PLAYERS[DEALER_COLOR_VAL])
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
@@ -675,7 +671,7 @@ end
 function getRuleBook(color)
   local playerRotation = ROTATION.color[color]
   local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
-  local myjson = [[{
+  local ruleBookJson = [[{
     "Name": "Custom_PDF",
     "Transform": {
       "posX": 0.0,
@@ -718,7 +714,7 @@ function getRuleBook(color)
     "GUID": "pdf001"
   }]]
   spawnObjectJSON({
-    json = myjson,
+    json = ruleBookJson,
     position = {ruleBookPos.x, 1.5, ruleBookPos.z},
     rotation = {0, playerRotation - 180, 0}
   })
@@ -1127,9 +1123,9 @@ end
 
 ---Contains the logic to deal correctly based on the number of
 ---players seated and the number of times players have recieved cards
----@param p integer<numPlayers>
+---@param p integer<playerCount>
 ---@param t string<"targetColor">
----@param r integer<roundNumber>
+---@param r integer<roundNum>
 ---@param deck object<deck>
 ---@param rotationVal vector
 function dealLogic(p, t, r, deck, rotationVal)
@@ -2042,6 +2038,7 @@ CALL_SETTINGS = {
   crackBack = false,
   crackAroundTheCorner = false
 }
+
 CURRENT_RULES = {
   "\n\n\n\n\n\n\n",
   "[21AF21]Welcome to Scripted Sheepshead!\n",
@@ -2332,7 +2329,7 @@ end
 --[[End of functions for settings window]]--
 
 ---@param player object
----@param window string<"widnowID">
+---@param window string<"windowID">
 function toggleWindowVisibility(player, window)
   local visibility = UI.getAttribute(window, "visibility")
   if string.find(visibility, player.color) then
@@ -2457,8 +2454,8 @@ function callUpEvent(player)
 end
 
 ---Finds next highest card that is not in passed in table
----@param cards table <"cardNames">
----@param name string <"Jack"|"Queen">
+---@param cards table<"cardNames">
+---@param name string<"Jack"|"Queen">
 ---@return string cardName
 function findCardToCall(cards, name)
   local callCard
