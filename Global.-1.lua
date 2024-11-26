@@ -253,14 +253,10 @@ end
 ---or used if you want to get number of elements in table with non integer keys
 ---@param table table<any>
 function tableLength(table)
-  local count = 0
   if table == {} or table == nil then
     return 0
   end
-  for _, _ in pairs(table) do
-    count = count + 1
-  end
-  return count
+  return #table
 end
 
 ---@param table table<any>
@@ -327,7 +323,10 @@ function getLooseCards(zone, returnFirstDeck)
       table.insert(looseCards, obj)
     end
   end
-  return looseCards
+  if not returnFirstDeck then    
+    return looseCards
+  end
+  return nil
 end
 
 ---Just checks to make sure cards are all there<br>
@@ -1664,12 +1663,12 @@ function setLeadOutCardProperties(objectName, isTrump)
   }
   if tableLength(CURRENT_TRICK) == 0 then
     table.insert(CURRENT_TRICK, trickProperties)
-  else
-    CURRENT_TRICK[1].ledSuit = trickProperties.ledSuit
-    CURRENT_TRICK[1].trump = isTrump
-    CURRENT_TRICK[1].currentHighStrength = trickProperties.currentHighStrength
-    CURRENT_TRICK[1].highStrengthIndex = 2
+    return
   end
+  CURRENT_TRICK[1].ledSuit = trickProperties.ledSuit
+  CURRENT_TRICK[1].trump = isTrump
+  CURRENT_TRICK[1].currentHighStrength = trickProperties.currentHighStrength
+  CURRENT_TRICK[1].highStrengthIndex = 2
 end
 
 ---Trick properties stored in CURRENT_TRICK[1]
@@ -1718,18 +1717,20 @@ function quickSearch(objectName, isTrump)
   else
     startIndex = CURRENT_TRICK[1].currentHighStrength
   end
-  for i = startIndex, #strengthList do
-    if isTrump then
+  if isTrump then
+    for i = startIndex, #strengthList do
       if objectName == strengthList[i] then
         return i
       end
-    else
+    end
+  else
+    for i = startIndex, #strengthList do
       if string.find(objectName, strengthList[i]) then
         return i
       end
     end
   end
-  return 1
+  return 0
 end
 
 ---Calculates player to give trick to. Sets global LEAD_OUT_PLAYER
