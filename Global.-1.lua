@@ -150,6 +150,14 @@ function safeToContinue()
   return true
 end
 
+---Sets the FLAG.fnRunning to true when safe this must be ran within a coroutine
+function startFnRunFlag()
+  while FLAG.fnRunning do
+    coroutine.yield(0)
+  end
+  FLAG.fnRunning = true
+end
+
 ---Pauses script, must be called from within a coroutine
 ---@param time integer_seconds
 function pause(time)
@@ -894,7 +902,13 @@ function startChipSpawn(player)
     broadcastToColor("[DC0000]Setup game before spawning extra chips.[-]", player.color)
     return
   end
+  if not safeToContinue() then
+    broadcastToColor("[DC0000]Action in progress, wait and try this command again.[-]", player.color)
+    return
+  end
+  FLAG.fnRunning = true
   startLuaCoroutine(self, 'spawnChips')
+  FLAG.fnRunning = false
 end
 
 ---Deals specified number of chips to all seated players<br>
@@ -1236,6 +1250,7 @@ function pickBlindsEvent(player)
 end
 
 function pickBlindsCoroutine()
+  startFnRunFlag()
   broadcastToAll("[21AF21]" .. PICKING_PLAYER.steam_name .. " Picks![-]")
   local blinds = getLooseCards(SCRIPT_ZONE.center)
   local playerPosition = Player[PICKING_PLAYER.color].getHandTransform().position
@@ -1298,6 +1313,7 @@ function pickBlindsCoroutine()
       toggleWindowVisibility(PICKING_PLAYER, "selectPartnerWindow")
     end
   end
+  FLAG.fnRunning = false
   return 1
 end
 
@@ -1305,7 +1321,7 @@ end
 ---a counter in front of PICKING_PLAYER<br> and player accross from color.
 ---Flips over pickers tricks to see score of hand
 function toggleCounterVisibility()
-  FLAG.fnRunning = true
+  startFnRunFlag()
   if not FLAG.counterVisible then
     local pickerColor = PICKING_PLAYER.color
     local pickerRotation = ROTATION.color[pickerColor]
