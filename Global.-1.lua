@@ -127,6 +127,7 @@ function onLoad()
     counterVisible = false,
     firstDealOfGame = false,
     allowGrouping = true,
+    selectingPartner = false
     fnRunning = false
   }
 
@@ -144,8 +145,12 @@ end
 
 ---Checks dealInProgress, trick.handOut, gameSetup.inProgress, and fnRunning
 function safeToContinue()
-  if FLAG.dealInProgress or FLAG.trick.handOut or FLAG.gameSetup.inProgress or FLAG.fnRunning then
-    return false
+  if FLAG.dealInProgress
+    or FLAG.trick.handOut
+    or FLAG.gameSetup.inProgress
+    or FLAG.fnRunning
+    or FLAG.selectingPartner then
+      return false
   end
   return true
 end
@@ -159,7 +164,7 @@ function startFnRunFlag()
 end
 
 ---Pauses script, must be called from within a coroutine
----@param time integer_seconds
+---@param time integer<seconds>
 function pause(time)
   local start = Time.time
   repeat coroutine.yield(0) until Time.time > start + time
@@ -424,7 +429,7 @@ end
 ---@param zone object<zone>
 ---@return integer<0|180>
 function moreFaceUpOrDown(zone)
-  local total, faceDownCount = countCards(zone, true)
+  local total, faceDownCount = countCards(zone)
   local halfOfTotal = math.floor(total / 2)
   if halfOfTotal >= faceDownCount then
     return 0
@@ -432,20 +437,17 @@ function moreFaceUpOrDown(zone)
   return 180
 end
 
----Returns the number of cards in a given zone, can also return faceDownCount
+---Returns the number of cards in a given zone, also returns faceDownCount
 ---@param zone object<zone>
----@param countFaceDown boolean
 ---@return integer<numCards>, integer<numCardsFaceDown>
-function countCards(zone, countFaceDown)
+function countCards(zone)
   local objects = zone.getObjects()
   local cardCount, faceDownCount = 0, 0
   for _, obj in ipairs(objects) do
     if obj.type == 'Deck' then
       cardCount = cardCount + obj.getQuantity()
-      if countFaceDown then
-        if obj.is_face_down then
-          faceDownCount = faceDownCount + obj.getQuantity()
-        end
+      if obj.is_face_down then
+        faceDownCount = faceDownCount + obj.getQuantity()
       end
     elseif obj.type == 'Card' then
       cardCount = cardCount + 1
@@ -460,6 +462,7 @@ end
 ---Checks the given card count of a given zone, returns true or false
 ---@param zone object<zone>
 ---@param count integer
+---@return boolean
 function checkCardCount(zone, count)
   if countCards(zone) == count then
     return true
@@ -469,6 +472,7 @@ end
 
 ---@param player object<player>
 ---@param cardName string
+---@return boolean
 function doesPlayerPossessCard(player, cardName)
   local playerCards = getPlayerCards(player)
   for _, name in ipairs(playerCards) do
@@ -906,14 +910,13 @@ function startChipSpawn(player)
     broadcastToColor("[DC0000]Action in progress, wait and try this command again.[-]", player.color)
     return
   end
-  FLAG.fnRunning = true
   startLuaCoroutine(self, 'spawnChips')
-  FLAG.fnRunning = false
 end
 
 ---Deals specified number of chips to all seated players<br>
 ---Requires: game is already setup & is ran from within a coroutine
 function spawnChips()
+  startFnRunFlag()
   for _, color in ipairs(SORTED_SEATED_PLAYERS) do
     local rotatedOffset
     local rotationAngle, playerPos = getItemMoveData(color)
@@ -934,6 +937,7 @@ function spawnChips()
       pause(0.02)
     end
   end
+  FLAG.fnRunning = false
   return 1
 end
 
@@ -1319,7 +1323,8 @@ end
 
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
 ---a counter in front of PICKING_PLAYER<br> and player accross from color.
----Flips over pickers tricks to see score of hand
+---Flips over pickers tricks to see score of hand<br>
+---Must be ran from within a coroutine
 function toggleCounterVisibility()
   startFnRunFlag()
   if not FLAG.counterVisible then
@@ -1338,39 +1343,34 @@ function toggleCounterVisibility()
     })
     block.setLock(true)
     block.setInvisibleTo(ALL_PLAYERS)
-    Wait.frames(
-      function()
-        tCounter = spawnObject({
-          type = 'Counter',
-          position = tCounterPos,
-          rotation = {295, pickerRotation - 180, 0},
-        })
-        pCounter = spawnObject({
-          type = 'Counter',
-          position = pCounterPos,
-          rotation = {295, pickerRotation, 0},
-        })
-        FLAG.counterVisible = true
-      end,
-      3
-    )
+    pause(0.05)
+    tCounter = spawnObject({
+      type = 'Counter',
+      position = tCounterPos,
+      rotation = {295, pickerRotation - 180, 0},
+    })
+    pCounter = spawnObject({
+      type = 'Counter',
+      position = pCounterPos,
+      rotation = {295, pickerRotation, 0},
+    })
+    FLAG.counterVisible = true
     local pickerZone = TRICK_ZONE[pickerColor]
     local pickerCards = getLooseCards(pickerZone)
     if pickerCards then
       group(pickerCards)
-      Wait.time(
-        function()
-          local pickerTricks = getLooseCards(pickerZone, true)
-          pickerTricks.setPositionSmooth({pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z})
-          pickerTricks.setRotationSmooth({0, pickerTricks.getRotation().y, 0})
-        end,
-        0.6
-      )
+      pause(0.6)
+      local pickerTricks = getLooseCards(pickerZone, true)
+      pickerTricks.setPositionSmooth({pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z})
+      pickerTricks.setRotationSmooth({0, pickerTricks.getRotation().y, 0})
     end
     --Card counter Loop starts here with setupGuidTable()
-    Wait.frames(function() setupGuidTable(tCounter.guid, pCounter.guid); FLAG.fnRunning = false end, 22)
+    pause(0.2)
+    setupGuidTable(tCounter.guid, pCounter.guid)
+    FLAG.fnRunning = false 
     if not FLAG.leasterHand then
-      Wait.time(displayWonOrLossText, 1.35)      
+      pause(1.35)
+      displayWonOrLossText()
     end
   else
     local zoneObjects = SCRIPT_ZONE.table.getObjects()
@@ -2653,7 +2653,7 @@ end
 
 ---@param player object<eventTrigger>
 function selectPartnerEvent(player, val, id)
-  FLAG.fnRunning = true
+  FLAG.selectingPartner = true
   local formattedID = id:gsub("-", " ")
   local unknownFormat = ""
   if UNKNOWN_TEXT then
@@ -2665,14 +2665,14 @@ function selectPartnerEvent(player, val, id)
   Wait.time(
     function()
       if not UNKNOWN_TEXT then --Unknown event off
-        local nonValidSuits = {"Hearts", "Spades", "Clubs"}
-        for i, suit in ipairs(nonValidSuits) do
+        local invalidSuits = {"Hearts", "Spades", "Clubs"}
+        for i, suit in ipairs(invalidSuits) do
           if string.find(suit, validSuit) then
-            table.remove(nonValidSuits, i)
+            table.remove(invalidSuits, i)
             break
           end
         end
-        for _, suit in ipairs(nonValidSuits) do --update global HOLD_CARDS
+        for _, suit in ipairs(invalidSuits) do --update global HOLD_CARDS
           for i = #HOLD_CARDS, 1, -1 do
             if string.find(HOLD_CARDS[i], suit) then
               table.remove(HOLD_CARDS, i)
@@ -2695,7 +2695,7 @@ function selectPartnerEvent(player, val, id)
       else --Unknown event on
         broadcastToColor("[21AF21]Remember to play your unknown card the first time ".. validSuit .. " is played[-]", PICKING_PLAYER.color)
       end
-      FLAG.fnRunning = false
+      FLAG.selectingPartner = false
     end,
     2
   )
