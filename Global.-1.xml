@@ -235,7 +235,7 @@
   rectAlignment="UpperLeft"
   allowDragging="true"
   returnToOriginalPositionWhenReleased="false"
-  visibility="Admin"
+  visibility=""
   showAnimationDelay="0"
   showAnimation="Grow"
   hideAnimation="Shrink"

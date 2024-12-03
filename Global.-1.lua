@@ -127,7 +127,7 @@ function onLoad()
     counterVisible = false,
     firstDealOfGame = false,
     allowGrouping = true,
-    selectingPartner = false
+    selectingPartner = false,
     fnRunning = false
   }
 
@@ -143,7 +143,7 @@ end
 
 --[[Utility functions]]--
 
----Checks dealInProgress, trick.handOut, gameSetup.inProgress, and fnRunning
+---Checks dealInProgress, trick.handOut, gameSetup.inProgress, selectingPartner, and fnRunning
 function safeToContinue()
   if FLAG.dealInProgress
     or FLAG.trick.handOut
@@ -211,7 +211,7 @@ end
 ---Copys input table and removes input color, if color not found returns original table
 ---@param color string
 ---@param list table<"colors">
----@return table <"colors">
+---@return table<"colors">
 function removeColorFromList(color, list)
   local currentIndex
   local modifiedList = copyTable(list)
@@ -657,7 +657,7 @@ function onChat(message, player)
       end
     elseif command == "settings" then
       if adminCheck(player) then
-        UI.show("settingsWindow")
+        toggleWindowVisibility(player, "settingsWindow")
       end
     elseif command == "spawnchips" then
       startChipSpawn(player)
@@ -2751,12 +2751,9 @@ function closeWindow(player, val, id)
   end
   local id1 = id .. "Button"
   local id2 = string.gsub(id, "Exit", "")
-  if id ~= "settingsWindowExit" then
-    UI.setAttribute(id2, "visibility", "")
-  end
   
   UI.setAttribute(id1, "image", "closeButton")
-  UI.hide(id2)
+  toggleWindowVisibility(player, id2)
 end
 
 function animateButtonEnter(player, val, id)
