@@ -582,8 +582,11 @@ function moveDeckAndDealerChip()
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = STATIC_OBJECT.dealerChip.getRotation()
-  repeat coroutine.yield(0) until getDeck(SCRIPT_ZONE.table) ~= nil
   local deck = getDeck(SCRIPT_ZONE.table)
+  while deck == nil do
+    coroutine.yield(0)
+    deck = getDeck(SCRIPT_ZONE.table)
+  end
   STATIC_OBJECT.dealerChip.setRotationSmooth({ chipRotation.x, rotationAngle - 90, chipRotation.z })
   STATIC_OBJECT.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
   deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, 180 })
@@ -973,9 +976,8 @@ function setUpGameCoroutine()
       FLAG.lookForPlayerText, FLAG.continue = false, false
       resetBoard(SCRIPT_ZONE.table, 'Chip')
     else
+      FLAG.lookForPlayerText, FLAG.continue, FLAG.gameSetup.inProgress = false, false, false
       print("[21AF21]New game was not selected.[-]")
-      FLAG.lookForPlayerText, FLAG.continue = false, false
-      FLAG.gameSetup.inProgress = false
       return 1
     end
   end
@@ -1832,23 +1834,19 @@ function findColorAcrossTable(color)
   end
 end
 
----Creates two global tables.<br> 1: of the entity of each zone and counter. 2: of each zoneObject
----and its associated counterObject, then starts the loop
+---Creates a global table OBJECT_SETS.<br> Table contains each zoneObject
+---and its associated counterObject, then starts the `countTricks` loop
 ---@param tCounterGUID string
 ---@param pCounterGUID string
 function setupGuidTable(tCounterGUID, pCounterGUID)
-  local pickerZoneGuid = TRICK_ZONE[PICKING_PLAYER.color].guid
-  local colorAcrossFromPicker = findColorAcrossTable(PICKING_PLAYER.color)
-  local tableGuid = TRICK_ZONE[colorAcrossFromPicker].guid
-
-  guidTable = {
-    [pickerZoneGuid] = pCounterGUID,
-    [tableGuid] = tCounterGUID
+  local guidTable = {
+    [TRICK_ZONE[PICKING_PLAYER.color].guid] = pCounterGUID,
+    [TRICK_ZONE[findColorAcrossTable(PICKING_PLAYER.color)].guid] = tCounterGUID
   }
 
-  objectSets = {}
+  OBJECT_SETS = {}
   for zoneGUID, counterGUID in pairs(guidTable) do
-    table.insert(objectSets, {z = getObjectFromGUID(zoneGUID), c = getObjectFromGUID(counterGUID)})
+    table.insert(OBJECT_SETS, {z = getObjectFromGUID(zoneGUID), c = getObjectFromGUID(counterGUID)})
   end
   SheepsheadGlobalTimer = Wait.time(countTricks, 1)
 end
@@ -1876,7 +1874,7 @@ cardNameTable = {
 function countTricks()
   values = {}
   hiddenValue = nil
-  for i, set in ipairs(objectSets) do
+  for i, set in ipairs(OBJECT_SETS) do
     values[i] = {}
     local objectsInZone = set.z.getObjects()
     for j, object in ipairs(objectsInZone) do
@@ -1936,7 +1934,7 @@ end
 
 ---Sends totaled values to the counters. It also color codes the counters to match
 function displayResults()
-  for i, set in pairs(objectSets) do
+  for i, set in pairs(OBJECT_SETS) do
     set.c.setValue(totals[i])
     local total = totals[i]
     if i == 1 and (total < 61 and total > 30) then
@@ -1999,8 +1997,8 @@ function displayWonOrLossText(textObject, score, cardCount, numCardInDeck)
   end
   
   if SheepsheadGlobalTimer then
-    local pickerScore = objectSets[1].c.getValue()
-    local pickerTrickCardCount = countCards(objectSets[1].z)
+    local pickerScore = OBJECT_SETS[1].c.getValue()
+    local pickerTrickCardCount = countCards(OBJECT_SETS[1].z)
     local cardStateChange = false
     if cardCount and cardCount ~= pickerTrickCardCount then
       if cardCount == totalCards or (cardCount ~= totalCards and pickerScore == 120) or 
@@ -2117,7 +2115,7 @@ function buildCallPanel()
   UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
 end
 
----@param rule string <"SETTINGS.rule">
+---@param rule string<"ruleName">
 ---@param bool boolean
 function updateRules(rule, bool)
   local ruleTable = {
@@ -2154,7 +2152,7 @@ function updateRules(rule, bool)
   end
 end
 
----@param call string <"CALL_SETTINGS.call">
+---@param call string<"callName">
 ---@param bool boolean
 function updateCalls(call, bool)
   local callTable = {
@@ -2209,7 +2207,7 @@ end
 ---Toggle setting via formatted id
 ---@param player nil
 ---@param val nil
----@param id string <"turnOnSettingName"|"turnOffSettingName">
+---@param id string<"turnOnSettingName"|"turnOffSettingName">
 function toggleSetting(player, val, id)
   local idName, state
   if string.find(id, "turnOn") then
@@ -2352,7 +2350,7 @@ function toggleWindowVisibility(player, window)
   if string.find(visibility, player.color) then
     if visibility == player.color then
       UI.setAttribute(window, "visibility", "")
-      UI.Hide(window)
+      UI.hide(window)
     else
       visibility = removeColorFromPipeList(player.color, visibility)
       UI.setAttribute(window, "visibility", visibility)
@@ -2370,7 +2368,7 @@ function showCallsEvent(player)
   toggleWindowVisibility(player, "callsWindow")
 end
 
----@param player object<event_Trigger>
+---@param player object<eventTrigger>
 function callPartnerEvent(player)
   if not PICKING_PLAYER then
     return
