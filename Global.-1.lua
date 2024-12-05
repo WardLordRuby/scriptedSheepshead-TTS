@@ -49,6 +49,11 @@ SPAWN_POS = {
   }
 }
 
+POS = {
+  center = Vector(0, 1.5, 0),
+  defaultDeckRotation = Vector(0, 0, 180)
+}
+
 ROTATION = {
   color = {
     White = 0,
@@ -325,7 +330,7 @@ end
 ---getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine<br>
 ---@param zone object<zone>
 ---@param returnFirstDeck option_bool
----@return table<card_Objects_and_deck_Objects>
+---@return table<card_Objects_and_deck_Objects>|nil
 function getLooseCards(zone, returnFirstDeck)
   local looseCards = {}
   for _, obj in ipairs(zone.getObjects()) do
@@ -342,6 +347,29 @@ function getLooseCards(zone, returnFirstDeck)
   return nil
 end
 
+---prepCards will group and center all cards and respawn the deck if any error is encountered<br>
+---Needs to be ran from within a coroutine
+function prepCards()
+  local looseCards = getLooseCards(SCRIPT_ZONE.table)
+  if looseCards == nil then
+    respawnDeckCoroutine()
+    return
+  end
+  
+  if #looseCards > 1 then
+    group(looseCards)
+    pause(0.5)
+    local deck = getDeck(SCRIPT_ZONE.table)
+    if deck == nil then
+      respawnDeckCoroutine()
+      return
+    end
+    deck.setPosition(POS.center)
+    deck.setRotation(POS.defaultDeckRotation)
+    pause(1)
+  end
+end
+
 ---Just checks to make sure cards are all there<br>
 ---Recomended to be ran from within a coroutine
 function verifyCardCount()
@@ -349,13 +377,21 @@ function verifyCardCount()
 
   if PLAYER_COUNT == 4 then
     if cardCount ~= 30 then
-      respawnDeckCoroutine()
-      return
+      local deck = getDeck(SCRIPT_ZONE.table)
+      if deck and deck.getQuantity() == 32 and cardCount == 32 then
+        removeBlackSevens(deck)
+      else
+        respawnDeckCoroutine()
+      end
     end
   else
     if cardCount ~= 32 then
-      respawnDeckCoroutine()
-      return
+      local deck = getDeck(SCRIPT_ZONE.table)
+      if deck and deck.getQuantity() == 30 and cardCount == 30 and BLACK_SEVENS then
+        returnDecktoPiquet(deck)
+      else
+        respawnDeckCoroutine()
+      end
     end
   end
 end
@@ -634,7 +670,7 @@ function onChat(message, player)
   if FLAG.lookForPlayerText then
     local lowerMessage = string.lower(message)
     if lowerMessage == 'y' then
-      if player.steam_name == gameSetupPlayer.steam_name then
+      if player.steam_name == GAME_SETUP_PLAYER.steam_name then
         print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
         print("[21AF21]New game is being set up.[-]")
         FLAG.continue = true
@@ -815,7 +851,7 @@ function printGameSettings()
   end
 
   PLAYER_COUNT = #SORTED_SEATED_PLAYERS
-  DEALER_COLOR_VAL = getColorVal(gameSetupPlayer.color, SORTED_SEATED_PLAYERS)
+  DEALER_COLOR_VAL = getColorVal(GAME_SETUP_PLAYER.color, SORTED_SEATED_PLAYERS)
 
   if SETTINGS.dealerSitsOut and PLAYER_COUNT == 6 then
     stateChangeDealerSitsOut(SETTINGS.dealerSitsOut)
@@ -832,18 +868,8 @@ function printGameSettings()
     UI.setAttribute("settingsButtonjdPartnerOff", "tooltip", "")
   end
 
+  prepCards()
   verifyCardCount()
-
-  local deck = getDeck(SCRIPT_ZONE.table)
-  if PLAYER_COUNT == 4 then
-    if deck.getQuantity() == 32 then
-      removeBlackSevens(deck)
-    end
-  else
-    if deck.getQuantity() == 30 then
-      returnDecktoPiquet(deck)
-    end
-  end
 
   moveDeckAndDealerChip()
   print("[21AF21]Sheepshead set up for [-]", #SORTED_SEATED_PLAYERS, " players!")
@@ -871,9 +897,8 @@ end
 ---Must be ran from within a coroutine
 ---@param deck object<deck>
 function removeBlackSevens(deck)
-  local centerPos = Vector(0, 1.5, 0)
-  deck.setPosition(centerPos)
-  deck.setRotation({ 0, 0, 180 })
+  deck.setPosition(POS.center)
+  deck.setRotation(POS.defaultDeckRotation)
   local cardsToRemove = {"Seven of Clubs", "Seven of Spades"}
   local guids = {}
   for _, card in ipairs(deck.getObjects()) do
@@ -886,7 +911,7 @@ function removeBlackSevens(deck)
   for _, guid in ipairs(guids) do
     deck.takeObject({
       guid = guid,
-      position = centerPos + Vector(2.75, 1, 0),
+      position = POS.center + Vector(2.75, 1, 0),
       smooth = false
     })
   end
@@ -952,7 +977,7 @@ function setUpGameEvent(player)
   end
   if player.admin then
     FLAG.gameSetup.inProgress = true
-    gameSetupPlayer = player
+    GAME_SETUP_PLAYER = player
     startLuaCoroutine(self, "setUpGameCoroutine")
   else
     broadcastToColor("[DC0000]You do not have permission to access this feature.", player.color, "[-]")
@@ -966,10 +991,10 @@ function setUpGameCoroutine()
     FLAG.gameSetup.inProgress = false
     return 1
   elseif FLAG.gameSetup.ran then
-    Player[gameSetupPlayer.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
+    Player[GAME_SETUP_PLAYER.color].broadcast("[b415ff]You are trying to set up a new game for [-]"
       .. #SORTED_SEATED_PLAYERS .. " players.")
     pause(1.5)
-    Player[gameSetupPlayer.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
+    Player[GAME_SETUP_PLAYER.color].broadcast("[b415ff]Are you sure you want to continue?[-] (y/n)")
     FLAG.lookForPlayerText = true
     pause(6)
     if FLAG.continue then
@@ -2471,7 +2496,7 @@ end
 ---Finds next highest card that is not in passed in table
 ---@param cards table<"cardNames">
 ---@param name string<"Jack"|"Queen">
----@return string cardName
+---@return string<"cardName">|nil
 function findCardToCall(cards, name)
   local callCard
   if tableLength(cards) == 0 then
