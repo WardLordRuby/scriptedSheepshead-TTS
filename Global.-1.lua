@@ -371,7 +371,7 @@ function prepCards()
 end
 
 ---Just checks to make sure cards are all there<br>
----Recomended to be ran from within a coroutine
+---Needs to be ran from within a coroutine
 function verifyCardCount()
   local cardCount = countCards(SCRIPT_ZONE.table)
 
@@ -578,6 +578,9 @@ end
 ---@param zone object<zone>
 function flipDeck(zone)
   local deck = getDeck(zone)
+  if not deck then
+    return
+  end
   if not deck.is_face_down then
     deck.flip()
   end
@@ -1105,9 +1108,8 @@ function dealCardsCoroutine()
     toggleCounterVisibility()
   end
 
+  verifyCardCount()
   if not FLAG.firstDealOfGame then
-    verifyCardCount()
-
     DEALER_COLOR_VAL = getNextColorValInList(DEALER_COLOR_VAL, SORTED_SEATED_PLAYERS)
     if tableLength(getLooseCards(SCRIPT_ZONE.table)) > 1 then
       rebuildDeck()
@@ -1117,8 +1119,6 @@ function dealCardsCoroutine()
     moveDeckAndDealerChip()
     pause(0.4)
   else
-    verifyCardCount()
-
     FLAG.firstDealOfGame = false
   end
 
@@ -1827,8 +1827,18 @@ function giveTrickToWinnerCoroutine()
       delay = delay + 1.5
       LAST_LEASTER_TRICK.interactable = true
       pause(0.5)
-      LAST_LEASTER_TRICK.setPositionSmooth(getDeck(playerTrickZone).getPosition())
-      LAST_LEASTER_TRICK.setRotationSmooth(getDeck(playerTrickZone).getRotation())
+      local playerTrickPos
+      local playerTrickRot
+      local playerTrickDeck = getDeck(playerTrickZone)
+      if playerTrickDeck then
+        playerTrickPos = playerTrickDeck.getPosition()
+        playerTrickRot = playerTrickDeck.getRotation()
+      else
+        playerTrickPos = playerTrickZone.getPosition()
+        playerTrickRot = playerTrickZone.getRotation()
+      end
+      LAST_LEASTER_TRICK.setPositionSmooth(playerTrickPos)
+      LAST_LEASTER_TRICK.setRotationSmooth(playerTrickRot)
       LAST_LEASTER_TRICK = nil
     end
     pause(delay)
@@ -2729,7 +2739,7 @@ function startLeasterHandCoroutine()
   group(getLooseCards(SCRIPT_ZONE.center))
   pause(0.6)
   LAST_LEASTER_TRICK = getDeck(SCRIPT_ZONE.table)
-  if LAST_LEASTER_TRICK.getQuantity() ~= 2 then
+  if not LAST_LEASTER_TRICK or LAST_LEASTER_TRICK.getQuantity() ~= 2 then
     print("startLeasterHand Err: blinds wrong quanity")
     return 1
   end
