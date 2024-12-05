@@ -1322,7 +1322,7 @@ function pickBlindsCoroutine()
         end
       end
     end
-  else --Call an Ace
+  elseif SETTINGS.jdPartner == false then --Call an Ace
     pause(0.5)
     buildPartnerChoices(PICKING_PLAYER)
     pause(0.25)
@@ -1424,7 +1424,7 @@ function setBuriedEvent(player)
   if not checkCardCount(TRICK_ZONE[PICKING_PLAYER.color], 2) then
     return
   end
-  if not SETTINGS.jdPartner then
+  if SETTINGS.jdPartner == false then
     local partnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
     if partnerWindowOpen ~= "" then
       broadcastToColor("[DC0000]Select Partner before burying cards", player.color)
