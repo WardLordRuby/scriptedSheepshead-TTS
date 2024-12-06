@@ -149,6 +149,7 @@ end
 --[[Utility functions]]--
 
 ---Checks dealInProgress, trick.handOut, gameSetup.inProgress, selectingPartner, and fnRunning
+---@return boolean
 function safeToContinue()
   if FLAG.dealInProgress
     or FLAG.trick.handOut
@@ -183,11 +184,13 @@ function getLastWord(str)
 end
 
 ---@param str string
+---@return string
 function upperFirstChar(str)
   return str:sub(1, 1):upper() .. str:sub(2)
 end
 
 ---@param str string
+---@return string
 function lowerFirstChar(str)
   return str:sub(1, 1):lower() .. str:sub(2)
 end
@@ -235,6 +238,7 @@ end
 
 ---@param color string
 ---@param pipeList string
+---@return pipeList string
 function addColorToPipeList(color, pipeList)
   if pipeList == nil or pipeList == "" then
     pipeList = color
@@ -246,6 +250,7 @@ end
 
 ---@param color string
 ---@param pipeList string
+---@return pipeList string
 function removeColorFromPipeList(color, pipeList)
   pipeList = string.gsub(pipeList, color .. '|', "")
   pipeList = string.gsub(pipeList, '|' .. color, "")
@@ -257,6 +262,7 @@ end
 
 ---@param object object
 ---@param zone object<zone>
+---@return boolean
 function isInZone(object, zone)
   local occupiedZones = object.getZones()
   for _, zoneObject in ipairs(occupiedZones) do
@@ -269,16 +275,29 @@ end
 
 ---Used to ensure 0 is returned if table empty or nil,<br>
 ---or used if you want to get number of elements in table with non integer keys
----@param table table<any>
-function tableLength(table)
-  if table == {} or table == nil then
+---@param table table<any>|nil
+---@return integer
+function len(table)
+  if table == nil or next(table) == nil then
     return 0
   end
-  return #table
+  local count = 0
+  for _ in pairs(table) do
+    count = count + 1
+  end
+  return count
+end
+
+---Used to ensure `true` is returned if table empty or nil
+---@param table table<any>|nil
+---@return boolean
+function isEmpty(table)
+  return table == nil or next(table) == nil
 end
 
 ---@param table table<any>
 ---@param value any
+---@return boolean
 function tableContains(table, value)
   for _, v in pairs(table) do
     if v == value then
@@ -668,6 +687,7 @@ end
 ---<br>Return: true, hides player msg | false, shows player msg
 ---@param message string<playerInput>
 ---@param player object<player>
+---@return boolean
 function onChat(message, player)
   --Sets flags for determining if to reset gameboard
   if FLAG.lookForPlayerText then
@@ -711,6 +731,7 @@ function onChat(message, player)
 end
 
 ---@param player object
+---@return boolean
 function adminCheck(player)
   if not player.admin then
     broadcastToColor("[DC0000]You do not have permission to access this feature.[-]", player.color)
@@ -795,7 +816,7 @@ end
 
 function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(SCRIPT_ZONE.table)
-  if tableLength(remainingTableCards) > 0 then
+  if not isEmpty(remainingTableCards) then
     resetBoard(SCRIPT_ZONE.table, "Card", "Deck")
   end
   STATIC_OBJECT.hiddenBag.takeObject({
@@ -1111,7 +1132,7 @@ function dealCardsCoroutine()
   verifyCardCount()
   if not FLAG.firstDealOfGame then
     DEALER_COLOR_VAL = getNextColorValInList(DEALER_COLOR_VAL, SORTED_SEATED_PLAYERS)
-    if tableLength(getLooseCards(SCRIPT_ZONE.table)) > 1 then
+    if len(getLooseCards(SCRIPT_ZONE.table)) > 1 then
       rebuildDeck()
     end
     pause(0.3)
@@ -1493,6 +1514,7 @@ end
 ---Return: true, allows object to enter | false, does not allow object to enter
 ---@param container object<container>
 ---@param object object
+---@return boolean
 function tryObjectEnterContainer(container, object)
   if not FLAG.allowGrouping then
     return false
@@ -1549,7 +1571,7 @@ end
 function onObjectPickUp(playerColor, object)
   if FLAG.trick.inProgress then
     if object.type == "Card" and isInZone(object, SCRIPT_ZONE.center) then
-      if tableLength(CURRENT_TRICK) > 1 then
+      if len(CURRENT_TRICK) > 1 then
         local objectName = object.getName()
         for i = 2, #CURRENT_TRICK do
           if objectName == CURRENT_TRICK[i].cardName and playerColor == CURRENT_TRICK[i].playedByColor then
@@ -1637,7 +1659,7 @@ function addCardDataToCurrentTrick(playerColor, object)
   --Check if object is trump
   local objectName = object.getName()
   local objectIsTrump = isTrump(objectName)
-  if tableLength(CURRENT_TRICK) < 2 then
+  if len(CURRENT_TRICK) < 2 then
     --Creates CURRENT_TRICK properties stored at index 1
     initializeCurrentTrick(objectName, objectIsTrump)
   end
@@ -1704,7 +1726,7 @@ function setLeadOutCardProperties(objectName, isTrump)
     currentHighStrength = quickSearch(objectName, isTrump),
     highStrengthIndex = 2
   }
-  if tableLength(CURRENT_TRICK) == 0 then
+  if isEmpty(CURRENT_TRICK) then
     table.insert(CURRENT_TRICK, trickProperties)
     return
   end
@@ -1731,6 +1753,7 @@ function updateCurrentTrickProperties(isTrump, strengthVal, index)
 end
 
 ---@param objectName string
+---@return boolean
 function isTrump(objectName)
   local trumpIdentifier = {"Diamonds", "Jack", "Queen"}
   for _, word in ipairs(trumpIdentifier) do
@@ -1744,6 +1767,7 @@ end
 ---Only search for strengths higher than currentHighStrength
 ---@param objectName string
 ---@param isTrump boolean
+---@return integer
 function quickSearch(objectName, isTrump)
   local strengthList
   if isTrump then
@@ -2509,7 +2533,7 @@ end
 ---@return string<"cardName">|nil
 function findCardToCall(cards, name)
   local callCard
-  if tableLength(cards) == 0 then
+  if isEmpty(cards) then
     callCard = name .. " of Diamonds"
     return callCard
   end
@@ -2536,7 +2560,7 @@ function buildPartnerChoices(player)
   --failCards = all suitableFail including ten's
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
   local failSuits, holdCards, partnerChoices = {}, {}, {}
-  if tableLength(failCards) > 0 then
+  if not isEmpty(failCards) then
     failSuits = uniqueFailSuits(failCards)
     local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player)
 
@@ -2544,11 +2568,11 @@ function buildPartnerChoices(player)
       failSuits = {"Hearts", "Spades", "Clubs"}
       holdCards = {"Ace of Hearts", "Ace of Spades", "Ace of Clubs"}
     end
-    if tableLength(notPartnerChoices) > 0 then
+    if not isEmpty(notPartnerChoices) then
       failSuits = removeHeldCards(notPartnerChoices, failSuits)
     end
     --compile list of valid partnerChoices and valid holdCards
-    if tableLength(failSuits) > 0 then
+    if not isEmpty(failSuits) then
       for _, suit in ipairs(failSuits) do
         table.insert(partnerChoices, card .. " of " .. suit)
       end
@@ -2567,7 +2591,7 @@ function buildPartnerChoices(player)
       end
     end
   end
-  if tableLength(failCards) == 0 or tableLength(failSuits) == 0 then
+  if isEmpty(failCards) or isEmpty(failSuits) then
     HOLD_CARDS = nil --nil = unknown mode
     return
   end
@@ -2593,8 +2617,7 @@ end
 ---setting unknown will include the King
 ---@param player object
 ---@param unknown option_bool
----@return table<"cardNames">
----@return string<"Ace"|"Ten">
+---@return table<"cardNames">, string<"Ace"|"Ten">
 function aceOrTenOfNotPartnerChoices(player, unknown)
   local tryOrder = {"Ace", "Ten"}
   if unknown then
@@ -2604,7 +2627,7 @@ function aceOrTenOfNotPartnerChoices(player, unknown)
   for _, tryCard in ipairs(tryOrder) do
     card = tryCard
     notPartnerChoices = filterPlayerCards(player, tryCard, "Diamonds")
-    if tableLength(notPartnerChoices) < 3 then
+    if len(notPartnerChoices) < 3 then
       break
     end
   end
@@ -2665,6 +2688,7 @@ end
 
 ---@param id string
 ---@param table xmlTable
+---@return integer
 function findPanelElement(id, table)
   for i, element in ipairs(table) do
     if element.tag == "Panel" and element.attributes.id == id then
