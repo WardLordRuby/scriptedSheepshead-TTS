@@ -34,16 +34,6 @@
   >Player down
 </button>
 
-<button id="test"
-  onClick="test"
-  position="880 260 0"
-  width="175"
-  height="52"
-  fontsize="24"
-  active="false"
-  >test
-</button>
-
 <Panel id="toolbox"
   width="165" height="505"
   rectAlignment="LowerRight"
