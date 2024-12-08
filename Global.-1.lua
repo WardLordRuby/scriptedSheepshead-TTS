@@ -117,23 +117,39 @@ function onLoad(script_state)
   STATIC_OBJECT.hiddenBag.setInvisibleTo(ALL_PLAYERS)
   STATIC_OBJECT.setBuriedButton.setInvisibleTo(ALL_PLAYERS)
 
+  ---@type {
+  ---   playerCount: integer|nil,
+  ---   sortedSeatedPlayers: table<"colors">|nil,
+  ---   dealOrder: table<"colors"|BLINDS_STR>|nil,
+  ---   blackSevens: string<"GUID">|nil,
+  ---   dealerColorVal: integer<index>|nil,
+  ---   holdCards: table<"cardName">|nil,
+  ---   currentTrick: table<metaData>|nil,
+  ---   gameSetupPlayer: string<"color">|nil,
+  ---   pickingPlayer: string<"color">|nil,
+  ---   leadOutPlayer: string<"color">|nil,
+  ---   lastLeasterTrick: string<"GUID">|nil,
+  ---   unknownText: string<"GUID">|nil,
+  ---   counterGUIDs: table<string<"zoneGUID">, string<"counterGUID">>|nil
+  --- }
   GLOBAL = {
-    playerCount = nil, --Type: `integer`
-    sortedSeatedPlayers = nil, --Type: `table<"colors">`
-    dealOrder = nil, --Type: `table<"colors" + "Blinds">`
-    blackSevens = nil, --Type: `string<GUID>`
-    dealerColorVal = nil, --Type: `integer<index>`
-    holdCards = nil, --Type: `table<"cardName">`<br> Note: nil == unknown mode
-    currentTrick = nil, --Type: `table<genMetadata[1], trickCardMetadata...>`
-    gameSetupPlayer = nil, --Type: `string<"color">`
-    pickingPlayer = nil, --Type: `string<"color">`
-    leadOutPlayer = nil, --Type: `string<"color">`
-    lastLeasterTrick = nil, --Type: `string<GUID>`
-    unknownText = nil, --Type: `string<GUID>`<br> Note: Shares position data with leasterCards
-    counterGUIDs = nil --Type: `table<zone_GUID = counter_GUID>`
+    playerCount = nil,
+    sortedSeatedPlayers = nil,
+    dealOrder = nil,
+    blackSevens = nil,
+    dealerColorVal = nil,
+    holdCards = nil, --Note: `nil` == unknown mode
+    currentTrick = nil, --Note: `self[1]` contains general trickMetadata, followed by metadata for each card in the trick
+    gameSetupPlayer = nil,
+    pickingPlayer = nil,
+    leadOutPlayer = nil,
+    lastLeasterTrick = nil,
+    unknownText = nil, --Note: Shares position data with leasterCards
+    counterGUIDs = nil --Note: Linked by Key, Value pairs
   }
 
-  COUNTER_OBJ_SETS = {} --Type: `table<table<z = object<zone>, c = object<counter>>>`<br>Note: Can not be stringified
+  ---@type table<table<objects>>
+  COUNTER_OBJ_SETS = {} --Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>Can not be stringified
   
   FLAG = {
     gameSetup = {
