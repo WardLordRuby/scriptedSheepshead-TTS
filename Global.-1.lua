@@ -509,18 +509,19 @@ function verifyCardCount()
   end
 end
 
----@param colorOrVar string<"color">|integer<index>
----@param list table<"colors">
+---Can only be called after gameSetup has been ran. Aka: `GLOBAL.sortedSeatedPlayers ~= nil`<br>
+---If you know input is always a color prefer to use `Player["color"]` instead of this fn call
+---@param colorOrIdx string<"color">|integer<index>
 ---@return object<player>
-function getPlayerObject(colorOrVar, list)
-  if colorOrVar == 0 then
-    return Player[list[#list]]
-  elseif colorOrVar == #list + 1 then
-    return Player[list[1]]
-  elseif tonumber(colorOrVar) then
-    return Player[list[colorOrVar]]
+function getPlayerObject(colorOrIdx)
+  if colorOrIdx == 0 then
+    return Player[GLOBAL.sortedSeatedPlayers[#GLOBAL.sortedSeatedPlayers]]
+  elseif colorOrIdx == #GLOBAL.sortedSeatedPlayers + 1 then
+    return Player[GLOBAL.sortedSeatedPlayers[1]]
+  elseif tonumber(colorOrIdx) then
+    return Player[GLOBAL.sortedSeatedPlayers[colorOrIdx]]
   end
-  return Player[colorOrVar]
+  return Player[colorOrIdx]
 end
 
 ---Returns the index location of a color in a list
@@ -1343,7 +1344,7 @@ function passEvent(player)
   if not GLOBAL.dealerColorVal then
     return
   end
-  local dealer = getPlayerObject(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
+  local dealer = getPlayerObject(GLOBAL.dealerColorVal)
   if GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers then
     if player.color == dealer.color then
       broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
@@ -1381,7 +1382,7 @@ end
 ---@param player object<eventTrigger>
 function pickBlindsEvent(player)
   if GLOBAL.playerCount == 5 and #GLOBAL.sortedSeatedPlayers == 6 then
-    if player.color == getPlayerObject(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers).color then
+    if player.color == getPlayerObject(GLOBAL.dealerColorVal).color then
       broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
       return
     end
@@ -1430,7 +1431,7 @@ function pickBlindsCoroutine()
   STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
 
   if SETTINGS.jdPartner then
-    local dealer = getPlayerObject(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
+    local dealer = getPlayerObject(GLOBAL.dealerColorVal)
     if pickingPlayer.color == dealer.color then
       pause(1.5)
       if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
@@ -1599,7 +1600,7 @@ end
 function setLeadOutPlayer()
   FLAG.cardsToBeBuried = false
   local leadOutVal = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
-  local leadOutPlayer = getPlayerObject(leadOutVal, GLOBAL.sortedSeatedPlayers)
+  local leadOutPlayer = getPlayerObject(leadOutVal)
   GLOBAL.leadOutPlayer = leadOutPlayer.color
   if not DEBUG then
     broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
@@ -1903,7 +1904,7 @@ end
 function calculateTrickWinner()
   FLAG.trick.handOut = true
   FLAG.trick.inProgress, FLAG.allowGrouping = false, false
-  local trickWinner = getPlayerObject(GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].playedByColor, GLOBAL.sortedSeatedPlayers)
+  local trickWinner = Player[GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].playedByColor]
   GLOBAL.leadOutPlayer = trickWinner.color
   broadcastToAll("[21AF21]" ..
   trickWinner.steam_name .. " takes the trick with " .. GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]")
@@ -2525,7 +2526,7 @@ function callPartnerEvent(player)
         return
       end
       if SETTINGS.jdPartner then
-        local dealer = getPlayerObject(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
+        local dealer = getPlayerObject(GLOBAL.dealerColorVal)
         if player.color == dealer.color and player.color == GLOBAL.pickingPlayer then
           if doesPlayerPossessCard(player, "Jack of Diamonds") then
             toggleWindowVisibility(player, "playAloneWindow")
@@ -2571,7 +2572,7 @@ function playerCallsEvent(player, val, id)
   end
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   if id == "Leaster" then
-    local dealer = getPlayerObject(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
+    local dealer = getPlayerObject(GLOBAL.dealerColorVal)
     if player.color == dealer.color and checkCardCount(SCRIPT_ZONE.center, 2) then
       broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
       GLOBAL.pickingPlayer = player.color
