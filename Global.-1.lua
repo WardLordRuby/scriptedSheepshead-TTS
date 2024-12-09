@@ -83,6 +83,9 @@ COIN_PRAM = {
 
 BLINDS_STR = "Blinds"
 
+--MARK: TODO
+--Fix 3DText when visible during a load
+
 ---@param script_state JSON<table>
 function onLoad(script_state)
   TRICK_ZONE = {
@@ -173,11 +176,12 @@ function onLoad(script_state)
     fnRunning = false
   }
 
+  --Note: the ordering of these values matters for correctly setting state onLoad
   SETTINGS = {
+    jdPartner = true,
     dealerSitsOut = false,
     calls = false,
-    threeHanded = false,
-    jdPartner = true
+    threeHanded = false
   }
   
   CALL_SETTINGS = {
@@ -193,11 +197,17 @@ function onLoad(script_state)
 
   if not isEmpty(state) then
     for rule, saved in pairs(state.settings) do
-      updateRules(rule, saved)
+      if SETTINGS[rule] ~= saved then
+        updateRules(rule, saved)
+        toggleUISettingsButtonState(rule, saved)        
+      end
     end
     
     for call, saved in pairs(state.callSettings) do
-      updateCalls(call, saved)
+      if CALL_SETTINGS[call] ~= saved then
+        updateCalls(call, saved)
+        toggleUISettingsButtonState(call, saved)        
+      end
     end
 
     for flag, saved in pairs(state.flags) do
@@ -214,10 +224,6 @@ function onLoad(script_state)
       tableBlock.setLock(true)
       startTrickCount()
     end
-
-    --MARK: TODO
-    --We also need to deal with the settings UI windows loading the correct state
-
   end
 
   if DEBUG then
@@ -2365,21 +2371,29 @@ function toggleSetting(player, val, id)
   if toggleNotValid(idName, state) then
     return
   end
-  local parentID1 = "settingsButton" .. idName .. "On"
-  local parentID2 = "settingsButton" .. idName .. "Off"
   idName = lowerFirstChar(idName)
-  for key in pairs(SETTINGS) do
+  for key, _ in pairs(SETTINGS) do
     if key == idName then
       updateRules(idName, state)
     end
   end
-  for key in pairs(CALL_SETTINGS) do
+  for key, _ in pairs(CALL_SETTINGS) do
     if key == idName then
       updateCalls(idName, state)
     end
   end
-  UI.setAttribute(parentID1, "active", state)
-  UI.setAttribute(parentID2, "active", not state)
+  toggleUISettingsButtonState(idName, state)
+end
+
+---Toggles the displayed state of a UI button
+---@param setting string<"settingName">
+---@param state boolean
+function toggleUISettingsButtonState(setting, state)
+  local id = upperFirstChar(setting)
+  local buttonOnID = "settingsButton" .. id .. "On"
+  local buttonOffID = "settingsButton" .. id .. "Off"
+  UI.setAttribute(buttonOnID, "active", state)
+  UI.setAttribute(buttonOffID, "active", not state)
 end
 
 ---@param bool boolean
