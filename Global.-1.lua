@@ -83,8 +83,14 @@ COIN_PRAM = {
 
 BLINDS_STR = "Blinds"
 
---MARK: TODO
---Fix 3DText when visible during a load
+---@type table<table<objects>>
+--Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>
+--Picker `object` group is always in index `1`<br>Can not be stringified
+COUNTER_OBJ_SETS = {}
+
+---@type object<"3DText">|nil
+--Note: Can not be stringified
+SCORE_TEXT_OBJ = nil
 
 ---@param script_state JSON<table>
 function onLoad(script_state)
@@ -133,6 +139,7 @@ function onLoad(script_state)
   ---   leadOutPlayer: string<"color">|nil,
   ---   lastLeasterTrick: string<"GUID">|nil,
   ---   unknownText: string<"GUID">|nil,
+  ---   chipScoreText: string<"GUID">|nil,
   ---   counterGUIDs: table<string<"zoneGUID">, string<"counterGUID">>|nil
   --- }
   GLOBAL = {
@@ -148,11 +155,9 @@ function onLoad(script_state)
     leadOutPlayer = nil,
     lastLeasterTrick = nil,
     unknownText = nil, --Note: Shares position data with leasterCards
+    chipScoreText = nil,
     counterGUIDs = nil --Note: Linked by Key, Value pairs
   }
-
-  ---@type table<table<objects>>
-  COUNTER_OBJ_SETS = {} --Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>Can not be stringified
   
   FLAG = {
     gameSetup = {
@@ -223,6 +228,11 @@ function onLoad(script_state)
       tableBlock.setInvisibleTo(ALL_PLAYERS)
       tableBlock.setLock(true)
       startTrickCount()
+      if not FLAG.leasterHand then
+        SCORE_TEXT_OBJ = getObjectFromGUID(GLOBAL.chipScoreText)
+        SCORE_TEXT_OBJ.interactable = false
+        displayWonOrLossText()
+      end
     end
   end
 
@@ -2139,28 +2149,28 @@ end
 
 ---If no params function runs a setup to create params and feeds them back into itself<br>
 ---runs while SheepsheadGlobalTimer loop is running
----@param textObject object
 ---@param score integer
 ---@param cardCount integer
-function displayWonOrLossText(textObject, score, cardCount, numCardInDeck)
-  local wonOrLoss, totalCards
-  if not textObject then
+---@param numCardInDeck integer
+function displayWonOrLossText(score, cardCount, numCardInDeck)
+  local totalCards
+  if not SCORE_TEXT_OBJ then
     local pickerRotation = ROTATION.color[GLOBAL.pickingPlayer] --Shares the same positionData as setBuriedButton
     local textPosition = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
-    wonOrLoss = spawnObject({
+    SCORE_TEXT_OBJ = spawnObject({
       type = "3DText",
       position = textPosition,
       rotation = { 90, pickerRotation, 0 }
     })
-    wonOrLoss.interactable = false
-    wonOrLoss.setValue("")
+    GLOBAL.chipScoreText = SCORE_TEXT_OBJ.guid
+    SCORE_TEXT_OBJ.interactable = false
+    SCORE_TEXT_OBJ.setValue("")
     if GLOBAL.playerCount == 4 then
       totalCards = 30
     else
       totalCards = 32
     end
   else
-    wonOrLoss = textObject
     totalCards = numCardInDeck
   end
   
@@ -2189,16 +2199,16 @@ function displayWonOrLossText(textObject, score, cardCount, numCardInDeck)
       else
         text = "-3 Chips"
       end
-      if text ~= wonOrLoss.getValue() then
-        wonOrLoss.setValue(text)
+      if text ~= SCORE_TEXT_OBJ.getValue() then
+        SCORE_TEXT_OBJ.setValue(text)
       end
     end
     if displayWonOrLossTimer then
       Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
     end
-    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(wonOrLoss, pickerScore, pickerTrickCardCount, totalCards) end, 15)
+    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(pickerScore, pickerTrickCardCount, totalCards) end, 15)
   else
-    wonOrLoss.destruct()
+    SCORE_TEXT_OBJ.destruct(); SCORE_TEXT_OBJ = nil; GLOBAL.chipScoreText = nil
     Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
   end
 end
