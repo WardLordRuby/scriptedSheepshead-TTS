@@ -2,11 +2,11 @@
 ### Scripted version of the Midwest (U.S) card game Sheepshead built for Tabletop Simulator  
 
 ### Next features to be added:  
-* Implement onSave to save players custom settings  
 * New icons for deal, pick, and pass  
 
 ### Current features:  
 * Automatically adjusts game settings for 3 to 6 players  
+* Script will save the scripts current state as well as players custom settings  
 * Scripted: Game Set Up, Dealing, Picking, Taking Tricks, Burying, and Leaster Hand  
 * Scripted calling partner for both JD partner and Call an Ace  
 * Scripted event for 'unknown' situation when playing Call an Ace  
