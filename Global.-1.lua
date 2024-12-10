@@ -83,13 +83,13 @@ COIN_PRAM = {
 
 BLINDS_STR = "Blinds"
 
+---Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>
+---Picker `object` group is always in index `1`<br>Can not be stringified
 ---@type table<table<objects>>
---Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>
---Picker `object` group is always in index `1`<br>Can not be stringified
 COUNTER_OBJ_SETS = {}
 
+---Note: Can not be stringified
 ---@type object<"3DText">|nil
---Note: Can not be stringified
 SCORE_TEXT_OBJ = nil
 
 ---@param script_state JSON<table>
@@ -2131,7 +2131,6 @@ function displayResults()
   trickCountStart()
 end
 
-
 ---Restarts loop back up at countTricks
 function trickCountStart()
   if SheepsheadGlobalTimer then
@@ -2153,7 +2152,6 @@ end
 ---@param cardCount integer
 ---@param numCardInDeck integer
 function displayWonOrLossText(score, cardCount, numCardInDeck)
-  local totalCards
   if not SCORE_TEXT_OBJ then
     local pickerRotation = ROTATION.color[GLOBAL.pickingPlayer] --Shares the same positionData as setBuriedButton
     local textPosition = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
@@ -2166,12 +2164,10 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
     SCORE_TEXT_OBJ.interactable = false
     SCORE_TEXT_OBJ.setValue("")
     if GLOBAL.playerCount == 4 then
-      totalCards = 30
+      numCardInDeck = 30
     else
-      totalCards = 32
+      numCardInDeck = 32
     end
-  else
-    totalCards = numCardInDeck
   end
   
   if SheepsheadGlobalTimer then
@@ -2179,14 +2175,14 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
     local pickerTrickCardCount = countCards(COUNTER_OBJ_SETS[1].z)
     local cardStateChange = false
     if cardCount and cardCount ~= pickerTrickCardCount then
-      if cardCount == totalCards or (cardCount ~= totalCards and pickerScore == 120) or 
+      if cardCount == numCardInDeck or (cardCount ~= numCardInDeck and pickerScore == 120) or 
       (cardCount > 2 and pickerTrickCardCount < 3) or (cardCount < 3 and pickerTrickCardCount > 2) then
         cardStateChange = true
       end
     end
     if not score or score ~= pickerScore or cardStateChange then
       local text
-      if pickerScore == 120 and pickerTrickCardCount == totalCards then
+      if pickerScore == 120 and pickerTrickCardCount == numCardInDeck then
         text = "+3 Chips!"
       elseif pickerScore > 90 then
         text = "+2 Chips!"
@@ -2206,7 +2202,7 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
     if displayWonOrLossTimer then
       Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
     end
-    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(pickerScore, pickerTrickCardCount, totalCards) end, 15)
+    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(pickerScore, pickerTrickCardCount, numCardInDeck) end, 15)
   else
     SCORE_TEXT_OBJ.destruct(); SCORE_TEXT_OBJ = nil; GLOBAL.chipScoreText = nil
     Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
