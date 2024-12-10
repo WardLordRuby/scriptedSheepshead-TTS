@@ -158,7 +158,7 @@ function onLoad(script_state)
     chipScoreText = nil,
     counterGUIDs = nil --Note: Linked by Key, Value pairs
   }
-  
+
   FLAG = {
     gameSetup = {
       inProgress = false,
@@ -181,14 +181,14 @@ function onLoad(script_state)
     fnRunning = false
   }
 
-  --Note: the ordering of these values matters for correctly setting state onLoad
+  --Note: the ordering of these values matters for correctly setting state `onLoad`
   SETTINGS = {
     jdPartner = true,
     dealerSitsOut = false,
     calls = false,
     threeHanded = false
   }
-  
+
   CALL_SETTINGS = {
     sheepshead = false,
     blitz = false,
@@ -204,14 +204,14 @@ function onLoad(script_state)
     for rule, saved in pairs(state.settings) do
       if SETTINGS[rule] ~= saved then
         updateRules(rule, saved)
-        toggleUISettingsButtonState(rule, saved)        
+        toggleUISettingsButtonState(rule, saved)
       end
     end
-    
+
     for call, saved in pairs(state.callSettings) do
       if CALL_SETTINGS[call] ~= saved then
         updateCalls(call, saved)
-        toggleUISettingsButtonState(call, saved)        
+        toggleUISettingsButtonState(call, saved)
       end
     end
 
@@ -288,6 +288,7 @@ end
 
 --[[String manipulation]]--
 
+---@param str string
 ---@return string
 function getLastWord(str)
   return str:match("%S+$") --%S+ = one or more non-space characters, $ = match end of string
@@ -470,7 +471,7 @@ function getLooseCards(zone, returnFirstDeck)
       table.insert(looseCards, obj)
     end
   end
-  if not returnFirstDeck then    
+  if not returnFirstDeck then
     return looseCards
   end
   return nil
@@ -484,7 +485,7 @@ function prepCards()
     respawnDeckCoroutine()
     return
   end
-  
+
   if #looseCards > 1 then
     group(looseCards)
     pause(0.5)
@@ -933,7 +934,7 @@ function respawnDeckCoroutine()
   STATIC_OBJECT.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
     position = { 3, 2, 0 },
-    rotation = { 0, 0, 180 },
+    rotation = POS.defaultDeckRotation,
     smooth = false
   })
   local deckCopy = getObjectFromGUID(GUID.DECK_COPY)
@@ -946,7 +947,7 @@ function respawnDeckCoroutine()
     STATIC_OBJECT.hiddenBag.takeObject({
       guid = GLOBAL.blackSevens,
       position = { 5, 2, 0 },
-      rotation = { 0, 0, 180 },
+      rotation = POS.defaultDeckRotation,
       smooth = false
     })
     getObjectFromGUID(GLOBAL.blackSevens).destruct()
@@ -1220,7 +1221,7 @@ function setUpHandEvent()
     GLOBAL.unknownText = nil
   end
   GLOBAL.currentTrick = {}
-  
+
   local selectPartnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
   local playAloneWindowOpen = UI.getAttribute("playAloneWindow", "visibility")
   if selectPartnerWindowOpen ~= "" then
@@ -1231,7 +1232,7 @@ function setUpHandEvent()
     UI.hide("playAloneWindow")
     UI.setAttribute("playAloneWindow", "visibility", "")
   end
-  
+
   startLuaCoroutine(self, "dealCardsCoroutine")
 end
 
@@ -1526,10 +1527,10 @@ function toggleCounterVisibility()
       pickerTricks.setPositionSmooth({ pickerZone.getPosition().x, 1.25, pickerZone.getPosition().z })
       pickerTricks.setRotationSmooth({ 0, pickerTricks.getRotation().y, 0 })
     end
-    --Card counter Loop starts here with startTrickCount()
+    --Card counter Loop starts here with `startTrickCount()`
     pause(0.2)
     startTrickCount(tCounter.guid, pCounter.guid)
-    FLAG.fnRunning = false 
+    FLAG.fnRunning = false
     if not FLAG.leasterHand then
       pause(1.35)
       displayWonOrLossText()
@@ -2020,7 +2021,7 @@ function startTrickCount(tCounterGUID, pCounterGUID)
     GLOBAL.counterGUIDs = {
       [TRICK_ZONE[GLOBAL.pickingPlayer].guid] = pCounterGUID,
       [TRICK_ZONE[findColorAcrossTable(GLOBAL.pickingPlayer)].guid] = tCounterGUID
-    }    
+    }
   end
 
   COUNTER_OBJ_SETS = {}
@@ -2113,7 +2114,7 @@ end
 
 ---Sends totaled values to the counters. It also color codes the counters to match
 function displayResults()
-  for i, set in pairs(COUNTER_OBJ_SETS) do
+  for i, set in ipairs(COUNTER_OBJ_SETS) do
     set.c.setValue(totals[i])
     local total = totals[i]
     if i == 1 and (total < 61 and total > 30) then
@@ -2169,13 +2170,13 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
       numCardInDeck = 32
     end
   end
-  
+
   if SheepsheadGlobalTimer then
     local pickerScore = COUNTER_OBJ_SETS[1].c.getValue()
     local pickerTrickCardCount = countCards(COUNTER_OBJ_SETS[1].z)
     local cardStateChange = false
     if cardCount and cardCount ~= pickerTrickCardCount then
-      if cardCount == numCardInDeck or (cardCount ~= numCardInDeck and pickerScore == 120) or 
+      if cardCount == numCardInDeck or (cardCount ~= numCardInDeck and pickerScore == 120) or
       (cardCount > 2 and pickerTrickCardCount < 3) or (cardCount < 3 and pickerTrickCardCount > 2) then
         cardStateChange = true
       end
@@ -2564,7 +2565,7 @@ function callPartnerEvent(player)
         end
       end
       toggleWindowVisibility(player, "callsWindow")
-    end, 
+    end,
     0.13
   )
 end
@@ -2915,7 +2916,7 @@ function closeWindow(player, val, id)
   end
   local id1 = id .. "Button"
   local id2 = string.gsub(id, "Exit", "")
-  
+
   UI.setAttribute(id1, "image", "closeButton")
   toggleWindowVisibility(player, id2)
 end
