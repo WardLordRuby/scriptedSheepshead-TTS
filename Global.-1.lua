@@ -181,9 +181,15 @@ function onLoad(script_state)
     fnRunning = false
   }
 
-  --Note: the ordering of these values matters for correctly setting state `onLoad`
+  ---Note: the ordering of these values matters for correctly setting state `onLoad`
+  ---@type {
+  ---   jdPartner: boolean|nil,
+  ---   dealerSitsOut: boolean,
+  ---   calls: boolean,
+  ---   threeHanded: boolean,
+  --- }
   SETTINGS = {
-    jdPartner = true,
+    jdPartner = true, --Note: `false` == Call an Ace && `nil` == No Partner
     dealerSitsOut = false,
     calls = false,
     threeHanded = false
@@ -2557,7 +2563,7 @@ function callPartnerEvent(player)
         else
           broadcastToColor("[DC0000]You can only call up if you are forced to pick and have the Jack[-]", player.color)
         end
-      else --Call an Ace
+      elseif SETTINGS.jdPartner == false then --Call an Ace
         if player.color == GLOBAL.pickingPlayer then
           toggleWindowVisibility(player, "selectPartnerWindow")
         else
