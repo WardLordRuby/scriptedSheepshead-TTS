@@ -92,6 +92,16 @@ COUNTER_OBJ_SETS = {}
 ---@type object<"3DText">|nil
 SCORE_TEXT_OBJ = nil
 
+---Timer that loops the responsible functions for displaying the score of a hand<br>
+---this value is instantiated by `startTrickCount`
+---@type integer<UID>|nil
+TRICK_COUNTER_TIMER = nil
+
+---Timer that loops the `displayWonOrLossText` function passing calculated values back into itself<br>
+---Responsible for displaying the number of chips won or loss in a hand<br>
+---@type integer<UID>|nil
+CHIP_SCORE_TEXT_TIMER = nil
+
 ---@param script_state JSON<table>
 function onLoad(script_state)
   TRICK_ZONE = {
@@ -2034,7 +2044,7 @@ function startTrickCount(tCounterGUID, pCounterGUID)
   for zoneGUID, counterGUID in pairs(GLOBAL.counterGUIDs) do
     table.insert(COUNTER_OBJ_SETS, {z = getObjectFromGUID(zoneGUID), c = getObjectFromGUID(counterGUID)})
   end
-  SheepsheadGlobalTimer = Wait.time(countTricks, 1)
+  TRICK_COUNTER_TIMER = Wait.time(countTricks, 1)
 end
 
 ---------------------------------------------------------------
@@ -2140,21 +2150,21 @@ end
 
 ---Restarts loop back up at countTricks
 function trickCountStart()
-  if SheepsheadGlobalTimer then
-    Wait.stop(SheepsheadGlobalTimer); SheepsheadGlobalTimer = nil
+  if TRICK_COUNTER_TIMER then
+    Wait.stop(TRICK_COUNTER_TIMER); TRICK_COUNTER_TIMER = nil
   end
-  SheepsheadGlobalTimer = Wait.time(countTricks, 1)
+  TRICK_COUNTER_TIMER = Wait.time(countTricks, 1)
 end
 
 ---Stops the trickCount Loop
 function trickCountStop()
-  if SheepsheadGlobalTimer then
-    Wait.stop(SheepsheadGlobalTimer); SheepsheadGlobalTimer = nil
+  if TRICK_COUNTER_TIMER then
+    Wait.stop(TRICK_COUNTER_TIMER); TRICK_COUNTER_TIMER = nil
   end
 end
 
 ---If no params function runs a setup to create params and feeds them back into itself<br>
----runs while SheepsheadGlobalTimer loop is running
+---runs while `TRICK_COUNTER_TIMER` loop is running
 ---@param score integer
 ---@param cardCount integer
 ---@param numCardInDeck integer
@@ -2177,7 +2187,7 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
     end
   end
 
-  if SheepsheadGlobalTimer then
+  if TRICK_COUNTER_TIMER then
     local pickerScore = COUNTER_OBJ_SETS[1].c.getValue()
     local pickerTrickCardCount = countCards(COUNTER_OBJ_SETS[1].z)
     local cardStateChange = false
@@ -2206,13 +2216,13 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
         SCORE_TEXT_OBJ.setValue(text)
       end
     end
-    if displayWonOrLossTimer then
-      Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
+    if CHIP_SCORE_TEXT_TIMER then
+      Wait.stop(CHIP_SCORE_TEXT_TIMER); CHIP_SCORE_TEXT_TIMER = nil
     end
-    displayWonOrLossTimer = Wait.frames(function() displayWonOrLossText(pickerScore, pickerTrickCardCount, numCardInDeck) end, 15)
+    CHIP_SCORE_TEXT_TIMER = Wait.frames(function() displayWonOrLossText(pickerScore, pickerTrickCardCount, numCardInDeck) end, 15)
   else
     SCORE_TEXT_OBJ.destruct(); SCORE_TEXT_OBJ = nil; GLOBAL.chipScoreText = nil
-    Wait.stop(displayWonOrLossTimer); displayWonOrLossTimer = nil
+    Wait.stop(CHIP_SCORE_TEXT_TIMER); CHIP_SCORE_TEXT_TIMER = nil
   end
 end
 
