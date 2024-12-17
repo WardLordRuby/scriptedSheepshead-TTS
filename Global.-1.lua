@@ -1436,18 +1436,17 @@ function pickBlindsCoroutine()
   startFnRunFlag()
   local pickingPlayer = Player[GLOBAL.pickingPlayer]
   broadcastToAll("[21AF21]" .. pickingPlayer.steam_name .. " Picks![-]")
-  local blinds = getLooseCards(SCRIPT_ZONE.center)
   local playerPosition = pickingPlayer.getHandTransform().position
   local playerRotation = pickingPlayer.getHandTransform().rotation
-  if blinds[1].type == "Deck" then
-    blinds[1].takeObject({
+  local blinds = getLooseCards(SCRIPT_ZONE.center, true)
+  if blinds then
+    blinds.takeObject({
       position = playerPosition,
       rotation = playerRotation
     })
     pause(0.2)
   end
-  blinds = getLooseCards(SCRIPT_ZONE.center)
-  for _, card in ipairs(blinds) do
+  for _, card in ipairs(getLooseCards(SCRIPT_ZONE.center)) do
     card.setPositionSmooth(playerPosition)
     card.setRotationSmooth(playerRotation)
   end
@@ -1456,8 +1455,8 @@ function pickBlindsCoroutine()
     if card.is_face_down then
       card.flip()
     end
-    FLAG.cardsToBeBuried = true
   end
+  FLAG.cardsToBeBuried = true
   showSetUpBuriedButton()
 
   if SETTINGS.jdPartner then
