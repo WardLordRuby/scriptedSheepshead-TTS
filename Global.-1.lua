@@ -250,6 +250,10 @@ function onLoad(script_state)
         displayWonOrLossText()
       end
     end
+
+    if FLAG.cardsToBeBuried and GLOBAL.pickingPlayer then
+      showSetUpBuriedButton()
+    end
   end
 
   if DEBUG then
@@ -1226,9 +1230,7 @@ function setUpHandEvent()
   end
   FLAG.dealInProgress = true
   if FLAG.cardsToBeBuried then
-    STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
-    STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
-    FLAG.cardsToBeBuried = false
+    hideSetUpBuriedButton()
   end
   GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards = nil, nil, nil
   FLAG.trick.inProgress, FLAG.leasterHand = false, false
@@ -1456,12 +1458,7 @@ function pickBlindsCoroutine()
     end
     FLAG.cardsToBeBuried = true
   end
-  local pickerRotation = ROTATION.color[pickingPlayer.color]
-  local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
-  STATIC_OBJECT.setBuriedButton.setPosition(setBuriedButtonPos)
-  STATIC_OBJECT.setBuriedButton.setRotation({ 0, pickerRotation, 0 })
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", pickingPlayer.color)
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
+  showSetUpBuriedButton()
 
   if SETTINGS.jdPartner then
     local dealer = getPlayerObject(GLOBAL.dealerColorVal)
@@ -1498,6 +1495,24 @@ function pickBlindsCoroutine()
   end
   FLAG.fnRunning = false
   return 1
+end
+
+---Does not check either valid condition `FLAG.cardsToBeBuried` and `GLOBAL.pickingPlayer`<br>
+---also does not set `FLAG.cardsToBeBuried`
+function showSetUpBuriedButton()
+  local pickerRotation = ROTATION.color[GLOBAL.pickingPlayer]
+  local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
+  STATIC_OBJECT.setBuriedButton.setPosition(setBuriedButtonPos)
+  STATIC_OBJECT.setBuriedButton.setRotation({ 0, pickerRotation, 0 })
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", GLOBAL.pickingPlayer)
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
+end
+
+---Also sets `FLAG.cardsToBeBuried` to `false`
+function hideSetUpBuriedButton()
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+  FLAG.cardsToBeBuried = false
 end
 
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
@@ -1626,12 +1641,10 @@ function setBuriedEvent(player)
     1.6
   )
   setLeadOutPlayer()
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+  hideSetUpBuriedButton()
 end
 
 function setLeadOutPlayer()
-  FLAG.cardsToBeBuried = false
   local leadOutVal = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
   local leadOutPlayer = getPlayerObject(leadOutVal)
   GLOBAL.leadOutPlayer = leadOutPlayer.color
