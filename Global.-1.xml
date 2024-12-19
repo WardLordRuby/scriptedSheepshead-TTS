@@ -5,7 +5,7 @@
   Written by: WardLordRuby -->
 
 <button
-  onClick="setUpGameEvent"
+  onClick="setupGameEvent"
   rectAlignment="UpperRight"
   offsetXY="-300 -1"
   width="175"
@@ -51,7 +51,7 @@
     image="dealButton"
     width="113" height="113"
     offsetXY="00 150"
-    onClick="setUpHandEvent"
+    onClick="setupHandEvent"
     onMouseEnter="animateButtonEnter"
     onMouseExit="animateButtonExit"
     onMouseDown="animateButtonDown"

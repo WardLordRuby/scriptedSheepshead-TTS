@@ -1,5 +1,5 @@
 <button
-  id="setUpBuriedButton"
+  id="setBuriedButton"
   width="1200"
   height="350"
   fontSize="220"

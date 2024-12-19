@@ -252,7 +252,7 @@ function onLoad(script_state)
     end
 
     if FLAG.cardsToBeBuried and GLOBAL.pickingPlayer then
-      showSetUpBuriedButton()
+      showSetBuriedButton()
     end
   end
 
@@ -409,7 +409,7 @@ end
 ---@param table table<any>|nil
 ---@return integer
 function len(table)
-  if table == nil or next(table) == nil then
+  if isEmpty(table) then
     return 0
   end
   local count = 0
@@ -426,6 +426,7 @@ function isEmpty(table)
   return table == nil or next(table) == nil
 end
 
+---Does not check table keys
 ---@param table table<any>
 ---@param value any
 ---@return boolean
@@ -749,16 +750,15 @@ end
 
 ---Called to remove items from a zone. Must be called from within a coroutine
 ---@param zone object<zone>
----@param item string<"Type">
----@param item2 option_string<"Type">
-function resetBoard(zone, item, item2)
-  if not item2 then
-    item2 = item
+---@param items table<"Types">|string<"Type">
+function resetBoard(zone, items)
+  if type(items) == "string" then
+    items = {items}
   end
   local zoneObjects = zone.getObjects()
   for i = #zoneObjects, 1 , -1 do
     local object = zoneObjects[i]
-    if object.type == item or object.type == item2 then
+    if tableContains(items, object.type) then
       object.destruct()
       pause(0.06)
     end
@@ -949,7 +949,7 @@ end
 function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(SCRIPT_ZONE.table)
   if not isEmpty(remainingTableCards) then
-    resetBoard(SCRIPT_ZONE.table, "Card", "Deck")
+    resetBoard(SCRIPT_ZONE.table, {"Card", "Deck"})
   end
   STATIC_OBJECT.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
@@ -997,7 +997,7 @@ end
 
 ---Prints the current game settings<br>
 ---Gets the correct deck for the number of seated players<br>
----Will stop setUpGameCoroutine if there is less than 3 seated players<br>
+---Will stop setupGameCoroutine if there is less than 3 seated players<br>
 ---Must be ran from within a coroutine
 function printGameSettings()
   if #GLOBAL.sortedSeatedPlayers < 3 then
@@ -1072,7 +1072,7 @@ function removeBlackSevens(deck)
     })
   end
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
-  pause(0.25)
+  pause(0.3)
   local smallDeck = getDeck(SCRIPT_ZONE.table, "small")
   smallDeck.setInvisibleTo(ALL_PLAYERS)
   STATIC_OBJECT.hiddenBag.putObject(smallDeck)
@@ -1098,7 +1098,7 @@ function startChipSpawn(player)
 end
 
 ---Deals specified number of chips to all seated players<br>
----Requires: game is already setup & is ran from within a coroutine
+---Requires: `FLAG.gameSetup.ran` & is ran from within a coroutine
 function spawnChips()
   startFnRunFlag()
   for _, color in ipairs(GLOBAL.sortedSeatedPlayers) do
@@ -1127,21 +1127,21 @@ end
 
 ---Start of game setup event
 ---@param player object<eventTrigger>
-function setUpGameEvent(player)
+function setupGameEvent(player)
   if not safeToContinue() then
     return
   end
   if player.admin then
     FLAG.gameSetup.inProgress = true
     GLOBAL.gameSetupPlayer = player.color
-    startLuaCoroutine(self, "setUpGameCoroutine")
+    startLuaCoroutine(self, "setupGameCoroutine")
   else
     broadcastToColor("[DC0000]You do not have permission to access this feature.", player.color, "[-]")
   end
 end
 
----Start of order of opperations for setUpGame
-function setUpGameCoroutine()
+---Start of order of opperations for game setup
+function setupGameCoroutine()
   if FLAG.gameSetup.ran and #GLOBAL.sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
     FLAG.gameSetup.inProgress = false
@@ -1196,7 +1196,7 @@ function setUpGameCoroutine()
   return 1
 end
 
---[[End of order of opperations for setUpGame]]--
+--[[End of order of opperations for game setup]]--
 --[[End of functions used by Set Up Game event]]--
 
 
@@ -1220,7 +1220,7 @@ function calculateDealOrder()
 end
 
 ---Start of New Hand event
-function setUpHandEvent()
+function setupHandEvent()
   if not safeToContinue() then
     return
   end
@@ -1230,7 +1230,7 @@ function setUpHandEvent()
   end
   FLAG.dealInProgress = true
   if FLAG.cardsToBeBuried then
-    hideSetUpBuriedButton()
+    hideSetBuriedButton()
   end
   GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards = nil, nil, nil
   FLAG.trick.inProgress, FLAG.leasterHand = false, false
@@ -1457,7 +1457,7 @@ function pickBlindsCoroutine()
     end
   end
   FLAG.cardsToBeBuried = true
-  showSetUpBuriedButton()
+  showSetBuriedButton()
 
   if SETTINGS.jdPartner then
     local dealer = getPlayerObject(GLOBAL.dealerColorVal)
@@ -1498,19 +1498,19 @@ end
 
 ---Does not check either valid condition `FLAG.cardsToBeBuried` and `GLOBAL.pickingPlayer`<br>
 ---also does not set `FLAG.cardsToBeBuried`
-function showSetUpBuriedButton()
+function showSetBuriedButton()
   local pickerRotation = ROTATION.color[GLOBAL.pickingPlayer]
   local setBuriedButtonPos = SPAWN_POS.setBuriedButton:copy():rotateOver('y', pickerRotation)
   STATIC_OBJECT.setBuriedButton.setPosition(setBuriedButtonPos)
   STATIC_OBJECT.setBuriedButton.setRotation({ 0, pickerRotation, 0 })
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", GLOBAL.pickingPlayer)
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "true")
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "visibility", GLOBAL.pickingPlayer)
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "active", "true")
 end
 
 ---Also sets `FLAG.cardsToBeBuried` to `false`
-function hideSetUpBuriedButton()
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "visibility", "")
-  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setUpBuriedButton", "active", "false")
+function hideSetBuriedButton()
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "visibility", "")
+  STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "active", "false")
   FLAG.cardsToBeBuried = false
 end
 
@@ -1640,7 +1640,7 @@ function setBuriedEvent(player)
     1.6
   )
   setLeadOutPlayer()
-  hideSetUpBuriedButton()
+  hideSetBuriedButton()
 end
 
 function setLeadOutPlayer()
@@ -2022,13 +2022,14 @@ end
 
 --[[New functions to adapt Blackjack Card Counter]]--
 
----Returns the color of the handposition located across the table from given color (GLOBAL.pickingPlayer)
+---Returns the color of the handposition located across the table from given color<br>
+---Color must be directly accross for the counter because `TABLE_BLOCK` is an invisible triangle
 ---@param color string
----@return string<"color">
+---@return string<"color">|nil
 function findColorAcrossTable(color)
   for i, colors in ipairs(ALL_PLAYERS) do
-    local acrossVal = 0
     if colors == color then
+      local acrossVal
       if i > 3 then
         acrossVal = i - 3
       else
@@ -2037,6 +2038,7 @@ function findColorAcrossTable(color)
       return ALL_PLAYERS[acrossVal]
     end
   end
+  return nil
 end
 
 ---Creates a global table GLOBAL.counterGUIDs and COUNTER_OBJ_SETS.<br> Table contains each zoneObject
@@ -2270,7 +2272,7 @@ CHAT_COMMANDS = {
   "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
 }
 
----Prints CURRENT_RULES to the screen
+---Prints `CURRENT_RULES` to the screen
 function displayRules()
   setNotes(table.concat(CURRENT_RULES, ""))
 end
