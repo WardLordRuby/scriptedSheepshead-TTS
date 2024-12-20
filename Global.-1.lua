@@ -607,12 +607,6 @@ function getPreviousColorValInList(index, list)
   end
 end
 
----Checks if a deck exists on the table<br>
----Recomended to be ran from within a coroutine
-function deckExists()
-  return getDeck(SCRIPT_ZONE.table) ~= nil
-end
-
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
 ---@param zone object<zone>
 ---@return integer<0|180>
@@ -1290,7 +1284,7 @@ function dealCardsCoroutine()
   deck.randomize()
   pause(0.35)
 
-  while deckExists() do
+  while deck ~= nil do
     dealLogic(
       GLOBAL.dealOrder[((orderIdx - 1) % #GLOBAL.dealOrder) + 1],
       math.floor(counter / #GLOBAL.dealOrder) + 1,
