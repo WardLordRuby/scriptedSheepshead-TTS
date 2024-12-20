@@ -138,15 +138,15 @@ function onLoad(script_state)
 
   ---@type {
   ---   playerCount: integer|nil,
-  ---   sortedSeatedPlayers: table<"colors">|nil,
+  ---   sortedSeatedPlayers: table<"Colors">|nil,
   ---   dealOrder: table<"colors"|BLINDS_STR>|nil,
   ---   blackSevens: string<"GUID">|nil,
   ---   dealerColorVal: integer<index>|nil,
   ---   holdCards: table<"cardName">|nil,
   ---   currentTrick: table<metaData>|nil,
-  ---   gameSetupPlayer: string<"color">|nil,
-  ---   pickingPlayer: string<"color">|nil,
-  ---   leadOutPlayer: string<"color">|nil,
+  ---   gameSetupPlayer: string<"Color">|nil,
+  ---   pickingPlayer: string<"Color">|nil,
+  ---   leadOutPlayer: string<"Color">|nil,
   ---   lastLeasterTrick: string<"GUID">|nil,
   ---   unknownText: string<"GUID">|nil,
   ---   chipScoreText: string<"GUID">|nil,
@@ -348,9 +348,9 @@ function copyTable(list)
 end
 
 ---Copys input table and removes input color, if color not found returns original table
----@param color string
----@param list table<"colors">
----@return table<"colors">
+---@param color string<"Color">
+---@param list table<"Colors">
+---@return table<"Colors">
 function removeColorFromList(color, list)
   local currentIndex
   local modifiedList = copyTable(list)
@@ -367,7 +367,7 @@ function removeColorFromList(color, list)
   return list
 end
 
----@param color string
+---@param color string<"Color">
 ---@param pipeList string
 ---@return pipeList string
 function addColorToPipeList(color, pipeList)
@@ -379,7 +379,7 @@ function addColorToPipeList(color, pipeList)
   return pipeList
 end
 
----@param color string
+---@param color string<"Color">
 ---@param pipeList string
 ---@return pipeList string
 function removeColorFromPipeList(color, pipeList)
@@ -549,7 +549,7 @@ end
 
 ---Can only be called after gameSetup has been ran. Aka: `GLOBAL.sortedSeatedPlayers ~= nil`<br>
 ---If you know input is always a color prefer to use `Player["color"]` instead of this fn call
----@param colorOrIdx string<"color">|integer<index>
+---@param colorOrIdx string<"Color">|integer<index>
 ---@return object<player>
 function getPlayerObject(colorOrIdx)
   if colorOrIdx == 0 then
@@ -563,8 +563,8 @@ function getPlayerObject(colorOrIdx)
 end
 
 ---Returns the index location of a color in a list
----@param color string
----@param list table<"colors">
+---@param color string<"Color">
+---@param list table<"Colors">
 function getColorVal(color, list)
   for i, colors in ipairs(list) do
     if colors == color then
@@ -575,7 +575,7 @@ end
 
 ---Returns the index of the player seated clockwise from given index
 ---@param index integer
----@param list table<"colors">
+---@param list table<"Colors">
 ---@return integer<index>
 function getNextColorValInList(index, list)
   local listLength = #list
@@ -592,7 +592,7 @@ end
 
 ---Returns the index of the player seated counter-clockwise from given index
 ---@param index integer
----@param list table<"colors">
+---@param list table<"Colors">
 ---@return integer<index>
 function getPreviousColorValInList(index, list)
   local listLength = #list
@@ -717,7 +717,7 @@ function filterPlayerCards(player, scheme, doNotInclude)
   return filteredCards
 end
 
----@param color string
+---@param color string<"Color">
 ---@return integer<rotationAngle>, vector<playerPosition>
 function getItemMoveData(color)
   return ROTATION.color[color], Player[color].getHandTransform().position
@@ -779,7 +779,7 @@ function moveDeckAndDealerChip()
   end
   STATIC_OBJECT.dealerChip.setRotationSmooth({ chipRotation.x, rotationAngle - 90, chipRotation.z })
   STATIC_OBJECT.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
-  deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, 180 })
+  deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, POS.defaultDeckRotation.z })
   deck.setPositionSmooth(playerPos + rotatedDeckOffset)
 end
 
@@ -873,7 +873,7 @@ function adminCheck(player)
 end
 
 ---Spawns a rule book in front of player color
----@param color string
+---@param color string<"Color">
 function getRuleBook(color)
   local playerRotation = ROTATION.color[color]
   local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
@@ -985,7 +985,7 @@ function respawnDeckCoroutine()
   return 1
 end
 
----Builds a global table of all seated players [GLOBAL.sortedSeatedPlayers]
+---Builds the `GLOBAL.sortedSeatedPlayers` table of all seated players
 function populatePlayers()
   GLOBAL.sortedSeatedPlayers = {}
   for _, color in ipairs(ALL_PLAYERS) do
@@ -997,7 +997,7 @@ end
 
 ---Prints the current game settings<br>
 ---Gets the correct deck for the number of seated players<br>
----Will stop setupGameCoroutine if there is less than 3 seated players<br>
+---Will stop `setupGameCoroutine` if there is less than 3 seated players<br>
 ---Must be ran from within a coroutine
 function printGameSettings()
   if #GLOBAL.sortedSeatedPlayers < 3 then
@@ -1031,9 +1031,9 @@ function printGameSettings()
   print("[21AF21]Sheepshead set up for [-]", #GLOBAL.sortedSeatedPlayers, " players!")
 end
 
----Called to add the GLOBAL.blackSevens to a given deck<br>
----Function uses global string GLOBAL.blackSevens provided by removeBlackSevens() to locate<br>
----GLOBAL.blackSevens within STATIC_OBJECT.hiddenBag, then moves them to the current deck position
+---Called to add the `GLOBAL.blackSevens` to a given deck<br>
+---Function uses global string GLOBAL.blackSevens provided by `removeBlackSevens()` to locate<br>
+---`GLOBAL.blackSevens` within `STATIC_OBJECT.hiddenBag`, then moves them to the current deck position
 ---@param deck object<deck>
 function returnDecktoPiquet(deck)
   STATIC_OBJECT.hiddenBag.takeObject({
@@ -1047,9 +1047,9 @@ function returnDecktoPiquet(deck)
   GLOBAL.blackSevens = nil
 end
 
----Called to remove the GLOBAL.blackSevens from a given deck<br>
----Finds the GLOBAL.blackSevens inside the given deck and moves them into STATIC_OBJECT.hiddenBag<br>
----Sets GLOBAL.blackSevens deck guid inside STATIC_OBJECT.hiddenBag<br>
+---Called to remove the `GLOBAL.blackSevens` from a given deck<br>
+---Finds the `GLOBAL.blackSevens` inside the given deck and moves them into `STATIC_OBJECT.hiddenBag`<br>
+---Sets `GLOBAL.blackSevens` deck guid inside `STATIC_OBJECT.hiddenBag`<br>
 ---Must be ran from within a coroutine
 ---@param deck object<deck>
 function removeBlackSevens(deck)
@@ -1202,8 +1202,8 @@ end
 
 --[[Start of functions used by New Hand event]]--
 
----Called to build GLOBAL.dealOrder correctly<br>
----Adds "Blinds" to the GLOBAL.dealOrder table in the position directly after the current dealer<br>
+---Called to build `GLOBAL.dealOrder` correctly<br>
+---Adds "Blinds" to the `GLOBAL.dealOrder` table in the position directly after the current dealer<br>
 ---If dealer sits out replaces dealer with blinds
 function calculateDealOrder()
   GLOBAL.dealOrder = copyTable(GLOBAL.sortedSeatedPlayers)
@@ -1279,10 +1279,8 @@ function dealCardsCoroutine()
   flipDeck(SCRIPT_ZONE.table)
   pause(0.35)
 
-  local count = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.dealOrder)
-  local roundTrigger = 1
-  local round = 1
-  local target = GLOBAL.dealOrder[count]
+  local orderIdx = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.dealOrder)
+  local counter = 0
 
   local deck = getDeck(SCRIPT_ZONE.table)
   local rotationVal = deck.getRotation()
@@ -1293,22 +1291,14 @@ function dealCardsCoroutine()
   pause(0.35)
 
   while deckExists() do
-    if count > #GLOBAL.dealOrder then
-      count = 1
-      target = GLOBAL.dealOrder[count]
-    end
-    if roundTrigger > #GLOBAL.dealOrder then
-      roundTrigger = 1
-      round = round + 1
-    end
-
-    if DEBUG then print(GLOBAL.playerCount .. ' ' .. count .. ' ' .. target .. ' ' .. round) end
-
-    dealLogic(GLOBAL.playerCount, target, round, deck, rotationVal)
+    dealLogic(
+      GLOBAL.dealOrder[((orderIdx - 1) % #GLOBAL.dealOrder) + 1],
+      math.floor(counter / #GLOBAL.dealOrder) + 1,
+      deck,
+      rotationVal
+    )
+    counter = counter + 1; orderIdx = orderIdx + 1
     pause(0.25)
-    count = count + 1
-    roundTrigger = roundTrigger + 1
-    target = GLOBAL.dealOrder[count]
   end
 
   FLAG.dealInProgress = false
@@ -1319,41 +1309,40 @@ end
 
 ---Contains the logic to deal correctly based on the number of
 ---players seated and the number of times players have recieved cards
----@param p integer<playerCount>
----@param t string<"targetColor">
----@param r integer<roundNum>
+---@param target string<"Color">
+---@param round integer
 ---@param deck object<deck>
 ---@param rotationVal vector
-function dealLogic(p, t, r, deck, rotationVal)
-  if p == 3 then
-    if t ~= BLINDS_STR and (r == 2 or r == 3) then
-      deck.deal(3, t)
-    elseif t ~= BLINDS_STR then
-      deck.deal(2, t)
-    elseif t == BLINDS_STR and r == 2 then
+function dealLogic(target, round, deck, rotationVal)
+  if GLOBAL.playerCount == 3 then
+    if target ~= BLINDS_STR and (round == 2 or round == 3) then
+      deck.deal(3, target)
+    elseif target ~= BLINDS_STR then
+      deck.deal(2, target)
+    elseif target == BLINDS_STR and round == 2 then
       dealToBlinds(deck, rotationVal)
     end
-  elseif p == 4 then
-    if t ~= BLINDS_STR and r == 2 then
-      deck.deal(3, t)
-    elseif t ~= BLINDS_STR then
-      deck.deal(2, t)
-    elseif t == BLINDS_STR and r == 1 then
+  elseif GLOBAL.playerCount == 4 then
+    if target ~= BLINDS_STR and round == 2 then
+      deck.deal(3, target)
+    elseif target ~= BLINDS_STR then
+      deck.deal(2, target)
+    elseif target == BLINDS_STR and round == 1 then
       dealToBlinds(deck, rotationVal)
     end
-  elseif p == 5 then
-    if t ~= BLINDS_STR then
-      deck.deal(2, t)
-    elseif t == BLINDS_STR and r == 1 then
+  elseif GLOBAL.playerCount == 5 then
+    if target ~= BLINDS_STR then
+      deck.deal(2, target)
+    elseif target == BLINDS_STR and round == 1 then
       dealToBlinds(deck, rotationVal)
     end
-  elseif p == 6 then
-    if t ~= BLINDS_STR and r == 2 then
-      deck.deal(3, t)
-    elseif t == BLINDS_STR and r == 1 then
+  elseif GLOBAL.playerCount == 6 then
+    if target ~= BLINDS_STR and round == 2 then
+      deck.deal(3, target)
+    elseif target == BLINDS_STR and round == 1 then
       dealToBlinds(deck, rotationVal)
-    elseif t ~= BLINDS_STR then
-      deck.deal(2, t)
+    elseif target ~= BLINDS_STR then
+      deck.deal(2, target)
     end
   end
 end
@@ -1365,7 +1354,7 @@ function dealToBlinds(deck, rotationVal)
   for i = 1, 2 do
     deck.takeObject({
       position = SPAWN_POS.blinds[i]:copy():rotateOver('y', rotationVal.y),
-      rotation = { rotationVal.x, rotationVal.y, 180 }
+      rotation = { rotationVal.x, rotationVal.y, POS.defaultDeckRotation.z }
     })
     pause(0.15)
   end
@@ -1412,8 +1401,8 @@ function passEvent(player)
   end
 end
 
----Moves the blinds into the pickers hand, sets player to GLOBAL.pickingPlayer
----Sets FLAG cardsToBeBuried to trigger buryCards logic
+---Moves the blinds into the pickers hand, sets player to `GLOBAL.pickingPlayer`
+---Sets `FLAG.cardsToBeBuried` to trigger buryCards logic
 ---@param player object<eventTrigger>
 function pickBlindsEvent(player)
   if GLOBAL.playerCount == 5 and #GLOBAL.sortedSeatedPlayers == 6 then
@@ -1515,7 +1504,7 @@ function hideSetBuriedButton()
 end
 
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
----a counter in front of GLOBAL.pickingPlayer<br> and player accross from color.
+---a counter in front of `GLOBAL.pickingPlayer`<br> and player accross from color.
 ---Flips over pickers tricks to see score of hand<br>
 ---Must be ran from within a coroutine
 function toggleCounterVisibility()
@@ -1580,8 +1569,8 @@ function toggleCounterVisibility()
   end
 end
 
----Makes sure buried cards are face down and unhides blinds and GLOBAL.pickingPlayers<br>
----hand objects. Calculates global GLOBAL.leadOutPlayer, hides Set Buried button
+---Makes sure buried cards are face down and unhides blinds and `GLOBAL.pickingPlayers`<br>
+---hand objects. Calculates global `GLOBAL.leadOutPlayer`, hides Set Buried button
 ---@param player object<eventTrigger>
 function setBuriedEvent(player)
   if player.color ~= GLOBAL.pickingPlayer then
@@ -1655,8 +1644,8 @@ function setLeadOutPlayer()
 end
 
 ---Runs when an object tries to enter a container<br>
----Doesn't allow card grouping during trickInProgress or cardsToBeBuried<br>
----Return: true, allows object to enter | false, does not allow object to enter
+---Doesn't allow card grouping during `FLAG.trick.inProgress` or `FLAG.cardsToBeBuried`<br>
+---Return: `true` allows object to enter | `false` does not allow object to enter
 ---@param container object<container>
 ---@param object object
 ---@return boolean
@@ -1710,7 +1699,7 @@ end
 
 ---Runs when a player pickes up an object<br>
 ---If someone plays the wrong card, Ex. Player didn't see they have to follow suit
----and needs to remove a card from the GLOBAL.currentTrick
+---and needs to remove a card from the `GLOBAL.currentTrick`
 ---@param playerColor string
 ---@param object object
 function onObjectPickUp(playerColor, object)
@@ -1731,13 +1720,13 @@ end
 
 ---Runs when a player drops an object<br>
 ---Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
----Builds the table GLOBAL.currentTrick to keep track of cardNames and player color who laid them in the SCRIPT_ZONE.center
+---Builds the table `GLOBAL.currentTrick` to keep track of cardNames and player color who laid them in the `SCRIPT_ZONE.center`
 ---@param playerColor string
 ---@param object object
 function onObjectDrop(playerColor, object)
   if FLAG.trick.inProgress then
     if object.type == "Card" then
-      --Wait function allows script to continue in the case of a player throwing a card into SCRIPT_ZONE.center
+      --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
       Wait.time(
         function()
           if isInZone(object, SCRIPT_ZONE.center) then
@@ -1981,12 +1970,12 @@ function giveTrickToWinnerCoroutine()
     local oldTricksPos = oldTricks.getPosition()
     local oldTricksRot = oldTricks.getRotation()
     trick.setPositionSmooth({ oldTricksPos.x, oldTricksPos.y + 0.5, oldTricksPos.z })
-    trick.setRotationSmooth({ oldTricksRot.x, oldTricksRot.y, 180 })
+    trick.setRotationSmooth({ oldTricksRot.x, oldTricksRot.y, POS.defaultDeckRotation.z })
   else
     local zoneRotation = playerTrickZone.getRotation()
     local zonePos = playerTrickZone.getPosition()
     trick.setPositionSmooth({ zonePos.x, zonePos.y - 2.7, zonePos.z })
-    trick.setRotationSmooth({ zoneRotation.x, zoneRotation.y + 180, 180 })
+    trick.setRotationSmooth({ zoneRotation.x, zoneRotation.y + 180, POS.defaultDeckRotation.z })
   end
   pause(0.5)
   group(getLooseCards(playerTrickZone))
@@ -2024,8 +2013,8 @@ end
 
 ---Returns the color of the handposition located across the table from given color<br>
 ---Color must be directly accross for the counter because `TABLE_BLOCK` is an invisible triangle
----@param color string
----@return string<"color">|nil
+---@param color string<"Color">
+---@return string<"Color">|nil
 function findColorAcrossTable(color)
   for i, colors in ipairs(ALL_PLAYERS) do
     if colors == color then
@@ -2401,9 +2390,11 @@ function toggleSetting(player, val, id)
   if string.find(id, "turnOn") then
     idName = string.gsub(id, "turnOn", "")
     state = true
-  else
+  elseif string.find(id, "turnOff") then
     idName = string.gsub(id, "turnOff", "")
     state = false
+  else
+    return
   end
   if toggleNotValid(idName, state) then
     return
@@ -2908,7 +2899,7 @@ function startLeasterHandCoroutine()
   local playerRotation = ROTATION.color[GLOBAL.pickingPlayer]
   local leasterPos = SPAWN_POS.leasterCards:copy():rotateOver('y', playerRotation)
   lastLeasterTrick.setPositionSmooth(leasterPos)
-  lastLeasterTrick.setRotationSmooth({ 0, playerRotation + 30, 180 })
+  lastLeasterTrick.setRotationSmooth({ 0, playerRotation + 30, POS.defaultDeckRotation.z })
   lastLeasterTrick.interactable = false
   setLeadOutPlayer()
   FLAG.leasterHand = true
