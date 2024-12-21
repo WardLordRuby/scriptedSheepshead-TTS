@@ -51,6 +51,7 @@ SPAWN_POS = {
 
 POS = {
   center = Vector(0, 1.5, 0),
+  objectRespawn = Vector(0, 3, 0),
   defaultDeckRotation = Vector(0, 0, 180)
 }
 
@@ -1490,11 +1491,19 @@ function showSetBuriedButton()
   STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "active", "true")
 end
 
----Also sets `FLAG.cardsToBeBuried` to `false`
+---Also sets `FLAG.cardsToBeBuried` to `false` and ensures no cards are hidden
 function hideSetBuriedButton()
   STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "visibility", "")
   STATIC_OBJECT.setBuriedButton.UI.setAttribute("setBuriedButton", "active", "false")
   FLAG.cardsToBeBuried = false
+  Wait.time(
+    function()
+      for _, card in ipairs(getLooseCards(SCRIPT_ZONE.table)) do
+        card.setHiddenFrom({})
+      end
+    end,
+    1.6
+  )
 end
 
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
@@ -1614,14 +1623,6 @@ function setBuriedEvent(player)
     end
   end
   Wait.time(function() group(buriedCards) end, 0.8)
-  Wait.time(
-    function()
-      for _, card in ipairs(getLooseCards(SCRIPT_ZONE.table)) do
-        card.setInvisibleTo()
-      end
-    end,
-    1.6
-  )
   setLeadOutPlayer()
   hideSetBuriedButton()
 end
@@ -1644,6 +1645,9 @@ end
 ---@param object object
 ---@return boolean
 function tryObjectEnterContainer(container, object)
+  if object.type ~= "Card" then
+    return true
+  end
   if not FLAG.allowGrouping then
     return false
   end
@@ -1666,13 +1670,12 @@ end
 function onObjectEnterZone(zone, object)
   --Makes sure items stay on the table if dropped
   if zone == SCRIPT_ZONE.drop then
-    object.setPosition({ 0, 3, 0 })
+    object.setPosition(POS.objectRespawn)
   end
   --Makes sure other players can not see what cards the picker is burying
   if FLAG.cardsToBeBuried then
     if zone == TRICK_ZONE[GLOBAL.pickingPlayer] and object.type == "Card" then
-      local hideFrom = removeColorFromList(GLOBAL.pickingPlayer, GLOBAL.sortedSeatedPlayers)
-      object.setInvisibleTo(hideFrom)
+      object.setHiddenFrom(removeColorFromList(GLOBAL.pickingPlayer, GLOBAL.sortedSeatedPlayers))
     end
   end
 end
@@ -1934,8 +1937,10 @@ function calculateTrickWinner()
   FLAG.trick.inProgress, FLAG.allowGrouping = false, false
   local trickWinner = Player[GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].playedByColor]
   GLOBAL.leadOutPlayer = trickWinner.color
-  broadcastToAll("[21AF21]" ..
-  trickWinner.steam_name .. " takes the trick with " .. GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]")
+  broadcastToAll(
+    "[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. 
+    GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]"
+  )
   startLuaCoroutine(self, "giveTrickToWinnerCoroutine")
 end
 
