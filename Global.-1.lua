@@ -142,7 +142,7 @@ function onLoad(script_state)
   ---   sortedSeatedPlayers: table<"Colors">|nil,
   ---   dealOrder: table<"colors"|BLINDS_STR>|nil,
   ---   blackSevens: string<"GUID">|nil,
-  ---   dealerColorVal: integer<index>|nil,
+  ---   dealerColorIdx: integer<index>|nil,
   ---   holdCards: table<"cardName">|nil,
   ---   currentTrick: table<metaData>|nil,
   ---   gameSetupPlayer: string<"Color">|nil,
@@ -158,7 +158,7 @@ function onLoad(script_state)
     sortedSeatedPlayers = nil,
     dealOrder = nil,
     blackSevens = nil,
-    dealerColorVal = nil,
+    dealerColorIdx = nil,
     holdCards = nil, --Note: `nil` == unknown mode
     currentTrick = nil, --Note: `self[1]` contains general trickMetadata, followed by metadata for each card in the trick
     gameSetupPlayer = nil,
@@ -566,7 +566,7 @@ end
 ---Returns the index location of a color in a list
 ---@param color string<"Color">
 ---@param list table<"Colors">
-function getColorVal(color, list)
+function getColorIndex(color, list)
   for i, colors in ipairs(list) do
     if colors == color then
       return i
@@ -574,38 +574,36 @@ function getColorVal(color, list)
   end
 end
 
----Returns the index of the player seated clockwise from given index
+---Returns the index of the player seated clockwise from given index, will never return `BLINDS_STR` index
 ---@param index integer
 ---@param list table<"Colors">
----@return integer<index>
-function getNextColorValInList(index, list)
+---@return integer<index>|nil
+function getNextColorIndex(index, list)
   local listLength = #list
-  for i = 1, listLength, 1 do
-    if i == index then
-      local nextColorVal = (index % listLength) + 1
-      while list[nextColorVal] == BLINDS_STR do
-        nextColorVal = (nextColorVal % listLength) + 1
-      end
-      return nextColorVal
-    end
+  if isEmpty(list) or index > listLength then
+    return nil
   end
+  local nextColorIdx = (index % listLength) + 1
+  while list[nextColorIdx] == BLINDS_STR do
+    nextColorIdx = (nextColorIdx % listLength) + 1
+  end
+  return nextColorIdx
 end
 
----Returns the index of the player seated counter-clockwise from given index
+---Returns the index of the player seated counter-clockwise from given index, will never return `BLINDS_STR` index
 ---@param index integer
 ---@param list table<"Colors">
----@return integer<index>
-function getPreviousColorValInList(index, list)
+---@return integer<index>|nil
+function getPreviousColorIndex(index, list)
   local listLength = #list
-  for i = listLength, 1, -1 do
-    if i == index then
-      local previousColorVal = (index - 2) % listLength + 1
-      while list[previousColorVal] == BLINDS_STR do
-        previousColorVal = (previousColorVal - 2) % listLength + 1
-      end
-      return previousColorVal
-    end
+  if isEmpty(list) or index > listLength then
+    return nil
   end
+  local previousColorIdx = (index - 2) % listLength + 1
+  while list[previousColorIdx] == BLINDS_STR do
+    previousColorIdx = (previousColorIdx - 2) % listLength + 1
+  end
+  return previousColorIdx
 end
 
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
@@ -763,7 +761,7 @@ end
 ---Moves deck and dealer chip in front of the next clockwise seated player<br>
 ---Needs to be ran from within a coroutine
 function moveDeckAndDealerChip()
-  local rotationAngle, playerPos = getItemMoveData(GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorVal])
+  local rotationAngle, playerPos = getItemMoveData(GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx])
   local rotatedChipOffset = SPAWN_POS.dealerChip:copy():rotateOver('y', rotationAngle)
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = STATIC_OBJECT.dealerChip.getRotation()
@@ -1002,7 +1000,7 @@ function printGameSettings()
   end
 
   GLOBAL.playerCount = #GLOBAL.sortedSeatedPlayers
-  GLOBAL.dealerColorVal = getColorVal(GLOBAL.gameSetupPlayer, GLOBAL.sortedSeatedPlayers)
+  GLOBAL.dealerColorIdx = getColorIndex(GLOBAL.gameSetupPlayer, GLOBAL.sortedSeatedPlayers)
 
   if SETTINGS.dealerSitsOut and GLOBAL.playerCount == 6 then
     stateChangeDealerSitsOut(SETTINGS.dealerSitsOut)
@@ -1203,14 +1201,14 @@ end
 function calculateDealOrder()
   GLOBAL.dealOrder = copyTable(GLOBAL.sortedSeatedPlayers)
   if GLOBAL.playerCount == #GLOBAL.sortedSeatedPlayers then
-    local blindVal = GLOBAL.dealerColorVal + 1
+    local blindVal = GLOBAL.dealerColorIdx + 1
     if blindVal > #GLOBAL.dealOrder + 1 then
       blindVal = 1
     end
     table.insert(GLOBAL.dealOrder, blindVal, BLINDS_STR)
   else
-    table.remove(GLOBAL.dealOrder, GLOBAL.dealerColorVal)
-    table.insert(GLOBAL.dealOrder, GLOBAL.dealerColorVal, BLINDS_STR)
+    table.remove(GLOBAL.dealOrder, GLOBAL.dealerColorIdx)
+    table.insert(GLOBAL.dealOrder, GLOBAL.dealerColorIdx, BLINDS_STR)
   end
 end
 
@@ -1257,7 +1255,7 @@ function dealCardsCoroutine()
 
   verifyCardCount()
   if not FLAG.firstDealOfGame then
-    GLOBAL.dealerColorVal = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
+    GLOBAL.dealerColorIdx = getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
     if len(getLooseCards(SCRIPT_ZONE.table)) > 1 then
       rebuildDeck()
     end
@@ -1274,7 +1272,7 @@ function dealCardsCoroutine()
   flipDeck(SCRIPT_ZONE.table)
   pause(0.35)
 
-  local orderIdx = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.dealOrder)
+  local orderIdx = getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.dealOrder)
   local counter = 0
 
   local deck = getDeck(SCRIPT_ZONE.table)
@@ -1360,10 +1358,10 @@ end
 ---Prints a message if player passes or is forced to pick
 ---@param player object<eventTrigger>
 function passEvent(player)
-  if not GLOBAL.dealerColorVal then
+  if not GLOBAL.dealerColorIdx then
     return
   end
-  local dealer = getPlayerObject(GLOBAL.dealerColorVal)
+  local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
   if GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers then
     if player.color == dealer.color then
       broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
@@ -1383,7 +1381,7 @@ function passEvent(player)
       end
     else
       broadcastToAll(player.steam_name .. " passed")
-      local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[getPreviousColorValInList(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)]
+      local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[getPreviousColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)]
       if player.color == rightOfDealerColor then
         if CALL_SETTINGS.leaster then
           broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealer.color)
@@ -1401,7 +1399,7 @@ end
 ---@param player object<eventTrigger>
 function pickBlindsEvent(player)
   if GLOBAL.playerCount == 5 and #GLOBAL.sortedSeatedPlayers == 6 then
-    if player.color == getPlayerObject(GLOBAL.dealerColorVal).color then
+    if player.color == getPlayerObject(GLOBAL.dealerColorIdx).color then
       broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
       return
     end
@@ -1444,7 +1442,7 @@ function pickBlindsCoroutine()
   showSetBuriedButton()
 
   if SETTINGS.jdPartner then
-    local dealer = getPlayerObject(GLOBAL.dealerColorVal)
+    local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
     if pickingPlayer.color == dealer.color then
       pause(1.5)
       if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
@@ -1628,7 +1626,7 @@ function setBuriedEvent(player)
 end
 
 function setLeadOutPlayer()
-  local leadOutVal = getNextColorValInList(GLOBAL.dealerColorVal, GLOBAL.sortedSeatedPlayers)
+  local leadOutVal = getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
   local leadOutPlayer = getPlayerObject(leadOutVal)
   GLOBAL.leadOutPlayer = leadOutPlayer.color
   if not DEBUG then
@@ -2567,7 +2565,7 @@ function callPartnerEvent(player)
         return
       end
       if SETTINGS.jdPartner then
-        local dealer = getPlayerObject(GLOBAL.dealerColorVal)
+        local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
         if player.color == dealer.color and player.color == GLOBAL.pickingPlayer then
           if doesPlayerPossessCard(player, "Jack of Diamonds") then
             toggleWindowVisibility(player, "playAloneWindow")
@@ -2613,7 +2611,7 @@ function playerCallsEvent(player, val, id)
   end
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   if id == "Leaster" then
-    local dealer = getPlayerObject(GLOBAL.dealerColorVal)
+    local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
     if player.color == dealer.color and checkCardCount(SCRIPT_ZONE.center, 2) then
       broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
       GLOBAL.pickingPlayer = player.color
