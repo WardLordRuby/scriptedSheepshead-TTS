@@ -348,24 +348,25 @@ function copyTable(list)
   return JSON.decode(JSON.encode(list))
 end
 
----Copys input table and removes input color, if color not found returns original table
----@param color string<"Color">
----@param list table<"Colors">
----@return table<"Colors">
-function removeColorFromList(color, list)
-  local currentIndex
-  local modifiedList = copyTable(list)
-  for i, colors in ipairs(modifiedList) do
-    if colors == color then
-      currentIndex = i
+---Copys input table and removes the first matching value, if value not found returns original table<br>
+---Table must have numerical indexes
+---@param remove T
+---@param from table<T>
+---@return table<T>
+function removeFromClonedList(remove, from)
+  local foundIdx
+  for i, v in ipairs(from) do
+    if v == remove then
+      foundIdx = i
       break
     end
   end
-  if currentIndex then
-    table.remove(modifiedList, currentIndex)
+  if foundIdx then
+    local modifiedList = copyTable(from)
+    table.remove(modifiedList, foundIdx)
     return modifiedList
   end
-  return list
+  return from
 end
 
 ---@param color string<"Color">
@@ -526,24 +527,27 @@ end
 ---Needs to be ran from within a coroutine
 function verifyCardCount()
   local cardCount = countCards(SCRIPT_ZONE.table)
-
+  local modifyDeck, deckModifiable, correctCount
   if GLOBAL.playerCount == 4 then
-    if cardCount ~= 30 then
-      local deck = getDeck(SCRIPT_ZONE.table)
-      if deck and deck.getQuantity() == 32 and cardCount == 32 then
-        removeBlackSevens(deck)
-      else
-        respawnDeckCoroutine()
-      end
+    correctCount = 30
+    modifyDeck = removeBlackSevens
+    deckModifiable = function(deck)
+      return deck and deck.getQuantity() == 32 and cardCount == 32
     end
   else
-    if cardCount ~= 32 then
-      local deck = getDeck(SCRIPT_ZONE.table)
-      if deck and deck.getQuantity() == 30 and cardCount == 30 and GLOBAL.blackSevens then
-        returnDecktoPiquet(deck)
-      else
-        respawnDeckCoroutine()
-      end
+    correctCount = 32
+    modifyDeck = returnDecktoPiquet
+    deckModifiable = function(deck)
+      return deck and deck.getQuantity() == 30 and cardCount == 30 and GLOBAL.blackSevens
+    end
+  end
+
+  if cardCount ~= correctCount then
+    local deck = getDeck(SCRIPT_ZONE.table)
+    if deckModifiable(deck) then
+      modifyDeck(deck)
+    else
+      respawnDeckCoroutine()
     end
   end
 end
@@ -563,15 +567,16 @@ function getPlayerObject(colorOrIdx)
   return Player[colorOrIdx]
 end
 
----Returns the index location of a color in a list
----@param color string<"Color">
----@param list table<"Colors">
-function getColorIndex(color, list)
-  for i, colors in ipairs(list) do
-    if colors == color then
+---Searches table for given input and return the index value if found, otherwise returns `nil`
+---@param find T
+---@param list table<T>|nil
+function getIndex(find, list)
+  for i, v in ipairs(list) do
+    if v == find then
       return i
     end
   end
+  return nil
 end
 
 ---Returns the index of the player seated clockwise from given index, will never return `BLINDS_STR` index
@@ -1000,7 +1005,7 @@ function printGameSettings()
   end
 
   GLOBAL.playerCount = #GLOBAL.sortedSeatedPlayers
-  GLOBAL.dealerColorIdx = getColorIndex(GLOBAL.gameSetupPlayer, GLOBAL.sortedSeatedPlayers)
+  GLOBAL.dealerColorIdx = getIndex(GLOBAL.gameSetupPlayer, GLOBAL.sortedSeatedPlayers)
 
   if SETTINGS.dealerSitsOut and GLOBAL.playerCount == 6 then
     stateChangeDealerSitsOut(SETTINGS.dealerSitsOut)
@@ -1673,7 +1678,7 @@ function onObjectEnterZone(zone, object)
   --Makes sure other players can not see what cards the picker is burying
   if FLAG.cardsToBeBuried then
     if zone == TRICK_ZONE[GLOBAL.pickingPlayer] and object.type == "Card" then
-      object.setHiddenFrom(removeColorFromList(GLOBAL.pickingPlayer, GLOBAL.sortedSeatedPlayers))
+      object.setHiddenFrom(removeFromClonedList(GLOBAL.pickingPlayer, GLOBAL.sortedSeatedPlayers))
     end
   end
 end
