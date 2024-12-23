@@ -2047,7 +2047,7 @@ function startTrickCount(tCounterGUID, pCounterGUID)
   for zoneGUID, counterGUID in pairs(GLOBAL.counterGUIDs) do
     table.insert(COUNTER_OBJ_SETS, {z = getObjectFromGUID(zoneGUID), c = getObjectFromGUID(counterGUID)})
   end
-  TRICK_COUNTER_TIMER = Wait.time(countTricks, 1)
+  startCounterLoop()
 end
 
 ---------------------------------------------------------------
@@ -2148,12 +2148,11 @@ function displayResults()
       set.c.setColorTint({ 0, 0, 0 })
     end
   end
-  trickCountStart()
+  startCounterLoop()
 end
 
----Restarts loop back up at countTricks
-function trickCountStart()
-  trickCountStop()
+---Internal use only, use `startTrickCount` to properly init counter variables
+function startCounterLoop()
   TRICK_COUNTER_TIMER = Wait.time(countTricks, 1)
 end
 
