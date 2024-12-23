@@ -669,7 +669,7 @@ function doesPlayerPossessCard(player, cardName)
   return false
 end
 
----Searches player HAND_ZONE and TRICK_ZONE
+---Searches `player`'s `HAND_ZONE` and `TRICK_ZONE`
 ---@param player object
 ---@return table<"cardNames">
 function getPlayerCards(player)
@@ -746,10 +746,11 @@ function flipCards(zone)
   end
 end
 
----Called to remove items from a zone. Must be called from within a coroutine
+---Called to remove items from a zone. Must be called from within a coroutine if `not skipAnimation`
 ---@param zone object<zone>
 ---@param items table<"Types">|string<"Type">
-function resetBoard(zone, items)
+---@param skipAnimation bool
+function removeItem(zone, items, skipAnimation)
   if type(items) == "string" then
     items = {items}
   end
@@ -758,7 +759,9 @@ function resetBoard(zone, items)
     local object = zoneObjects[i]
     if tableContains(items, object.type) then
       object.destruct()
-      pause(0.06)
+      if not skipAnimation then
+        pause(0.06)        
+      end
     end
   end
 end
@@ -842,7 +845,7 @@ function onChat(message, player)
     elseif command == "rules" then
       getRuleBook(player.color)
     elseif command == "hiderules" then
-      hideRuleBook()
+      removeItem(SCRIPT_ZONE.table, "Tile", true)
     elseif command == "respawndeck" then
       if adminCheck(player) then
         respawnDeck()
@@ -924,17 +927,6 @@ function getRuleBook(color)
   })
 end
 
----Deletes all rulebooks from table
-function hideRuleBook()
-  local tableObjects = SCRIPT_ZONE.table.getObjects()
-  for i = #tableObjects, 1, -1 do
-    local tableObject = tableObjects[i]
-    if tableObject.type == "Tile" then
-      tableObject.destruct()
-    end
-  end
-end
-
 ---Removes any cards on the table and respawns the deck
 function respawnDeck()
   if not safeToContinue() then
@@ -947,7 +939,7 @@ end
 function respawnDeckCoroutine()
   local remainingTableCards = getLooseCards(SCRIPT_ZONE.table)
   if not isEmpty(remainingTableCards) then
-    resetBoard(SCRIPT_ZONE.table, {"Card", "Deck"})
+    removeItem(SCRIPT_ZONE.table, {"Card", "Deck"})
   end
   STATIC_OBJECT.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
@@ -1152,7 +1144,7 @@ function setupGameCoroutine()
     pause(6)
     if FLAG.continue then
       FLAG.lookForPlayerText, FLAG.continue = false, false
-      resetBoard(SCRIPT_ZONE.table, "Chip")
+      removeItem(SCRIPT_ZONE.table, "Chip")
     else
       FLAG.lookForPlayerText, FLAG.continue, FLAG.gameSetup.inProgress = false, false, false
       print("[21AF21]New game was not selected.[-]")
