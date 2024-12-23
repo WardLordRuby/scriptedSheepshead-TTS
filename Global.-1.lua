@@ -1018,8 +1018,6 @@ function printGameSettings()
 
   if SETTINGS.threeHanded and GLOBAL.playerCount ~= 3 then
     updateRules("threeHanded", false)
-    UI.setAttribute("settingsButtonjdPartnerOn", "tooltip", "")
-    UI.setAttribute("settingsButtonjdPartnerOff", "tooltip", "")
   end
 
   prepCards()
@@ -2155,9 +2153,7 @@ end
 
 ---Restarts loop back up at countTricks
 function trickCountStart()
-  if TRICK_COUNTER_TIMER then
-    Wait.stop(TRICK_COUNTER_TIMER); TRICK_COUNTER_TIMER = nil
-  end
+  trickCountStop()
   TRICK_COUNTER_TIMER = Wait.time(countTricks, 1)
 end
 
@@ -2494,6 +2490,7 @@ function stateChangeThreeHanded(bool)
         Wait.time(function() toggleSetting(player, val, "turnOffCalls") end, 3)
       end
     end
+    UI.setAttribute(jdPartnerID, "tooltip", "")
     updateRules("jdPartner", jdPartner)
   end
 end
@@ -2704,7 +2701,7 @@ function buildPartnerChoices(player)
     --compile list of valid partnerChoices and valid holdCards
     if not isEmpty(failSuits) then
       for _, suit in ipairs(failSuits) do
-        table.insert(partnerChoices, card .. " of " .. suit)
+        table.insert(partnerChoices, card .. "-of-" .. suit)
       end
       if card == "Ace" then
         for _, cardName in ipairs(failCards) do
@@ -2780,7 +2777,7 @@ function removeHeldCards(notPartnerChoices, failSuits)
   return failSuits
 end
 
----Finds the valid partnerChoices for when unknown event is triggered and passes them to setActivePartnerButtons
+---Finds the valid partnerChoices for when unknown event is triggered and passes them to `setActivePartnerButtons`
 ---@param player object
 function unknownPartnerChoices(player)
   local failSuits = {"Hearts", "Spades", "Clubs"}
@@ -2788,7 +2785,7 @@ function unknownPartnerChoices(player)
   failSuits = removeHeldCards(notPartnerChoices, failSuits)
   local partnerChoices = {}
   for _, suit in ipairs(failSuits) do
-    table.insert(partnerChoices, card .. " of " .. suit)
+    table.insert(partnerChoices, card .. "-of-" .. suit)
   end
   setActivePartnerButtons(partnerChoices)
   if DEBUG then
@@ -2797,41 +2794,34 @@ function unknownPartnerChoices(player)
   end
 end
 
+---Input `list` must be formatted as "Card-of-Suit"
 ---@param list table<"cardNames">
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
-  resetSelectPartnerWindow(selectPartnerWindow, xmlTable)
-  xmlTable = UI.getXmlTable()
-  local formattedList = {}
-  for _, cardName in ipairs(list) do
-    local formattedName = cardName:gsub(" ", "-")
-    table.insert(formattedList, formattedName)
-  end
-  for _, childrenButtons in pairs(xmlTable[selectPartnerWindow].children[1].children) do
-    local buttonID = childrenButtons.attributes.id
-    if tableContains(formattedList, buttonID) then
-      UI.setAttribute(buttonID, "active", "true")
+  resetActiveChildern(selectPartnerWindow)
+  for _, button in pairs(selectPartnerWindow.children[1].children) do
+    if tableContains(list, button.attributes.id) then
+      UI.setAttribute(button.attributes.id, "active", "true")
     end
   end
 end
 
 ---@param id string
 ---@param table xmlTable
----@return integer
+---@return xmlTableElement
 function findPanelElement(id, table)
   for i, element in ipairs(table) do
     if element.tag == "Panel" and element.attributes.id == id then
-      return i
+      return table[i]
     end
   end
 end
 
----Hides all cardButtons in selectPartnerWindow
----@param id string
----@param table xmlTable
-function resetSelectPartnerWindow(id, table)
-  for _, childrenButtons in pairs(table[id].children[1].children) do
+---Sets the `"active"` attribute to false for all childen of the input `panel` 
+---@param panel xmlTableElement
+function resetActiveChildern(panel)
+  for _, childrenButtons in pairs(panel.children[1].children) do
     if childrenButtons.attributes.active == "true" then
       UI.setAttribute(childrenButtons.attributes.id, "active", "false")
     end
