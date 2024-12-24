@@ -552,21 +552,6 @@ function verifyCardCount()
   end
 end
 
----Can only be called after gameSetup has been ran. Aka: `GLOBAL.sortedSeatedPlayers ~= nil`<br>
----If you know input is always a color prefer to use `Player["color"]` instead of this fn call
----@param colorOrIdx string<"Color">|integer<index>
----@return object<player>
-function getPlayerObject(colorOrIdx)
-  if colorOrIdx == 0 then
-    return Player[GLOBAL.sortedSeatedPlayers[#GLOBAL.sortedSeatedPlayers]]
-  elseif colorOrIdx == #GLOBAL.sortedSeatedPlayers + 1 then
-    return Player[GLOBAL.sortedSeatedPlayers[1]]
-  elseif tonumber(colorOrIdx) then
-    return Player[GLOBAL.sortedSeatedPlayers[colorOrIdx]]
-  end
-  return Player[colorOrIdx]
-end
-
 ---Searches table for given input and return the index value if found, otherwise returns `nil`
 ---@param find T
 ---@param list table<T>|nil
@@ -1357,7 +1342,7 @@ function passEvent(player)
   if not GLOBAL.dealerColorIdx then
     return
   end
-  local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
+  local dealer = Player[GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]]
   if GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers then
     if player.color == dealer.color then
       broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
@@ -1395,7 +1380,7 @@ end
 ---@param player object<eventTrigger>
 function pickBlindsEvent(player)
   if GLOBAL.playerCount == 5 and #GLOBAL.sortedSeatedPlayers == 6 then
-    if player.color == getPlayerObject(GLOBAL.dealerColorIdx).color then
+    if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
       return
     end
@@ -1438,8 +1423,7 @@ function pickBlindsCoroutine()
   showSetBuriedButton()
 
   if SETTINGS.jdPartner then
-    local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
-    if pickingPlayer.color == dealer.color then
+    if pickingPlayer.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       pause(1.5)
       if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
         if not string.find(UI.getAttribute("playAloneWindow", "visibility"), pickingPlayer.color) then
@@ -1622,8 +1606,9 @@ function setBuriedEvent(player)
 end
 
 function setLeadOutPlayer()
-  local leadOutVal = getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
-  local leadOutPlayer = getPlayerObject(leadOutVal)
+  local leadOutPlayer = Player[GLOBAL.sortedSeatedPlayers[
+    getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
+  ]]
   GLOBAL.leadOutPlayer = leadOutPlayer.color
   if not DEBUG then
     broadcastToAll("[21AF21]" .. leadOutPlayer.steam_name .. " leads out.[-]")
@@ -2551,7 +2536,6 @@ function callPartnerEvent(player)
   if not GLOBAL.pickingPlayer then
     return
   end
-  local player = player
   Wait.time( --0.13s delay allows button click sound to be played
     function() --Show call partner window for selected parter mode
       if GLOBAL.leadOutPlayer then
@@ -2559,8 +2543,8 @@ function callPartnerEvent(player)
         return
       end
       if SETTINGS.jdPartner then
-        local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
-        if player.color == dealer.color and player.color == GLOBAL.pickingPlayer then
+        local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
+        if player.color == dealerColor and player.color == GLOBAL.pickingPlayer then
           if doesPlayerPossessCard(player, "Jack of Diamonds") then
             toggleWindowVisibility(player, "playAloneWindow")
           else
@@ -2605,13 +2589,14 @@ function playerCallsEvent(player, val, id)
   end
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   if id == "Leaster" then
-    local dealer = getPlayerObject(GLOBAL.dealerColorIdx)
-    if player.color == dealer.color and checkCardCount(SCRIPT_ZONE.center, 2) then
-      broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
-      GLOBAL.pickingPlayer = player.color
-      startLuaCoroutine(self, "startLeasterHandCoroutine")
-    elseif player.color == dealer.color and countCards(SCRIPT_ZONE.center) ~= 2 then
-      broadcastToColor("[DC0000] You can only call leaster before you pick the blinds[-]", player.color)
+    if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
+      if checkCardCount(SCRIPT_ZONE.center, 2) then
+        broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
+        GLOBAL.pickingPlayer = player.color
+        startLuaCoroutine(self, "startLeasterHandCoroutine")
+      else
+        broadcastToColor("[DC0000] You can only call leaster before you pick the blinds[-]", player.color)
+      end
     else
       broadcastToColor("[DC0000] You can only call leaster if you are forced to pick[-]", player.color)
     end
