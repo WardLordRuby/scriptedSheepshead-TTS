@@ -630,17 +630,6 @@ function countCards(zone)
   return cardCount, faceDownCount
 end
 
----Checks the given card count of a given zone, returns true or false
----@param zone object<zone>
----@param count integer
----@return boolean
-function checkCardCount(zone, count)
-  if countCards(zone) == count then
-    return true
-  end
-  return false
-end
-
 ---@param player object<player>
 ---@param cardName string
 ---@return boolean
@@ -1349,7 +1338,7 @@ function passEvent(player)
       return
     end
   end
-  if not FLAG.dealInProgress and checkCardCount(SCRIPT_ZONE.center, 2) then
+  if not FLAG.dealInProgress and countCards(SCRIPT_ZONE.center) == 2 then
     if player.color == dealer.color then
       if not DEBUG then
         if CALL_SETTINGS.leaster then
@@ -1557,7 +1546,7 @@ function setBuriedEvent(player)
   if player.color ~= GLOBAL.pickingPlayer then
     return
   end
-  if not checkCardCount(TRICK_ZONE[GLOBAL.pickingPlayer], 2) then
+  if countCards(TRICK_ZONE[GLOBAL.pickingPlayer]) ~= 2 then
     return
   end
   if SETTINGS.jdPartner == false then
@@ -2590,7 +2579,7 @@ function playerCallsEvent(player, val, id)
   Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
   if id == "Leaster" then
     if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
-      if checkCardCount(SCRIPT_ZONE.center, 2) then
+      if countCards(SCRIPT_ZONE.center) == 2 then
         broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
         GLOBAL.pickingPlayer = player.color
         startLuaCoroutine(self, "startLeasterHandCoroutine")
