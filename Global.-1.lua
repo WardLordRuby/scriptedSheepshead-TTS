@@ -1272,6 +1272,7 @@ function dealCardsCoroutine()
 
   local deck = getDeck(SCRIPT_ZONE.table)
   local rotationVal = deck.getRotation()
+  local dealPostions = #GLOBAL.dealOrder
 
   flipDeck(SCRIPT_ZONE.table)
   pause(0.15)
@@ -1280,8 +1281,8 @@ function dealCardsCoroutine()
 
   while deck ~= nil do
     dealLogic(
-      GLOBAL.dealOrder[((orderIdx - 1) % #GLOBAL.dealOrder) + 1],
-      math.floor(counter / #GLOBAL.dealOrder) + 1,
+      GLOBAL.dealOrder[((orderIdx - 1) % dealPostions) + 1],
+      math.floor(counter / dealPostions) + 1,
       deck,
       rotationVal
     )
@@ -1895,9 +1896,11 @@ end
 function quickSearch(objectName, isTrump)
   local strengthList
   if isTrump then
-    strengthList = {"Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
-      "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs", "Queen of Diamonds",
-      "Queen of Hearts", "Queen of Spades", "Queen of Clubs"}
+    strengthList = {
+      "Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
+      "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs",
+      "Queen of Diamonds", "Queen of Hearts", "Queen of Spades", "Queen of Clubs"
+    }
   else
     strengthList = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
   end
@@ -2467,19 +2470,17 @@ function stateChangeThreeHanded(bool)
     end
     UI.setAttribute(jdPartnerID, "tooltip", "Can not change setting, No partner playing 3 handed")
   else
-    if SETTINGS.jdPartner == nil then
-      local callCount = 0
-      for _, bool in pairs(CALL_SETTINGS) do
-        if bool then
-          callCount = callCount + 1
-          if callCount > 1 then
-            break
-          end
+    local callCount = 0
+    for _, callEnabled in pairs(CALL_SETTINGS) do
+      if callEnabled then
+        callCount = callCount + 1
+        if callCount > 1 then
+          break
         end
       end
-      if callCount == 1 then
-        Wait.time(function() toggleSetting(player, val, "turnOffCalls") end, 3)
-      end
+    end
+    if callCount == 1 then
+      Wait.time(function() toggleSetting(player, val, "turnOffCalls") end, 3)
     end
     UI.setAttribute(jdPartnerID, "tooltip", "")
     updateRules("jdPartner", jdPartner)
