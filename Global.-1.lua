@@ -273,13 +273,12 @@ function onSave()
     flags = FLAG,
     globals = GLOBAL
   }
-
   return JSON.encode(state)
 end
 
 --[[Utility functions]]--
 
----Checks dealInProgress, trick.handOut, gameSetup.inProgress, selectingPartner, and fnRunning
+---Checks `dealInProgress`, `trick.handOut`, `gameSetup.inProgress`, `selectingPartner`, and `fnRunning`
 ---@return boolean
 function safeToContinue()
   if FLAG.dealInProgress
@@ -723,7 +722,7 @@ end
 ---Called to remove items from a zone. Must be called from within a coroutine if `not skipAnimation`
 ---@param zone object<zone>
 ---@param items table<"Types">|string<"Type">
----@param skipAnimation bool
+---@param skipAnimation option_bool
 function removeItem(zone, items, skipAnimation)
   if type(items) == "string" then
     items = {items}
@@ -734,7 +733,7 @@ function removeItem(zone, items, skipAnimation)
     if tableContains(items, object.type) then
       object.destruct()
       if not skipAnimation then
-        pause(0.06)        
+        pause(0.06)
       end
     end
   end
@@ -1558,25 +1557,21 @@ function setBuriedEvent(player)
   end
   local buriedCards = getLooseCards(TRICK_ZONE[GLOBAL.pickingPlayer])
   if GLOBAL.holdCards then --callAnAce active, make sure holdCard(s) is not in burried cards
-    if #GLOBAL.holdCards == 2 then
+    local holdCardsLen = #GLOBAL.holdCards
+    if holdCardsLen < 3 then
       local count = 0
       for _, card in ipairs(buriedCards) do
-        for _, cardName in ipairs(GLOBAL.holdCards) do
-          if card.getName() == cardName then
-            count = count + 1
-          end
+        if tableContains(GLOBAL.holdCards, card.getName()) then
+          count = count + 1
         end
       end
-      if count == 2 then
+      if holdCardsLen == 2 and count == 2 then
         broadcastToColor("[DC0000]You can not bury both of your hold cards", player.color)
         return
       end
-    elseif #GLOBAL.holdCards == 1 then
-      for _, card in ipairs(buriedCards) do
-        if card.getName() == GLOBAL.holdCards[1] then
-          broadcastToColor("[DC0000]You can not bury your hold card", player.color)
-          return
-        end
+      if holdCardsLen == 1 and count == 1 then
+        broadcastToColor("[DC0000]You can not bury your hold card", player.color)
+        return
       end
     end
   end
@@ -1723,10 +1718,8 @@ function removeCardFromTrick(indexToRemove, indexToUpdate)
 
   table.remove(GLOBAL.currentTrick, indexToRemove)
   for i = 2, #GLOBAL.currentTrick do
-    if indexToUpdate then
-      if highCardName == GLOBAL.currentTrick[i].cardName then
-        GLOBAL.currentTrick[1].highStrengthIndex = i
-      end
+    if indexToUpdate and highCardName == GLOBAL.currentTrick[i].cardName then
+      GLOBAL.currentTrick[1].highStrengthIndex = i
     end
     GLOBAL.currentTrick[i].index = i
   end
@@ -1741,11 +1734,12 @@ function reCalculateCurrentTrick(indexToRemove)
   end
   --Remove card from trick and find the high card in remaining cards
   removeCardFromTrick(indexToRemove)
-  if #GLOBAL.currentTrick > 1 then
+  local currentTrickLen = #GLOBAL.currentTrick
+  if currentTrickLen > 1 then
     GLOBAL.currentTrick[1].currentHighStrength = 1
     setLeadOutCardProperties(GLOBAL.currentTrick[2].cardName, isTrump(GLOBAL.currentTrick[2].cardName))
-    if #GLOBAL.currentTrick > 2 then
-      for i = 3, #GLOBAL.currentTrick do
+    if currentTrickLen > 2 then
+      for i = 3, currentTrickLen do
         calculateCardData(i, isTrump(GLOBAL.currentTrick[i].cardName))
       end
     end
@@ -1908,7 +1902,7 @@ function calculateTrickWinner()
   local trickWinner = Player[GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].playedByColor]
   GLOBAL.leadOutPlayer = trickWinner.color
   broadcastToAll(
-    "[21AF21]" .. trickWinner.steam_name .. " takes the trick with " .. 
+    "[21AF21]" .. trickWinner.steam_name .. " takes the trick with " ..
     GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]"
   )
   startLuaCoroutine(self, "giveTrickToWinnerCoroutine")
@@ -2761,7 +2755,7 @@ function unknownPartnerChoices(player)
 end
 
 ---Input `list` must be formatted as "Card-of-Suit"
----@param list table<"cardNames">
+---@param list table<"Card-of-Suit">
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
@@ -2784,7 +2778,7 @@ function findPanelElement(id, table)
   end
 end
 
----Sets the `"active"` attribute to false for all childen of the input `panel` 
+---Sets the `"active"` attribute to `"false"` for all childen of the input `panel`
 ---@param panel xmlTableElement
 function resetActiveChildern(panel)
   for _, childrenButtons in pairs(panel.children[1].children) do
