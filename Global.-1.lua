@@ -349,9 +349,9 @@ end
 
 ---Copys input table and removes the first matching value, if value not found returns original table<br>
 ---Table must have numerical indexes
----@param remove T
----@param from table<T>
----@return table<T>
+---@param remove any
+---@param from table<any>
+---@return table<any>
 function removeFromClonedList(remove, from)
   local foundIdx
   for i, v in ipairs(from) do
@@ -552,8 +552,8 @@ function verifyCardCount()
 end
 
 ---Searches table for given input and return the index value if found, otherwise returns `nil`
----@param find T
----@param list table<T>|nil
+---@param find any
+---@param list table<any>|nil
 function getIndex(find, list)
   for i, v in ipairs(list) do
     if v == find then
