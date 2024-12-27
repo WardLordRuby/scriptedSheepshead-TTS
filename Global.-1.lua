@@ -499,58 +499,6 @@ function getLooseCards(zone, returnFirstDeck)
   return nil
 end
 
----prepCards will group and center all cards and respawn the deck if any error is encountered<br>
----Needs to be ran from within a coroutine
-function prepCards()
-  local looseCards = getLooseCards(SCRIPT_ZONE.table)
-  if not looseCards then
-    respawnDeckCoroutine()
-    return
-  end
-
-  if #looseCards > 1 then
-    group(looseCards)
-    pause(0.5)
-    local deck = getDeck(SCRIPT_ZONE.table)
-    if not deck then
-      respawnDeckCoroutine()
-      return
-    end
-    deck.setPosition(POS.center)
-    deck.setRotation(POS.defaultDeckRotation)
-    pause(1)
-  end
-end
-
----Just checks to make sure cards are all there<br>
----Needs to be ran from within a coroutine
-function verifyCardCount()
-  local cardCount = countCards(SCRIPT_ZONE.table)
-  local modifyDeck, deckModifiable, correctCount
-  if GLOBAL.playerCount == 4 then
-    correctCount = 30
-    modifyDeck = removeBlackSevens
-    deckModifiable = function(deck)
-      return deck and deck.getQuantity() == 32 and cardCount == 32
-    end
-  else
-    correctCount = 32
-    modifyDeck = returnDecktoPiquet
-    deckModifiable = function(deck)
-      return deck and deck.getQuantity() == 30 and cardCount == 30 and GLOBAL.blackSevens
-    end
-  end
-
-  if cardCount ~= correctCount then
-    local deck = getDeck(SCRIPT_ZONE.table)
-    if deckModifiable(deck) then
-      modifyDeck(deck)
-    else
-      respawnDeckCoroutine()
-    end
-  end
-end
-
 ---Searches table for given input and return the index value if found, otherwise returns `nil`
 ---@param find any
 ---@param list table<any>|nil
@@ -694,6 +642,11 @@ function getItemMoveData(color)
   return ROTATION.color[color], Player[color].getHandTransform().position
 end
 
+---Prints `CURRENT_RULES` to the screen
+function displayRules()
+  setNotes(table.concat(CURRENT_RULES, ""))
+end
+
 --[[Object manipulation]]--
 
 ---Checks if a deck in the given zone is face up, if so it flips the deck<br>
@@ -755,6 +708,58 @@ function moveDeckAndDealerChip()
   STATIC_OBJECT.dealerChip.setPositionSmooth(playerPos + rotatedChipOffset)
   deck.setRotationSmooth({ deck.getRotation().x, rotationAngle, POS.defaultDeckRotation.z })
   deck.setPositionSmooth(playerPos + rotatedDeckOffset)
+end
+
+---prepCards will group and center all cards and respawn the deck if any error is encountered<br>
+---Needs to be ran from within a coroutine
+function prepCards()
+  local looseCards = getLooseCards(SCRIPT_ZONE.table)
+  if not looseCards then
+    respawnDeckCoroutine()
+    return
+  end
+
+  if #looseCards > 1 then
+    group(looseCards)
+    pause(0.5)
+    local deck = getDeck(SCRIPT_ZONE.table)
+    if not deck then
+      respawnDeckCoroutine()
+      return
+    end
+    deck.setPosition(POS.center)
+    deck.setRotation(POS.defaultDeckRotation)
+    pause(1)
+  end
+end
+
+---Just checks to make sure cards are all there<br>
+---Needs to be ran from within a coroutine
+function verifyCardCount()
+  local cardCount = countCards(SCRIPT_ZONE.table)
+  local modifyDeck, deckModifiable, correctCount
+  if GLOBAL.playerCount == 4 then
+    correctCount = 30
+    modifyDeck = removeBlackSevens
+    deckModifiable = function(deck)
+      return deck and deck.getQuantity() == 32 and cardCount == 32
+    end
+  else
+    correctCount = 32
+    modifyDeck = returnDecktoPiquet
+    deckModifiable = function(deck)
+      return deck and deck.getQuantity() == 30 and cardCount == 30 and GLOBAL.blackSevens
+    end
+  end
+
+  if cardCount ~= correctCount then
+    local deck = getDeck(SCRIPT_ZONE.table)
+    if deckModifiable(deck) then
+      modifyDeck(deck)
+    else
+      respawnDeckCoroutine()
+    end
+  end
 end
 
 ---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
@@ -2190,41 +2195,6 @@ end
 
 --[[END OF CARD SCORING]]--
 
-CURRENT_RULES = {
-  "\n\n\n\n\n\n\n",
-  "[21AF21]Welcome to Scripted Sheepshead!\n",
-  "By: WardLordRuby           [-]\n",
-  "[b415ff]Features:                   [-]\n",
-  "Will Auto Adjust for 3-6 Players\n",
-  "Scripted Dealing, Picking,     \n",
-  "Taking Tricks, Burying        \n",
-  "Card Counters for Each Team \n",
-  "Custom Game Settings       \n",
-  "Custom Schrute Silver Coins   \n",
-  "Gameplay Rules and Tips    \n",
-  "Use ([fc8803].help[-]) for Commands    \n\n",
-  "[b415ff]Current Sheepshead Rules:   [-]\n",
-  "Jack of Diamonds Partner    \n",
-  "Dealer Pick your Own       \n",
-  "Can Call if Forced to Pick    \n",
-  "6 Handed - Normal        \n",
-  "Extra Calls Disabled       "
-}
-
-CHAT_COMMANDS = {
-  "[b415ff]Sheepshead Console Help[-]\n",
-  "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]\n",
-  "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]\n",
-  "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck][-]\n",
-  "[21AF21].spawnchips[-] [Gives all seated players 15 additional chips][-]\n",
-  "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
-}
-
----Prints `CURRENT_RULES` to the screen
-function displayRules()
-  setNotes(table.concat(CURRENT_RULES, ""))
-end
-
 --[[Start of functions used by settings window]]--
 
 ---Updates position of buttons for all enabled calls and<br>
@@ -2254,36 +2224,14 @@ end
 ---@param rule string<"ruleName">
 ---@param bool boolean
 function updateRules(rule, bool)
-  local ruleTable = {
-    dealerSitsOut = {
-      [true] = "6 Handed - Dealer Sits Out   \n",
-      [false] = "6 Handed - Normal        \n",
-      ruleIndex = 17,
-      execute = stateChangeDealerSitsOut
-    },
-    calls = {
-      [true] = "Extra Calls Enabled        ",
-      [false] = "Extra Calls Disabled       ",
-      ruleIndex = 18,
-      execute = stateChangeCalls
-    },
-    threeHanded = {
-      [true] = "Picker Plays Alone         \n",
-      ruleIndex = 14,
-      execute = stateChangeThreeHanded
-    },
-    jdPartner = {
-      [true] = "Jack of Diamonds Partner    \n",
-      [false] = "Call an Ace                \n",
-      ruleIndex = 14
-    },
-  }
   SETTINGS[rule] = bool
-  if ruleTable[rule].execute then
-    ruleTable[rule].execute(bool)
+  if RULE_TABLE[rule].execute then
+    RULE_TABLE[rule].execute(bool)
   end
-  if ruleTable[rule][bool] then
-    CURRENT_RULES[ruleTable[rule].ruleIndex] = ruleTable[rule][bool]
+  if RULE_TABLE[rule][bool] then
+    for desc, ruleIdx in pairs(RULE_TABLE[rule][bool]) do
+      CURRENT_RULES[ruleIdx] = desc
+    end
     displayRules()
   end
 end
@@ -2291,20 +2239,9 @@ end
 ---@param call string<"callName">
 ---@param bool boolean
 function updateCalls(call, bool)
-  local callTable = {
-    crack = {
-      execute = stateChangeCrack
-    },
-    crackBack = {
-      execute = stateChangeCrackSubSet
-    },
-    crackAroundTheCorner = {
-      execute = stateChangeCrackSubSet
-    }
-  }
   CALL_SETTINGS[call] = bool
-  if callTable[call] then
-    callTable[call].execute(bool, call)
+  if CALL_TABLE[call] then
+    CALL_TABLE[call].execute(bool, call)
   end
   buildCallPanel()
 end
@@ -2911,6 +2848,83 @@ function animateButtonUp(player, val, id)
 end
 
 --[[End of graphic anamations]]--
+
+--[[GLOBAL tables used for modifying settins]]--
+
+--Note: GLOBAL tables that contain function pointers must be definded
+--      after the function is defined in Lua
+
+CURRENT_RULES = {
+  "\n\n\n\n\n\n\n",
+  "[21AF21]Welcome to Scripted Sheepshead!\n",
+  "By: WardLordRuby           [-]\n",
+  "[b415ff]Features:                   [-]\n",
+  "Will Auto Adjust for 3-6 Players\n",
+  "Scripted Dealing, Picking,     \n",
+  "Taking Tricks, Burying        \n",
+  "Card Counters for Each Team \n",
+  "Custom Game Settings       \n",
+  "Custom Schrute Silver Coins   \n",
+  "Gameplay Rules and Tips    \n",
+  "Use ([fc8803].help[-]) for Commands    \n\n",
+  "[b415ff]Current Sheepshead Rules:   [-]\n",
+  "Jack of Diamonds Partner    \n",
+  "Dealer Pick your Own       \nCan Call if Forced to Pick    \n",
+  "6 Handed - Normal        \n",
+  "Extra Calls Disabled       "
+}
+
+CHAT_COMMANDS = {
+  "[b415ff]Sheepshead Console Help[-]\n",
+  "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]\n",
+  "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]\n",
+  "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck][-]\n",
+  "[21AF21].spawnchips[-] [Gives all seated players 15 additional chips][-]\n",
+  "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
+}
+
+RULE_TABLE = {
+  dealerSitsOut = {
+    [true] = {["6 Handed - Dealer Sits Out   \n"] = 16},
+    [false] = {["6 Handed - Normal        \n"] = 16},
+    execute = stateChangeDealerSitsOut
+  },
+  calls = {
+    [true] = {["Extra Calls Enabled        "] = 17},
+    [false] = {["Extra Calls Disabled       "] = 17},
+    execute = stateChangeCalls
+  },
+  threeHanded = {
+    [true] = {
+      ["Picker Plays Alone         \n"] = 14,
+      ["Dealer Pick your Own       \n"] = 15
+    },
+    [false] = {["Dealer Pick your Own       \nCan Call if Forced to Pick    \n"] = 15},
+    execute = stateChangeThreeHanded
+  },
+  jdPartner = {
+    [true] = {
+      ["Jack of Diamonds Partner    \n"] = 14,
+      ["Dealer Pick your Own       \nCan Call if Forced to Pick    \n"] = 15
+    },
+    [false] = {
+      ["Call an Ace                \n"] = 14,
+      ["Dealer Pick your Own       \n"] = 15
+    }
+  },
+}
+
+CALL_TABLE = {
+  crack = {
+    execute = stateChangeCrack
+  },
+  crackBack = {
+    execute = stateChangeCrackSubSet
+  },
+  crackAroundTheCorner = {
+    execute = stateChangeCrackSubSet
+  }
+}
 
 --Debug tools
 function playerCountDebugUp()
