@@ -372,7 +372,7 @@ end
 ---@param pipeList string
 ---@return pipeList string
 function addColorToPipeList(color, pipeList)
-  if pipeList == nil or pipeList == "" then
+  if not pipeList or pipeList == "" then
     pipeList = color
   else
     pipeList = pipeList .. "|" .. color
@@ -503,7 +503,7 @@ end
 ---Needs to be ran from within a coroutine
 function prepCards()
   local looseCards = getLooseCards(SCRIPT_ZONE.table)
-  if looseCards == nil then
+  if not looseCards then
     respawnDeckCoroutine()
     return
   end
@@ -512,7 +512,7 @@ function prepCards()
     group(looseCards)
     pause(0.5)
     local deck = getDeck(SCRIPT_ZONE.table)
-    if deck == nil then
+    if not deck then
       respawnDeckCoroutine()
       return
     end
@@ -747,7 +747,7 @@ function moveDeckAndDealerChip()
   local rotatedDeckOffset = SPAWN_POS.deck:copy():rotateOver('y', rotationAngle)
   local chipRotation = STATIC_OBJECT.dealerChip.getRotation()
   local deck = getDeck(SCRIPT_ZONE.table)
-  while deck == nil do
+  while not deck do
     coroutine.yield(0)
     deck = getDeck(SCRIPT_ZONE.table)
   end
@@ -1133,7 +1133,7 @@ function setupGameCoroutine()
   --This is how Number of players is mannaged in debug mode
   --Happens in place of populatePlayers
   if DEBUG then
-    if GLOBAL.sortedSeatedPlayers == nil then
+    if not GLOBAL.sortedSeatedPlayers then
       GLOBAL.sortedSeatedPlayers = copyTable(ALL_PLAYERS)
       FLAG.gameSetup.inProgress = false
       return 1
@@ -2401,7 +2401,7 @@ end
 
 ---@param bool boolean
 function stateChangeDealerSitsOut(bool)
-  if GLOBAL.sortedSeatedPlayers == nil then
+  if not GLOBAL.sortedSeatedPlayers then
     return
   end
   if bool then
@@ -2728,8 +2728,7 @@ end
 function removeHeldCards(notPartnerChoices, failSuits)
   for _, cardToRemove in ipairs(notPartnerChoices) do
     for i = #failSuits, 1, -1 do
-      local suit = failSuits[i]
-      if string.find(cardToRemove, suit) then
+      if string.find(cardToRemove, failSuits[i]) then
         table.remove(failSuits, i)
       end
     end
@@ -2917,7 +2916,7 @@ end
 --Debug tools
 function playerCountDebugUp()
   if DEBUG then
-    if GLOBAL.sortedSeatedPlayers == nil then
+    if not GLOBAL.sortedSeatedPlayers then
       print("[21AF21]Press Set Up Game to initialize variables before changing player count.")
     elseif #GLOBAL.sortedSeatedPlayers > 0 and #GLOBAL.sortedSeatedPlayers < 6 then
       table.insert(GLOBAL.sortedSeatedPlayers, #GLOBAL.sortedSeatedPlayers + 1,
@@ -2932,7 +2931,7 @@ end
 
 function playerCountDebugDown()
   if DEBUG then
-    if GLOBAL.sortedSeatedPlayers == nil then
+    if not GLOBAL.sortedSeatedPlayers then
       print("[21AF21]Press Set Up Game to initialize variables before changing player count.")
     elseif #GLOBAL.sortedSeatedPlayers == 1 then
       print("Can not remove any more players")
