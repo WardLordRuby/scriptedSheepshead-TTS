@@ -183,7 +183,7 @@ function onLoad(script_state)
     stopCoroutine = false,
     dealInProgress = false,
     lookForPlayerText = false,
-    continue = false,
+    continue = nil,
     cardsToBeBuried = false,
     counterVisible = false,
     firstDealOfGame = false,
@@ -303,7 +303,7 @@ end
 ---@param time integer<seconds>
 function pause(time)
   local start = Time.time
-  repeat coroutine.yield(0) until Time.time > start + time
+  repeat coroutine.yield(0) until Time.time > start + time or FLAG.continue ~= nil
 end
 
 --[[String manipulation]]--
@@ -796,17 +796,16 @@ end
 ---@return boolean
 function onChat(message, player)
   --Sets flags for determining if to reset gameboard
-  if FLAG.lookForPlayerText then
+  if FLAG.lookForPlayerText and player.color == GLOBAL.gameSetupPlayer then
     local lowerMessage = string.lower(message)
     if lowerMessage == 'y' then
-      if player.steam_name == Player[GLOBAL.gameSetupPlayer].steam_name then
-        print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
-        print("[21AF21]New game is being set up.[-]")
-        FLAG.continue = true
-        return false
-      end
-    else
-      return true
+      print("[21AF21]" .. player.steam_name .. " selected new game.[-]")
+      print("[21AF21]New game is being set up.[-]")
+      FLAG.continue = true
+      return false
+    elseif lowerMessage == 'n' then
+      FLAG.continue = false
+      return false
     end
   end
 
@@ -1116,10 +1115,10 @@ function setupGameCoroutine()
     FLAG.lookForPlayerText = true
     pause(6)
     if FLAG.continue then
-      FLAG.lookForPlayerText, FLAG.continue = false, false
+      FLAG.lookForPlayerText, FLAG.continue = false, nil
       removeItem(SCRIPT_ZONE.table, "Chip")
     else
-      FLAG.lookForPlayerText, FLAG.continue, FLAG.gameSetup.inProgress = false, false, false
+      FLAG.lookForPlayerText, FLAG.gameSetup.inProgress, FLAG.continue = false, false, nil
       print("[21AF21]New game was not selected.[-]")
       return 1
     end
