@@ -131,15 +131,6 @@ BLACK_SEVENS = {"Seven of Clubs", "Seven of Spades"}
 
 BLINDS_STR = "Blinds"
 
-CARD_FILTER = {
-  suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
-  King = {"King"},
-  Ace = {"Ace"},
-  Ten = {"Ten"},
-  Jack = {"Jack"},
-  Queen = {"Queen"}
-}
-
 FAIL_STRENGTHS = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
 
 TRUMP_IDENTIFIER = {"Diamonds", "Jack", "Queen"}
@@ -687,7 +678,15 @@ end
 ---@return table<"cardNames">
 function filterPlayerCards(player, scheme, doNotInclude)
   local playerCards = getPlayerCards(player)
-  local filteredCards, validCard = {}, nil
+  local filteredCards, filterList = {}, {}
+  local validCard
+  if scheme == "suitableFail" then
+    for i = 1, 5 do
+      filterList[i] = FAIL_STRENGTHS[i]
+    end
+  else
+    filterList[1] = scheme
+  end
   if doNotInclude then
     validCard = function(name, findName)
       return string.find(name, findName) and not string.find(name, doNotInclude)
@@ -698,7 +697,7 @@ function filterPlayerCards(player, scheme, doNotInclude)
     end
   end
   for _, name in ipairs(playerCards) do
-    for _, findName in ipairs(CARD_FILTER[scheme]) do
+    for _, findName in ipairs(filterList) do
       if validCard(name, findName) then
         table.insert(filteredCards, name)
       end
