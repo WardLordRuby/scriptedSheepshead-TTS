@@ -4,6 +4,8 @@
 
 DEBUG = true
 
+--[[CONST values]]--
+
 GUID = {
   TRICK_ZONE_WHITE = "70f1a5",
   TRICK_ZONE_RED = "b14dc7",
@@ -26,8 +28,6 @@ GUID = {
   SET_BURIED_BUTTON = "37d199",
   DECK_COPY = "f247a7"
 }
-
-ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
 
 SPAWN_POS = {
   tableBlock = Vector(0, 3.96, 0),
@@ -82,7 +82,74 @@ COIN_PRAM = {
   specular_sharpness = 5
 }
 
+RULE_BOOK_JSON = [[{
+  "Name": "Custom_PDF",
+  "Transform": {
+    "posX": 0.0,
+    "posY": 0.0,
+    "posZ": 0.0,
+    "rotX": 0.0,
+    "rotY": 0.0,
+    "rotZ": 0.0,
+    "scaleX": 1.0,
+    "scaleY": 1.0,
+    "scaleZ": 1.0
+  },
+  "Nickname": "Rules and Tips",
+  "Description": "",
+  "GMNotes": "",
+  "ColorDiffuse": {
+    "r": 1.0,
+    "g": 1.0,
+    "b": 1.0
+  },
+  "Locked": false,
+  "Grid": true,
+  "Snap": true,
+  "IgnoreFoW": false,
+  "Autoraise": true,
+  "Sticky": true,
+  "Tooltip": true,
+  "GridProjection": false,
+  "HideWhenFaceDown": false,
+  "Hands": false,
+  "CustomPDF": {
+    "PDFUrl": "https://steamusercontent-a.akamaihd.net/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/",
+    "PDFPassword": "",
+    "PDFPage": 0,
+    "PDFPageOffset": 0
+  },
+  "XmlUI": "<!-- -->",
+  "LuaScript": "--foo",
+  "LuaScriptState": "",
+  "GUID": "pdf001"
+}]]
+
+ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
+
 BLINDS_STR = "Blinds"
+
+CARD_FILTER = {
+  suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
+  blackSevens = {"Seven of Clubs", "Seven of Spades"}, 
+  King = {"King"},
+  Ace = {"Ace"},
+  Ten = {"Ten"},
+  Jack = {"Jack"},
+  Queen = {"Queen"}
+}
+
+TRUMP_STRENGTHS = {
+  "Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
+  "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs",
+  "Queen of Diamonds", "Queen of Hearts", "Queen of Spades", "Queen of Clubs"
+}
+
+TRUMP_IDENTIFIER = {"Diamonds", "Jack", "Queen"}
+
+FAIL_STRENGTHS = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+
+--[[GLOBAL values]]--
 
 ---Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>
 ---Picker `object` group is always in index `1`<br>Can not be stringified
@@ -616,18 +683,10 @@ end
 ---@param doNotInclude string
 ---@return table<"cardNames">
 function filterPlayerCards(player, scheme, doNotInclude)
-  local schemes = {
-    suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
-    King = {"King"},
-    Ace = {"Ace"},
-    Ten = {"Ten"},
-    Jack = {"Jack"},
-    Queen = {"Queen"}
-  }
   local playerCards = getPlayerCards(player)
   local filteredCards = {}
   for _, name in ipairs(playerCards) do
-    for _, findName in ipairs(schemes[scheme]) do
+    for _, findName in ipairs(CARD_FILTER[scheme]) do
       if string.find(name, findName) and not string.find(name, doNotInclude) then
         table.insert(filteredCards, name)
       end
@@ -855,50 +914,8 @@ end
 function getRuleBook(color)
   local playerRotation = ROTATION.color[color]
   local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
-  local ruleBookJson = [[{
-    "Name": "Custom_PDF",
-    "Transform": {
-      "posX": 0.0,
-      "posY": 0.0,
-      "posZ": 0.0,
-      "rotX": 0.0,
-      "rotY": 0.0,
-      "rotZ": 0.0,
-      "scaleX": 1.0,
-      "scaleY": 1.0,
-      "scaleZ": 1.0
-    },
-    "Nickname": "Rules and Tips",
-    "Description": "",
-    "GMNotes": "",
-    "ColorDiffuse": {
-      "r": 1.0,
-      "g": 1.0,
-      "b": 1.0
-    },
-    "Locked": false,
-    "Grid": true,
-    "Snap": true,
-    "IgnoreFoW": false,
-    "Autoraise": true,
-    "Sticky": true,
-    "Tooltip": true,
-    "GridProjection": false,
-    "HideWhenFaceDown": false,
-    "Hands": false,
-    "CustomPDF": {
-      "PDFUrl": "https://steamusercontent-a.akamaihd.net/ugc/2288456143469151321/BB82096AE4DD8D9295A3B9062729704F9B5A2A5B/",
-      "PDFPassword": "",
-      "PDFPage": 0,
-      "PDFPageOffset": 0
-    },
-    "XmlUI": "<!-- -->",
-    "LuaScript": "--foo",
-    "LuaScriptState": "",
-    "GUID": "pdf001"
-  }]]
   spawnObjectJSON({
-    json = ruleBookJson,
+    json = RULE_BOOK_JSON,
     position = { ruleBookPos.x, 1.5, ruleBookPos.z },
     rotation = { 0, playerRotation - 180, 0 }
   })
@@ -1020,10 +1037,9 @@ end
 function removeBlackSevens(deck)
   deck.setPosition(POS.center)
   deck.setRotation(POS.defaultDeckRotation)
-  local cardsToRemove = {"Seven of Clubs", "Seven of Spades"}
   local guids = {}
   for _, card in ipairs(deck.getObjects()) do
-    for _, cardName in ipairs(cardsToRemove) do
+    for _, cardName in ipairs(CARD_FILTER.blackSevens) do
       if card.name == cardName then
         table.insert(guids, card.guid)
       end
@@ -1270,8 +1286,6 @@ function dealCardsCoroutine()
   FLAG.dealInProgress = false
   return 1
 end
-
---End of order of opperations for dealing
 
 ---Contains the logic to deal correctly based on the number of
 ---players seated and the number of times players have recieved cards
@@ -1852,8 +1866,7 @@ end
 ---@param objectName string
 ---@return boolean
 function isTrump(objectName)
-  local trumpIdentifier = {"Diamonds", "Jack", "Queen"}
-  for _, word in ipairs(trumpIdentifier) do
+  for _, word in ipairs(TRUMP_IDENTIFIER) do
     if string.find(objectName, word) then
       return true
     end
@@ -1866,34 +1879,28 @@ end
 ---@param isTrump boolean
 ---@return integer
 function quickSearch(objectName, isTrump)
-  local strengthList
+  local strengthList, startIndex, isStronger
   if isTrump then
-    strengthList = {
-      "Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
-      "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs",
-      "Queen of Diamonds", "Queen of Hearts", "Queen of Spades", "Queen of Clubs"
-    }
+    strengthList = TRUMP_STRENGTHS
+    isStronger = function(cardName)
+      return objectName == cardName
+    end
   else
-    strengthList = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+    strengthList = FAIL_STRENGTHS
+    isStronger = function(cardName)
+      return string.find(objectName, cardName)
+    end
   end
 
-  local startIndex
   if not GLOBAL.currentTrick[1] or GLOBAL.currentTrick[1].currentHighStrength == 0 then
     startIndex = 1
   else
     startIndex = GLOBAL.currentTrick[1].currentHighStrength
   end
-  if isTrump then
-    for i = startIndex, #strengthList do
-      if objectName == strengthList[i] then
-        return i
-      end
-    end
-  else
-    for i = startIndex, #strengthList do
-      if string.find(objectName, strengthList[i]) then
-        return i
-      end
+
+  for i = startIndex, #strengthList do
+    if isStronger(strengthList[i]) then
+      return i
     end
   end
   return 0
@@ -2535,9 +2542,9 @@ end
 ---@param player object<eventTrigger>
 function callUpEvent(player)
   toggleWindowVisibility(player, "playAloneWindow")
-  local tryOrder = {"Jack", "Queen"}
   local callCard
-  for _, tryCard in ipairs(tryOrder) do
+  for i = 2, 3 do
+    local tryCard = TRUMP_IDENTIFIER[i]
     callCard = findCardToCall(filterPlayerCards(player, tryCard, "nil"), tryCard)
     if callCard then
       break
@@ -2675,9 +2682,8 @@ end
 ---Finds the valid partnerChoices for when unknown event is triggered and passes them to `setActivePartnerButtons`
 ---@param player object
 function unknownPartnerChoices(player)
-  local failSuits = {"Hearts", "Spades", "Clubs"}
   local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player, true)
-  failSuits = removeHeldCards(notPartnerChoices, failSuits)
+  local failSuits = removeHeldCards(notPartnerChoices, {"Hearts", "Spades", "Clubs"})
   local partnerChoices = {}
   for _, suit in ipairs(failSuits) do
     table.insert(partnerChoices, card .. "-of-" .. suit)
