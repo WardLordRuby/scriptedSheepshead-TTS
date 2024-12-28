@@ -131,7 +131,7 @@ BLINDS_STR = "Blinds"
 
 CARD_FILTER = {
   suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
-  blackSevens = {"Seven of Clubs", "Seven of Spades"}, 
+  blackSevens = {"Seven of Clubs", "Seven of Spades"},
   King = {"King"},
   Ace = {"Ace"},
   Ten = {"Ten"},
@@ -680,14 +680,23 @@ end
 ---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
 ---@param player object
 ---@param scheme string<"suitableFail"|"King"|"Ace"|"Ten"|"Jack"|"Queen">
----@param doNotInclude string
+---@param doNotInclude option_string
 ---@return table<"cardNames">
 function filterPlayerCards(player, scheme, doNotInclude)
   local playerCards = getPlayerCards(player)
-  local filteredCards = {}
+  local filteredCards, validCard = {}, nil
+  if doNotInclude then
+    validCard = function(name, findName)
+      return string.find(name, findName) and not string.find(name, doNotInclude)
+    end
+  else
+    validCard = function(name, findName)
+      return string.find(name, findName)
+    end
+  end
   for _, name in ipairs(playerCards) do
     for _, findName in ipairs(CARD_FILTER[scheme]) do
-      if string.find(name, findName) and not string.find(name, doNotInclude) then
+      if validCard(name, findName) then
         table.insert(filteredCards, name)
       end
     end
@@ -2545,7 +2554,7 @@ function callUpEvent(player)
   local callCard
   for i = 2, 3 do
     local tryCard = TRUMP_IDENTIFIER[i]
-    callCard = findCardToCall(filterPlayerCards(player, tryCard, "nil"), tryCard)
+    callCard = findCardToCall(filterPlayerCards(player, tryCard), tryCard)
     if callCard then
       break
     end
