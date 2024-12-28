@@ -127,11 +127,12 @@ RULE_BOOK_JSON = [[{
 
 ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
 
+BLACK_SEVENS = {"Seven of Clubs", "Seven of Spades"}
+
 BLINDS_STR = "Blinds"
 
 CARD_FILTER = {
   suitableFail = {"Seven", "Eight", "Nine", "Ten", "King"},
-  blackSevens = {"Seven of Clubs", "Seven of Spades"},
   King = {"King"},
   Ace = {"Ace"},
   Ten = {"Ten"},
@@ -139,15 +140,15 @@ CARD_FILTER = {
   Queen = {"Queen"}
 }
 
+FAIL_STRENGTHS = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+
+TRUMP_IDENTIFIER = {"Diamonds", "Jack", "Queen"}
+
 TRUMP_STRENGTHS = {
   "Seven of Diamonds", "Eight of Diamonds", "Nine of Diamonds", "King of Diamonds", "Ten of Diamonds",
   "Ace of Diamonds", "Jack of Diamonds", "Jack of Hearts", "Jack of Spades", "Jack of Clubs",
   "Queen of Diamonds", "Queen of Hearts", "Queen of Spades", "Queen of Clubs"
 }
-
-TRUMP_IDENTIFIER = {"Diamonds", "Jack", "Queen"}
-
-FAIL_STRENGTHS = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
 
 --[[GLOBAL values]]--
 
@@ -214,6 +215,7 @@ function onLoad(script_state)
   ---   currentTrick: table<metaData>|nil,
   ---   gameSetupPlayer: string<"Color">|nil,
   ---   pickingPlayer: string<"Color">|nil,
+  ---   partnerCard: string<"cardName">|nil,
   ---   leadOutPlayer: string<"Color">|nil,
   ---   lastLeasterTrick: string<"GUID">|nil,
   ---   unknownText: string<"GUID">|nil,
@@ -230,6 +232,7 @@ function onLoad(script_state)
     currentTrick = nil, --Note: `self[1]` contains general trickMetadata, followed by metadata for each card in the trick
     gameSetupPlayer = nil,
     pickingPlayer = nil,
+    partnerCard = nil,
     leadOutPlayer = nil,
     lastLeasterTrick = nil,
     unknownText = nil, --Note: Shares position data with leasterCards
@@ -644,7 +647,7 @@ function countCards(zone)
   return cardCount, faceDownCount
 end
 
----@param player object<player>
+---@param player string<"Color">
 ---@param cardName string
 ---@return boolean
 function doesPlayerPossessCard(player, cardName)
@@ -658,19 +661,19 @@ function doesPlayerPossessCard(player, cardName)
 end
 
 ---Searches `player`'s `HAND_ZONE` and `TRICK_ZONE`
----@param player object
+---@param player string<"Color">
 ---@return table<"cardNames">
 function getPlayerCards(player)
   local cards = {}
-  for _, card in ipairs(getLooseCards(HAND_ZONE[player.color])) do
+  for _, card in ipairs(getLooseCards(HAND_ZONE[player])) do
     table.insert(cards, card.getName())
   end
-  for _, object in ipairs(getLooseCards(TRICK_ZONE[player.color])) do
+  for _, object in ipairs(getLooseCards(TRICK_ZONE[player])) do
     if object.type == "Card" then
       table.insert(cards, object.getName())
     else
       for _, card in ipairs(object.getObjects()) do
-        table.insert(cards, card.name)
+        table.insert(cards, card.getName())
       end
     end
   end
@@ -678,7 +681,7 @@ function getPlayerCards(player)
 end
 
 ---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
----@param player object
+---@param player string<"Color">
 ---@param scheme string<"suitableFail"|"King"|"Ace"|"Ten"|"Jack"|"Queen">
 ---@param doNotInclude option_string
 ---@return table<"cardNames">
@@ -704,10 +707,10 @@ function filterPlayerCards(player, scheme, doNotInclude)
   return filteredCards
 end
 
----@param color string<"Color">
+---@param player string<"Color">
 ---@return integer<rotationAngle>, vector<playerPosition>
-function getItemMoveData(color)
-  return ROTATION.color[color], Player[color].getHandTransform().position
+function getItemMoveData(player)
+  return ROTATION.color[player], Player[player].getHandTransform().position
 end
 
 ---Prints `CURRENT_RULES` to the screen
@@ -897,7 +900,7 @@ function onChat(message, player)
       end
     elseif command == "settings" then
       if adminCheck(player) then
-        toggleWindowVisibility(player, "settingsWindow")
+        toggleWindowVisibility(player.color, "settingsWindow")
       end
     elseif command == "spawnchips" then
       startChipSpawn(player)
@@ -919,9 +922,9 @@ function adminCheck(player)
 end
 
 ---Spawns a rule book in front of player color
----@param color string<"Color">
-function getRuleBook(color)
-  local playerRotation = ROTATION.color[color]
+---@param player string<"Color">
+function getRuleBook(player)
+  local playerRotation = ROTATION.color[player]
   local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
   spawnObjectJSON({
     json = RULE_BOOK_JSON,
@@ -1048,8 +1051,8 @@ function removeBlackSevens(deck)
   deck.setRotation(POS.defaultDeckRotation)
   local guids = {}
   for _, card in ipairs(deck.getObjects()) do
-    for _, cardName in ipairs(CARD_FILTER.blackSevens) do
-      if card.name == cardName then
+    for _, cardName in ipairs(BLACK_SEVENS) do
+      if card.getName() == cardName then
         table.insert(guids, card.guid)
       end
     end
@@ -1222,7 +1225,7 @@ function setupHandEvent()
   if FLAG.cardsToBeBuried then
     hideSetBuriedButton()
   end
-  GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards = nil, nil, nil
+  GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards, GLOBAL.partnerCard = nil, nil, nil, nil
   FLAG.trick.inProgress, FLAG.leasterHand = false, false
   if GLOBAL.unknownText then
     getObjectFromGUID(GLOBAL.unknownText).destruct()
@@ -1357,15 +1360,15 @@ function passEvent(player)
   if not GLOBAL.dealerColorIdx then
     return
   end
-  local dealer = Player[GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]]
+  local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
   if GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers then
-    if player.color == dealer.color then
+    if player.color == dealerColor then
       broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
       return
     end
   end
   if not FLAG.dealInProgress and countCards(SCRIPT_ZONE.center) == 2 then
-    if player.color == dealer.color then
+    if player.color == dealerColor then
       if not DEBUG then
         if CALL_SETTINGS.leaster then
           broadcastToColor("[DC0000]Dealer can not pass. Pick your own or Call a Leaster.[-]", player.color)
@@ -1373,16 +1376,16 @@ function passEvent(player)
           broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", player.color)
         end
       else
-        print("[DC0000]Dealer can not pass. " .. dealer.color .. " pick your own![-]")
+        print("[DC0000]Dealer can not pass. " .. dealerColor .. " pick your own![-]")
       end
     else
       broadcastToAll(player.steam_name .. " passed")
       local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[getPreviousColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)]
       if player.color == rightOfDealerColor then
         if CALL_SETTINGS.leaster then
-          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealer.color)
-          if not string.find(UI.getAttribute("callsWindow", "visibility"), dealer.color) then
-            toggleWindowVisibility(dealer, "callsWindow")
+          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
+          if not string.find(UI.getAttribute("callsWindow", "visibility"), dealerColor) then
+            toggleWindowVisibility(dealerColor, "callsWindow")
           end
         end
       end
@@ -1413,7 +1416,7 @@ end
 function pickBlindsCoroutine()
   startFnRunFlag()
   local pickingPlayer = Player[GLOBAL.pickingPlayer]
-  broadcastToAll("[21AF21]" .. pickingPlayer.steam_name .. " Picks![-]")
+  broadcastToAll("[21AF21]" .. pickingPlayer.steam_name .. " picks![-]")
   local playerPosition = pickingPlayer.getHandTransform().position
   local playerRotation = pickingPlayer.getHandTransform().rotation
   local blinds = getLooseCards(SCRIPT_ZONE.center, true)
@@ -1440,20 +1443,20 @@ function pickBlindsCoroutine()
   if SETTINGS.jdPartner then
     if pickingPlayer.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       pause(1.5)
-      if doesPlayerPossessCard(pickingPlayer, "Jack of Diamonds") then
+      if doesPlayerPossessCard(pickingPlayer.color, "Jack of Diamonds") then
         if not string.find(UI.getAttribute("playAloneWindow", "visibility"), pickingPlayer.color) then
-          toggleWindowVisibility(pickingPlayer, "playAloneWindow")
+          toggleWindowVisibility(pickingPlayer.color, "playAloneWindow")
         end
       end
     end
   elseif SETTINGS.jdPartner == false then --Call an Ace
     pause(0.5)
-    buildPartnerChoices(pickingPlayer)
+    buildPartnerChoices(pickingPlayer.color)
     pause(0.25)
     if GLOBAL.holdCards then
-      toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
+      toggleWindowVisibility(pickingPlayer.color, "selectPartnerWindow")
     else --Unknown event
-      unknownPartnerChoices(pickingPlayer)
+      unknownPartnerChoices(pickingPlayer.color)
       pause(0.25)
       local unknownTextPos = SPAWN_POS.leasterCards:copy():rotateOver('y', pickerRotation)
       local unknownText = spawnObject({
@@ -1466,7 +1469,7 @@ function pickBlindsCoroutine()
       unknownText.TextTool.setFontColor("Green")
       unknownText.setValue("Place Unknown Card\nFacedown Here")
       GLOBAL.unknownText = unknownText.guid
-      toggleWindowVisibility(pickingPlayer, "selectPartnerWindow")
+      toggleWindowVisibility(pickingPlayer.color, "selectPartnerWindow")
     end
   end
   FLAG.fnRunning = false
@@ -1930,7 +1933,6 @@ end
 
 ---Resets trick FLAG and data then moves Trick to TRICK_ZONE of trickWinner
 ---Shows card counters if hand is over
----@param player object
 function giveTrickToWinnerCoroutine()
   local lastTrick = false
   if #Player[GLOBAL.leadOutPlayer].getHandObjects() == 0 then
@@ -1984,7 +1986,7 @@ function giveTrickToWinnerCoroutine()
       GLOBAL.lastLeasterTrick = nil
     end
     pause(delay)
-    GLOBAL.leadOutPlayer = nil
+    GLOBAL.leadOutPlayer, GLOBAL.partnerCard = nil, nil
     toggleCounterVisibility()
   else
     FLAG.fnRunning = false
@@ -1996,11 +1998,11 @@ end
 
 ---Returns the color of the handposition located across the table from given color<br>
 ---Color must be directly accross for the counter because `TABLE_BLOCK` is an invisible triangle
----@param color string<"Color">
+---@param player string<"Color">
 ---@return string<"Color">|nil
-function findColorAcrossTable(color)
+function findColorAcrossTable(player)
   for i, colors in ipairs(ALL_PLAYERS) do
-    if colors == color then
+    if colors == player then
       local acrossVal
       if i > 3 then
         acrossVal = i - 3
@@ -2441,20 +2443,27 @@ end
 
 --[[End of functions for settings window]]--
 
----@param player object
+---@param player string<"Color">
 ---@param window string<"windowID">
-function toggleWindowVisibility(player, window)
+---@param force option_bool
+function toggleWindowVisibility(player, window, force)
   local visibility = UI.getAttribute(window, "visibility")
-  if string.find(visibility, player.color) then
-    if visibility == player.color then
+  if string.find(visibility, player) then
+    if force then
+      return
+    end
+    if visibility == player then
       UI.setAttribute(window, "visibility", "")
       UI.hide(window)
     else
-      visibility = removeColorFromPipeList(player.color, visibility)
+      visibility = removeColorFromPipeList(player, visibility)
       UI.setAttribute(window, "visibility", visibility)
     end
   else
-    visibility = addColorToPipeList(player.color, visibility)
+    if force == false then
+      return
+    end
+    visibility = addColorToPipeList(player, visibility)
     UI.setAttribute(window, "visibility", visibility)
     UI.show(window)
   end
@@ -2463,7 +2472,7 @@ end
 --[[Start of functions and buttons for calls window]]--
 
 function showCallsEvent(player)
-  toggleWindowVisibility(player, "callsWindow")
+  toggleWindowVisibility(player.color, "callsWindow")
 end
 
 ---@param player object<eventTrigger>
@@ -2477,11 +2486,13 @@ function callPartnerEvent(player)
         broadcastToColor("[DC0000]You can not do this now[-]", player.color)
         return
       end
-      if SETTINGS.jdPartner then
+      if GLOBAL.partnerCard then
+        broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. GLOBAL.partnerCard .. " as their partner[-]")
+      elseif SETTINGS.jdPartner then
         local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
         if player.color == dealerColor and player.color == GLOBAL.pickingPlayer then
-          if doesPlayerPossessCard(player, "Jack of Diamonds") then
-            toggleWindowVisibility(player, "playAloneWindow")
+          if doesPlayerPossessCard(player.color, "Jack of Diamonds") then
+            toggleWindowVisibility(player.color, "playAloneWindow")
           else
             broadcastToColor("[DC0000]Jack of Diamonds will be your partner[-]", player.color)
           end
@@ -2490,12 +2501,12 @@ function callPartnerEvent(player)
         end
       elseif SETTINGS.jdPartner == false then --Call an Ace
         if player.color == GLOBAL.pickingPlayer then
-          toggleWindowVisibility(player, "selectPartnerWindow")
+          toggleWindowVisibility(player.color, "selectPartnerWindow", true)
         else
           broadcastToColor("[DC0000]Only the picker can call their partner[-]", player.color)
         end
       end
-      toggleWindowVisibility(player, "callsWindow")
+      toggleWindowVisibility(player.color, "callsWindow")
     end,
     0.13
   )
@@ -2522,7 +2533,7 @@ function playerCallsEvent(player, val, id)
       return
     end
   end
-  Wait.time(function() toggleWindowVisibility(player, "callsWindow") end, 0.13)
+  Wait.time(function() toggleWindowVisibility(player.color, "callsWindow") end, 0.13)
   if id == "Leaster" then
     if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       if countCards(SCRIPT_ZONE.center) == 2 then
@@ -2550,11 +2561,11 @@ end
 
 ---@param player object<eventTrigger>
 function callUpEvent(player)
-  toggleWindowVisibility(player, "playAloneWindow")
+  toggleWindowVisibility(player.color, "playAloneWindow")
   local callCard
   for i = 2, 3 do
     local tryCard = TRUMP_IDENTIFIER[i]
-    callCard = findCardToCall(filterPlayerCards(player, tryCard), tryCard)
+    callCard = findCardToCall(filterPlayerCards(player.color, tryCard), tryCard)
     if callCard then
       break
     end
@@ -2563,6 +2574,7 @@ function callUpEvent(player)
     broadcastToColor("[DC0000]No suitable card to Call. Try your luck playing alone![-]", player.color)
     return
   end
+  GLOBAL.partnerCard = callCard
   broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. callCard .. " to be their partner![-]")
 end
 
@@ -2594,7 +2606,7 @@ end
 
 ---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
 ---and updates the global GLOBAL.holdCards | if no valid holdCards will update as nil
----@param player object<player>
+---@param player string<"Color">
 function buildPartnerChoices(player)
   --failCards = all suitableFail including ten's
   local failCards = filterPlayerCards(player, "suitableFail", "Diamonds")
@@ -2654,7 +2666,7 @@ end
 
 ---returns the fail aces a player holds, if player holds 3 fail aces returns the fail 10's a player holds<br>
 ---setting unknown will include the King
----@param player object
+---@param player string<"Color">
 ---@param unknown option_bool
 ---@return table<"cardNames">, string<"Ace"|"Ten">
 function aceOrTenOfNotPartnerChoices(player, unknown)
@@ -2689,7 +2701,7 @@ function removeHeldCards(notPartnerChoices, failSuits)
 end
 
 ---Finds the valid partnerChoices for when unknown event is triggered and passes them to `setActivePartnerButtons`
----@param player object
+---@param player string<"color">
 function unknownPartnerChoices(player)
   local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player, true)
   local failSuits = removeHeldCards(notPartnerChoices, {"Hearts", "Spades", "Clubs"})
@@ -2741,14 +2753,15 @@ end
 ---@param player object<eventTrigger>
 function selectPartnerEvent(player, val, id)
   FLAG.selectingPartner = true
-  local formattedID = id:gsub('-', ' ')
+  local callCard = id:gsub('-', ' ')
   local unknownFormat = ""
   if GLOBAL.unknownText then
     unknownFormat = " - Unknown"
   end
-  broadcastToAll("[21AF21]" .. player.steam_name .. " Picks " .. formattedID .. unknownFormat .. " as their parnter")
-  toggleWindowVisibility(player, "selectPartnerWindow")
-  local validSuit = getLastWord(formattedID)
+  GLOBAL.partnerCard = callCard
+  broadcastToAll("[21AF21]" .. player.steam_name .. " picks " .. callCard .. unknownFormat .. " as their parnter")
+  toggleWindowVisibility(player.color, "selectPartnerWindow")
+  local validSuit = getLastWord(callCard)
   Wait.time(
     function()
       if not GLOBAL.unknownText then --Unknown event off
@@ -2841,7 +2854,7 @@ function closeWindow(player, val, id)
   local id2 = string.gsub(id, "Exit", "")
 
   UI.setAttribute(id1, "image", "closeButton")
-  toggleWindowVisibility(player, id2)
+  toggleWindowVisibility(player.color, id2)
 end
 
 function animateButtonEnter(player, val, id)
@@ -2864,7 +2877,7 @@ end
 
 --[[End of graphic anamations]]--
 
---[[GLOBAL tables used for modifying settins]]--
+--[[GLOBAL tables used for modifying settings]]--
 
 --Note: GLOBAL tables that contain function pointers must be definded
 --      after the function is defined in Lua
