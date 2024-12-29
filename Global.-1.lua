@@ -6,6 +6,31 @@ DEBUG = true
 
 --[[CONST values]]--
 
+ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
+
+BLACK_SEVENS = {"Seven of Clubs", "Seven of Spades"}
+
+BLINDS_STR = "Blinds"
+
+CHAT_COMMANDS = {
+  "[b415ff]Sheepshead Console Help[-]\n",
+  "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet]\n",
+  "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet]\n",
+  "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck]\n",
+  "[21AF21].spawnchips[-] [Gives all seated players 15 additional chips]\n",
+  "[21AF21].settings[-] [Opens Window to Change Game Settings]"
+}
+
+COIN_PRAM = {
+  mesh = "https://steamusercontent-a.akamaihd.net/ugc/2205135744307283952/DEF0BF91642CF5636724CA3A37083385C810BA06/",
+  diffuse = "https://steamusercontent-a.akamaihd.net/ugc/2288456143464578824/E739670FE62B8267C90E54D4B786C1C83BA7CC22/",
+  type = 5,
+  material = 2,
+  specular_sharpness = 5
+}
+
+FAIL_STRENGTHS = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+
 GUID = {
   TRICK_ZONE_WHITE = "70f1a5",
   TRICK_ZONE_RED = "b14dc7",
@@ -27,26 +52,6 @@ GUID = {
   DEALER_CHIP = "e18594",
   SET_BURIED_BUTTON = "37d199",
   DECK_COPY = "f247a7"
-}
-
-SPAWN_POS = {
-  tableBlock = Vector(0, 3.96, 0),
-  pickerCounter = Vector(0, 1.83, -4.04),
-  tableCounter = Vector(0, 1.83, 4.04),
-  leasterCards = Vector(-3.84, 1, -6.63),
-  ruleBook = Vector(0, 0.96, -9.5),
-  dealerChip = Vector(4, -2.58, 7),
-  deck = Vector(2, -2.5, 5),
-  setBuriedButton = Vector(0, 0.96, -8),
-  blinds = {
-    Vector(-0.7, 1, 0),
-    Vector(0.8, 1, 0)
-  },
-  chips = {
-    Vector(4.62, -2, 3),
-    Vector(6.12, -2, 3.13),
-    Vector(5.31, -2, 4.35)
-  }
 }
 
 POS = {
@@ -72,14 +77,6 @@ ROTATION = {
     Red = 330,
     Blue = 330
   }
-}
-
-COIN_PRAM = {
-  mesh = "https://steamusercontent-a.akamaihd.net/ugc/2205135744307283952/DEF0BF91642CF5636724CA3A37083385C810BA06/",
-  diffuse = "https://steamusercontent-a.akamaihd.net/ugc/2288456143464578824/E739670FE62B8267C90E54D4B786C1C83BA7CC22/",
-  type = 5,
-  material = 2,
-  specular_sharpness = 5
 }
 
 RULE_BOOK_JSON = [[{
@@ -125,13 +122,25 @@ RULE_BOOK_JSON = [[{
   "GUID": "pdf001"
 }]]
 
-ALL_PLAYERS = {"White", "Red", "Yellow", "Green", "Blue", "Pink"}
-
-BLACK_SEVENS = {"Seven of Clubs", "Seven of Spades"}
-
-BLINDS_STR = "Blinds"
-
-FAIL_STRENGTHS = {"Seven", "Eight", "Nine", "King", "Ten", "Ace"}
+SPAWN_POS = {
+  tableBlock = Vector(0, 3.96, 0),
+  pickerCounter = Vector(0, 1.83, -4.04),
+  tableCounter = Vector(0, 1.83, 4.04),
+  leasterCards = Vector(-3.84, 1, -6.63),
+  ruleBook = Vector(0, 0.96, -9.5),
+  dealerChip = Vector(4, -2.58, 7),
+  deck = Vector(2, -2.5, 5),
+  setBuriedButton = Vector(0, 0.96, -8),
+  blinds = {
+    Vector(-0.7, 1, 0),
+    Vector(0.8, 1, 0)
+  },
+  chips = {
+    Vector(4.62, -2, 3),
+    Vector(6.12, -2, 3.13),
+    Vector(5.31, -2, 4.35)
+  }
+}
 
 TRUMP_IDENTIFIER = {"Diamonds", "Jack", "Queen"}
 
@@ -142,6 +151,11 @@ TRUMP_STRENGTHS = {
 }
 
 --[[GLOBAL values]]--
+
+---Timer that loops the `displayWonOrLossText` function passing calculated values back into itself<br>
+---Responsible for displaying the number of chips won or loss in a hand<br>
+---@type integer<UID>|nil
+CHIP_SCORE_TEXT_TIMER = nil
 
 ---Note: `object` table contains: `z = object<zone>, c = object<counter>`<br>
 ---Picker `object` group is always in index `1`<br>Can not be stringified
@@ -156,11 +170,6 @@ SCORE_TEXT_OBJ = nil
 ---this value is instantiated by `startTrickCount`
 ---@type integer<UID>|nil
 TRICK_COUNTER_TIMER = nil
-
----Timer that loops the `displayWonOrLossText` function passing calculated values back into itself<br>
----Responsible for displaying the number of chips won or loss in a hand<br>
----@type integer<UID>|nil
-CHIP_SCORE_TEXT_TIMER = nil
 
 ---@param script_state JSON<table>
 function onLoad(script_state)
@@ -1379,7 +1388,9 @@ function passEvent(player)
       end
     else
       broadcastToAll(player.steam_name .. " passed")
-      local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[getPreviousColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)]
+      local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[
+        getPreviousColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
+      ]
       if player.color == rightOfDealerColor then
         if CALL_SETTINGS.leaster then
           broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
@@ -1707,12 +1718,12 @@ function onObjectPickUp(playerColor, object)
   end
 end
 
----Runs when a player drops an object<br>
----Gaurd clauses don't work in onEvents() otherwise I would use them here<br>
----Builds the table `GLOBAL.currentTrick` to keep track of cardNames and player color who laid them in the `SCRIPT_ZONE.center`
+---Runs when a player drops an object<br>Builds the table `GLOBAL.currentTrick`
+---to keep track of cardNames and player color who laid them in the `SCRIPT_ZONE.center`
 ---@param playerColor string
 ---@param object object
 function onObjectDrop(playerColor, object)
+  --Gaurd clauses don't work in onEvents()
   if FLAG.trick.inProgress then
     if object.type == "Card" then
       --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
@@ -1794,7 +1805,9 @@ function addCardDataToCurrentTrick(playerColor, object)
   table.insert(GLOBAL.currentTrick, cardData)
   if DEBUG then
     if #GLOBAL.currentTrick == 2 then
-      print("[21AF21]Card led out is: " .. GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]")
+      print(
+        "[21AF21]Card led out is: " .. GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]"
+      )
     else
       print("[21AF21]" .. GLOBAL.currentTrick[#GLOBAL.currentTrick].cardName .. " added to trick[-]")
     end
@@ -2203,7 +2216,10 @@ function displayWonOrLossText(score, cardCount, numCardInDeck)
     if CHIP_SCORE_TEXT_TIMER then
       Wait.stop(CHIP_SCORE_TEXT_TIMER); CHIP_SCORE_TEXT_TIMER = nil
     end
-    CHIP_SCORE_TEXT_TIMER = Wait.frames(function() displayWonOrLossText(pickerScore, pickerTrickCardCount, numCardInDeck) end, 15)
+    CHIP_SCORE_TEXT_TIMER = Wait.frames(
+      function() displayWonOrLossText(pickerScore, pickerTrickCardCount, numCardInDeck) end,
+      15
+    )
   else
     SCORE_TEXT_OBJ.destruct(); SCORE_TEXT_OBJ = nil; GLOBAL.chipScoreText = nil
     Wait.stop(CHIP_SCORE_TEXT_TIMER); CHIP_SCORE_TEXT_TIMER = nil
@@ -2787,12 +2803,18 @@ function selectPartnerEvent(player, val, id)
         if numOfValidCards > 2 then
           validCards = validCards:gsub(validSuit .. "([^,])", validSuit .. ",%1")
         end
-        broadcastToColor("[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]", GLOBAL.pickingPlayer)
+        broadcastToColor(
+          "[21AF21]Remember to play the " .. validCards .. " the first time " .. validSuit .. " is played[-]",
+          GLOBAL.pickingPlayer
+        )
         if DEBUG then
           print("Valid holdCards are: " .. table.concat(GLOBAL.holdCards, ", "))
         end
       else --Unknown event on
-        broadcastToColor("[21AF21]Remember to play your unknown card the first time ".. validSuit .. " is played[-]", GLOBAL.pickingPlayer)
+        broadcastToColor(
+          "[21AF21]Remember to play your unknown card the first time ".. validSuit .. " is played[-]",
+          GLOBAL.pickingPlayer
+        )
       end
       FLAG.selectingPartner = false
     end,
@@ -2876,11 +2898,7 @@ end
 
 --[[End of graphic anamations]]--
 
---[[GLOBAL tables used for modifying settings]]--
-
---Note: GLOBAL tables that contain function pointers must be definded
---      after the function is defined in Lua
-
+---GLOBAL table used for displaying the current settings as notes
 CURRENT_RULES = {
   "\n\n\n\n\n\n\n",
   "[21AF21]Welcome to Scripted Sheepshead!\n",
@@ -2901,14 +2919,9 @@ CURRENT_RULES = {
   "Extra Calls Disabled       "
 }
 
-CHAT_COMMANDS = {
-  "[b415ff]Sheepshead Console Help[-]\n",
-  "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet][-]\n",
-  "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet][-]\n",
-  "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck][-]\n",
-  "[21AF21].spawnchips[-] [Gives all seated players 15 additional chips][-]\n",
-  "[21AF21].settings[-] [Opens Window to Change Game Settings][-]"
-}
+--[[CONST tables]]--
+
+--Note: Global tables that contain function pointers must be definded after the function is defined in Lua
 
 RULE_TABLE = {
   dealerSitsOut = {
