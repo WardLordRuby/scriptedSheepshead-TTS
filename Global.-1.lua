@@ -1391,12 +1391,10 @@ function passEvent(player)
       local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[
         getPreviousColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
       ]
-      if player.color == rightOfDealerColor then
-        if CALL_SETTINGS.leaster then
-          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
-          if not string.find(UI.getAttribute("callsWindow", "visibility"), dealerColor) then
-            toggleWindowVisibility(dealerColor, "callsWindow")
-          end
+      if player.color == rightOfDealerColor and CALL_SETTINGS.leaster then
+        broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
+        if not string.find(UI.getAttribute("callsWindow", "visibility"), dealerColor) then
+          toggleWindowVisibility(dealerColor, "callsWindow")
         end
       end
     end
@@ -1454,9 +1452,7 @@ function pickBlindsCoroutine()
     if pickingPlayer.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       pause(1.5)
       if doesPlayerPossessCard(pickingPlayer.color, "Jack of Diamonds") then
-        if not string.find(UI.getAttribute("playAloneWindow", "visibility"), pickingPlayer.color) then
-          toggleWindowVisibility(pickingPlayer.color, "playAloneWindow")
-        end
+        toggleWindowVisibility(pickingPlayer.color, "playAloneWindow", true)
       end
     end
   elseif SETTINGS.jdPartner == false then --Call an Ace
@@ -1564,13 +1560,7 @@ function toggleCounterVisibility()
       displayWonOrLossText()
     end
   else
-    local zoneObjects = SCRIPT_ZONE.table.getObjects()
-    for i = #zoneObjects, 1, -1 do
-      local tableObject = zoneObjects[i]
-      if tableObject.type == "Counter" then
-        tableObject.destruct()
-      end
-    end
+    removeItem(SCRIPT_ZONE.table, "Counter", true)
     STATIC_OBJECT.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
     FLAG.counterVisible = false
     trickCountStop()
@@ -1596,7 +1586,7 @@ function setBuriedEvent(player)
     end
   end
   local buriedCards = getLooseCards(TRICK_ZONE[GLOBAL.pickingPlayer])
-  if GLOBAL.holdCards then --callAnAce active, make sure holdCard(s) is not in burried cards
+  if GLOBAL.holdCards then --callAnAce active, make sure holdCard(s) not in burried cards
     local holdCardsLen = #GLOBAL.holdCards
     if holdCardsLen < 3 then
       local count = 0
@@ -1688,12 +1678,11 @@ end
 ---@param object object
 function onObjectLeaveZone(zone, object)
   --Starts trick
-  if safeToContinue() and not FLAG.cardsToBeBuried then
-    if GLOBAL.leadOutPlayer then
-      if zone == HAND_ZONE[GLOBAL.leadOutPlayer] then
-        FLAG.trick.inProgress = true
-      end
-    end
+  if safeToContinue()
+    and not FLAG.cardsToBeBuried
+    and GLOBAL.leadOutPlayer
+    and zone == HAND_ZONE[GLOBAL.leadOutPlayer] then
+      FLAG.trick.inProgress = true
   end
 end
 
@@ -1703,18 +1692,17 @@ end
 ---@param playerColor string
 ---@param object object
 function onObjectPickUp(playerColor, object)
-  if FLAG.trick.inProgress then
-    if object.type == "Card" and isInZone(object, SCRIPT_ZONE.center) then
-      if len(GLOBAL.currentTrick) > 1 then
-        local objectName = object.getName()
-        for i = 2, #GLOBAL.currentTrick do
-          if objectName == GLOBAL.currentTrick[i].cardName and playerColor == GLOBAL.currentTrick[i].playedByColor then
-            reCalculateCurrentTrick(GLOBAL.currentTrick[i].index)
-            break
-          end
+  if FLAG.trick.inProgress
+    and object.type == "Card"
+    and isInZone(object, SCRIPT_ZONE.center)
+    and len(GLOBAL.currentTrick) > 1 then
+      local objectName = object.getName()
+      for i = 2, #GLOBAL.currentTrick do
+        if objectName == GLOBAL.currentTrick[i].cardName and playerColor == GLOBAL.currentTrick[i].playedByColor then
+          reCalculateCurrentTrick(GLOBAL.currentTrick[i].index)
+          break
         end
       end
-    end
   end
 end
 
@@ -1724,25 +1712,23 @@ end
 ---@param object object
 function onObjectDrop(playerColor, object)
   --Gaurd clauses don't work in onEvents()
-  if FLAG.trick.inProgress then
-    if object.type == "Card" then
-      --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
-      Wait.time(
-        function()
-          if isInZone(object, SCRIPT_ZONE.center) then
-            if not DEBUG and playerColor ~= GLOBAL.leadOutPlayer then
-              broadcastToAll("[21AF21]" .. Player[GLOBAL.leadOutPlayer].steam_name .. " leads out.[-]")
-            else
-              addCardDataToCurrentTrick(playerColor, object)
-              if #GLOBAL.currentTrick == GLOBAL.playerCount + 1 then
-                calculateTrickWinner()
-              end
+  if FLAG.trick.inProgress and object.type == "Card" then
+    --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
+    Wait.time(
+      function()
+        if isInZone(object, SCRIPT_ZONE.center) then
+          if not DEBUG and playerColor ~= GLOBAL.leadOutPlayer then
+            broadcastToAll("[21AF21]" .. Player[GLOBAL.leadOutPlayer].steam_name .. " leads out.[-]")
+          else
+            addCardDataToCurrentTrick(playerColor, object)
+            if #GLOBAL.currentTrick == GLOBAL.playerCount + 1 then
+              calculateTrickWinner()
             end
           end
-        end,
-        0.5
-      )
-    end
+        end
+      end,
+      0.5
+    )
   end
 end
 
@@ -2273,7 +2259,7 @@ end
 ---@param bool boolean
 function updateCalls(call, bool)
   CALL_SETTINGS[call] = bool
-  if CALL_TABLE[call] then
+  if CALL_TABLE[call].execute then
     CALL_TABLE[call].execute(bool, call)
   end
   buildCallPanel()
@@ -2507,7 +2493,7 @@ function callPartnerEvent(player)
         local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
         if player.color == dealerColor and player.color == GLOBAL.pickingPlayer then
           if doesPlayerPossessCard(player.color, "Jack of Diamonds") then
-            toggleWindowVisibility(player.color, "playAloneWindow")
+            toggleWindowVisibility(player.color, "playAloneWindow", true)
           else
             broadcastToColor("[DC0000]Jack of Diamonds will be your partner[-]", player.color)
           end
