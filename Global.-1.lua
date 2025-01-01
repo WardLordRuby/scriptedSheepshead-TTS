@@ -361,6 +361,12 @@ function safeToContinue()
   return true
 end
 
+---Returns `true` if thier are 6 seated players and `SETTINGS.dealerSitsOut` is active
+---@return boolean
+function dealerSitsOutActive()
+  return GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers
+end
+
 ---Sets the FLAG.fnRunning to true when safe this must be ran within a coroutine
 function startFnRunFlag()
   while FLAG.fnRunning do
@@ -1370,11 +1376,9 @@ function passEvent(player)
     return
   end
   local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
-  if GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers then
-    if player.color == dealerColor then
-      broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
-      return
-    end
+  if dealerSitsOutActive() and player.color == dealerColor then
+    broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
+    return
   end
   if not FLAG.dealInProgress and countCards(SCRIPT_ZONE.center) == 2 then
     if player.color == dealerColor then
@@ -1406,11 +1410,9 @@ end
 ---Sets `FLAG.cardsToBeBuried` to trigger buryCards logic
 ---@param player object<eventTrigger>
 function pickBlindsEvent(player)
-  if GLOBAL.playerCount == 5 and #GLOBAL.sortedSeatedPlayers == 6 then
-    if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
-      broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
-      return
-    end
+  if dealerSitsOutActive() and player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
+    broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
+    return
   end
   if FLAG.dealInProgress then
     return
