@@ -904,7 +904,7 @@ function onChat(message, player)
       removeItem(SCRIPT_ZONE.table, "Tile", true)
     elseif command == "respawndeck" then
       if adminCheck(player) then
-        respawnDeck()
+        respawnDeck(player.color)
       end
     elseif command == "settings" then
       if adminCheck(player) then
@@ -942,9 +942,10 @@ function getRuleBook(player)
 end
 
 ---Removes any cards on the table and respawns the deck
-function respawnDeck()
+---@param player string<"Color">
+function respawnDeck(player)
   if not safeToContinue() then
-    print("[DC0000]Please wait till event is over and try again.[-]")
+    broadcastToColor("[DC0000]Please wait till event is over and try again.[-]", player)
     return
   end
   startLuaCoroutine(self, "respawnDeckCoroutine")
@@ -2259,17 +2260,18 @@ end
 ---@param bool boolean
 function updateCalls(call, bool)
   CALL_SETTINGS[call] = bool
-  if CALL_TABLE[call].execute then
+  if CALL_TABLE[call] then
     CALL_TABLE[call].execute(bool, call)
   end
   buildCallPanel()
 end
 
 ---Abstracted gaurd clause for determining if settings window toggle is not valid
+---@param player object<eventTrigger>|nil
 ---@param id string
 ---@param state boolean
 ---@return boolean
-function toggleNotValid(id, state)
+function toggleNotValid(player, id, state)
   local lowerID = string.lower(id)
   if not SETTINGS.calls and state then
     for key in pairs(CALL_SETTINGS) do
@@ -2286,7 +2288,11 @@ function toggleNotValid(id, state)
   end
   if id == "jdPartner" or lowerID == "dealersitsout" then
     if not safeToContinue() then
-      print("[DC0000]Please wait and try again[-]")
+      if player and player.color then
+        broadcastToColor("[DC0000]Please wait and try again[-]", player.color)
+      else
+        print("[DC0000]Please wait and try again[-]")
+      end
       return true
     end
   end
@@ -2297,8 +2303,8 @@ function toggleNotValid(id, state)
 end
 
 ---Toggle setting via formatted id
----@param player nil
----@param val nil
+---@param player object<eventTrigger>|nil
+---@param val string<"number">|nil
 ---@param id string<"turnOnSettingName"|"turnOffSettingName">
 function toggleSetting(player, val, id)
   local idName, state
@@ -2311,7 +2317,7 @@ function toggleSetting(player, val, id)
   else
     return
   end
-  if toggleNotValid(idName, state) then
+  if toggleNotValid(player, idName, state) then
     return
   end
   idName = lowerFirstChar(idName)
@@ -2362,12 +2368,12 @@ function stateChangeDealerSitsOut(bool)
   if bool then
     if #GLOBAL.sortedSeatedPlayers == 6 then
       GLOBAL.playerCount = 5
-      print("[21AF21]Dealer will sit out every hand.[-]")
+      broadcastToAll("[21AF21]Dealer will sit out every hand.[-]")
     end
   else
     if #GLOBAL.sortedSeatedPlayers == 6 then
-      GLOBAL.playerCount = #GLOBAL.sortedSeatedPlayers
-      print("[21AF21]Dealer will no longer sit out.[-]")
+      GLOBAL.playerCount = 6
+      broadcastToAll("[21AF21]Dealer will no longer sit out.[-]")
     end
   end
 end
