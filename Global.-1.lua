@@ -587,36 +587,37 @@ function getIndex(find, list)
   return nil
 end
 
----Returns the index of the player seated clockwise from given index, will never return `BLINDS_STR` index
+---Returns the index of the player seated clockwise from given index, will never return `BLINDS_STR` index<br>
+---Can also return the counter-clockwise index postion if the `reverse` flag is set
 ---@param index integer
 ---@param list table<"Colors">
+---@param reverse option_bool
 ---@return integer<index>|nil
-function getNextColorIndex(index, list)
-  local listLength = #list
-  if isEmpty(list) or index > listLength then
+function cycleColorIndex(index, list, reverse)
+  if isEmpty(list) then
     return nil
   end
-  local nextColorIdx = (index % listLength) + 1
-  while list[nextColorIdx] == BLINDS_STR do
-    nextColorIdx = (nextColorIdx % listLength) + 1
+  local listLength = #list
+  if index > listLength or index < 1 then
+    return nil
   end
-  return nextColorIdx
-end
 
----Returns the index of the player seated counter-clockwise from given index, will never return `BLINDS_STR` index
----@param index integer
----@param list table<"Colors">
----@return integer<index>|nil
-function getPreviousColorIndex(index, list)
-  local listLength = #list
-  if isEmpty(list) or index > listLength then
-    return nil
+  local step
+  if reverse then
+    step = function(curr)
+      return ((curr - 2) % listLength) + 1
+    end
+  else
+    step = function(curr)
+      return (curr % listLength) + 1
+    end
   end
-  local previousColorIdx = (index - 2) % listLength + 1
-  while list[previousColorIdx] == BLINDS_STR do
-    previousColorIdx = (previousColorIdx - 2) % listLength + 1
+
+  local i = step(index)
+  while list[i] == BLINDS_STR do
+    i = step(i)
   end
-  return previousColorIdx
+  return i
 end
 
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
@@ -1270,7 +1271,7 @@ function dealCardsCoroutine()
 
   verifyCardCount()
   if not FLAG.firstDealOfGame then
-    GLOBAL.dealerColorIdx = getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
+    GLOBAL.dealerColorIdx = cycleColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
     if len(getLooseCards(SCRIPT_ZONE.table)) > 1 then
       rebuildDeck()
     end
@@ -1287,7 +1288,7 @@ function dealCardsCoroutine()
   flipDeck(SCRIPT_ZONE.table)
   pause(0.35)
 
-  local orderIdx = getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.dealOrder)
+  local orderIdx = cycleColorIndex(GLOBAL.dealerColorIdx, GLOBAL.dealOrder)
   local counter = 0
 
   local deck = getDeck(SCRIPT_ZONE.table)
@@ -1393,13 +1394,13 @@ function passEvent(player)
       end
     else
       broadcastToAll(player.steam_name .. " passed")
-      local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[
-        getPreviousColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
-      ]
-      if player.color == rightOfDealerColor and CALL_SETTINGS.leaster then
-        broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
-        if not string.find(UI.getAttribute("callsWindow", "visibility"), dealerColor) then
-          toggleWindowVisibility(dealerColor, "callsWindow")
+      if CALL_SETTINGS.leaster then
+        local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[
+          cycleColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers, true)
+        ]
+        if player.color == rightOfDealerColor then
+          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
+          toggleWindowVisibility(dealerColor, "callsWindow", true)
         end
       end
     end
@@ -1624,7 +1625,7 @@ end
 
 function setLeadOutPlayer()
   local leadOutPlayer = Player[GLOBAL.sortedSeatedPlayers[
-    getNextColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
+    cycleColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers)
   ]]
   GLOBAL.leadOutPlayer = leadOutPlayer.color
   if not DEBUG then
@@ -2556,8 +2557,7 @@ function playerCallsEvent(player, val, id)
       broadcastToColor("[DC0000] You can only call leaster if you are forced to pick[-]", player.color)
     end
   elseif id:sub(1, 5) == "Crack" then
-    id = insertSpaces(id)
-    id = string.gsub(id, "Crack", "Crack's")
+    id = string.gsub(insertSpaces(id), "Crack", "Crack's")
     broadcastToAll("[21AF21]" .. player.steam_name .. id .. "![-]")
   else
     broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. id .. "![-]")
