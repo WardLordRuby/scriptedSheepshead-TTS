@@ -208,7 +208,7 @@ function onLoad(script_state)
   ---@type {
   ---   playerCount: integer|nil,
   ---   sortedSeatedPlayers: table<"Colors">|nil,
-  ---   dealOrder: table<"colors"|BLINDS_STR>|nil,
+  ---   dealOrder: table<"Colors"|BLINDS_STR>|nil,
   ---   blackSevens: string<"GUID">|nil,
   ---   dealerColorIdx: integer<index>|nil,
   ---   holdCards: table<"cardName">|nil,
@@ -557,7 +557,7 @@ end
 
 ---getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine<br>
 ---@param zone object<zone>
----@param returnFirstDeck option_bool
+---@param returnFirstDeck option_boolean
 ---@return table<card_Objects_and_deck_Objects>|nil
 function getLooseCards(zone, returnFirstDeck)
   local looseCards = {}
@@ -591,7 +591,7 @@ end
 ---Can also return the counter-clockwise index postion if the `reverse` flag is set
 ---@param index integer
 ---@param list table<"Colors">
----@param reverse option_bool
+---@param reverse option_boolean
 ---@return integer<index>|nil
 function cycleColorIndex(index, list, reverse)
   if isEmpty(list) then
@@ -761,7 +761,7 @@ end
 ---Called to remove items from a zone. Must be called from within a coroutine if `not skipAnimation`
 ---@param zone object<zone>
 ---@param items table<"Types">|string<"Type">
----@param skipAnimation option_bool
+---@param skipAnimation option_boolean
 function removeItem(zone, items, skipAnimation)
   if type(items) == "string" then
     items = {items}
@@ -2455,7 +2455,7 @@ end
 
 ---@param player string<"Color">
 ---@param window string<"windowID">
----@param force option_bool
+---@param force option_boolean
 function toggleWindowVisibility(player, window, force)
   local visibility = UI.getAttribute(window, "visibility")
   if string.find(visibility, player) then
@@ -2661,7 +2661,7 @@ end
 
 ---filters a list of card names down to one of each fail suit
 ---@param failCards table<"cardName">
----@return table<"suitName">
+---@return table<"Suit">
 function uniqueFailSuits(failCards)
   local failSuits = {}
   for _, cardName in ipairs(failCards) do
@@ -2676,7 +2676,7 @@ end
 ---returns the fail aces a player holds, if player holds 3 fail aces returns the fail 10's a player holds<br>
 ---setting unknown will include the King
 ---@param player string<"Color">
----@param unknown option_bool
+---@param unknown option_boolean
 ---@return table<"cardNames">, string<"Ace"|"Ten">
 function aceOrTenOfNotPartnerChoices(player, unknown)
   local tryOrder = {"Ace", "Ten"}
@@ -2696,8 +2696,8 @@ end
 
 ---Removes suits from failSuits if they share the same suit with cards found in notPartnerChoices
 ---@param notPartnerChoices table<"cardNames">
----@param failSuits table<"suitName">
----@return table<"suitName">
+---@param failSuits table<"Suit">
+---@return table<"Suit">
 function removeHeldCards(notPartnerChoices, failSuits)
   for _, cardToRemove in ipairs(notPartnerChoices) do
     for i = #failSuits, 1, -1 do
@@ -2710,7 +2710,7 @@ function removeHeldCards(notPartnerChoices, failSuits)
 end
 
 ---Finds the valid partnerChoices for when unknown event is triggered and passes them to `setActivePartnerButtons`
----@param player string<"color">
+---@param player string<"Color">
 function unknownPartnerChoices(player)
   local notPartnerChoices, card = aceOrTenOfNotPartnerChoices(player, true)
   local failSuits = removeHeldCards(notPartnerChoices, {"Hearts", "Spades", "Clubs"})
