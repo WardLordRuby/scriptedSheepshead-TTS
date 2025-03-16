@@ -361,7 +361,7 @@ function safeToContinue()
   return true
 end
 
----Returns `true` if thier are 6 seated players and `SETTINGS.dealerSitsOut` is active
+---Returns `true` if there are 6 seated players and `SETTINGS.dealerSitsOut` is active
 ---@return boolean
 function dealerSitsOutActive()
   return GLOBAL.playerCount ~= #GLOBAL.sortedSeatedPlayers
@@ -423,7 +423,7 @@ function copyTable(list)
   return JSON.decode(JSON.encode(list))
 end
 
----Copys input table and removes the first matching value, if value not found returns original table<br>
+---Copies input table and removes the first matching value, if value not found returns original table<br>
 ---Table must have numerical indexes
 ---@param remove any
 ---@param from table<any>
@@ -555,7 +555,7 @@ function getDeck(zone, size)
   return getDeck(zone)
 end
 
----getLooseCards also provieds a safe way to return a deck Object from outside of a coroutine<br>
+---getLooseCards also provides a safe way to return a deck Object from outside of a coroutine<br>
 ---@param zone object<zone>
 ---@param returnFirstDeck option_boolean
 ---@return table<card_Objects_and_deck_Objects>|nil
@@ -588,7 +588,7 @@ function getIndex(find, list)
 end
 
 ---Returns the index of the player seated clockwise from given index, will never return `BLINDS_STR` index<br>
----Can also return the counter-clockwise index postion if the `reverse` flag is set
+---Can also return the counter-clockwise index position if the `reverse` flag is set
 ---@param index integer
 ---@param list table<"Colors">
 ---@param reverse option_boolean
@@ -736,7 +736,7 @@ end
 --[[Object manipulation]]--
 
 ---Checks if a deck in the given zone is face up, if so it flips the deck<br>
----Recomended to be ran from within a coroutine
+---Recommended to be ran from within a coroutine
 ---@param zone object<zone>
 function flipDeck(zone)
   local deck = getDeck(zone)
@@ -832,7 +832,7 @@ function verifyCardCount()
     end
   else
     correctCount = 32
-    modifyDeck = returnDecktoPiquet
+    modifyDeck = returnDeckToPiquet
     deckModifiable = function(deck)
       return deck and deck.getQuantity() == 30 and cardCount == 30 and GLOBAL.blackSevens
     end
@@ -880,13 +880,13 @@ end
 
 --[[Start of functions used by Set Up Game event]]--
 
----Runs everytime a chat occurs.
+---Runs every time a chat occurs.
 ---<br>Return: true, hides player msg | false, shows player msg
 ---@param message string<playerInput>
 ---@param player object<player>
 ---@return boolean
 function onChat(message, player)
-  --Sets flags for determining if to reset gameboard
+  --Sets flags for determining if to reset game board
   if FLAG.lookForPlayerText and player.color == GLOBAL.gameSetupPlayer then
     local lowerMessage = string.lower(message)
     if lowerMessage == 'y' then
@@ -1045,7 +1045,7 @@ end
 ---Function uses global string GLOBAL.blackSevens provided by `removeBlackSevens()` to locate<br>
 ---`GLOBAL.blackSevens` within `STATIC_OBJECT.hiddenBag`, then moves them to the current deck position
 ---@param deck object<deck>
-function returnDecktoPiquet(deck)
+function returnDeckToPiquet(deck)
   STATIC_OBJECT.hiddenBag.takeObject({
     guid = GLOBAL.blackSevens,
     position = deck.getPosition(),
@@ -1149,7 +1149,7 @@ function setupGameEvent(player)
   end
 end
 
----Start of order of opperations for game setup
+---Start of order of operations for game setup
 function setupGameCoroutine()
   if FLAG.gameSetup.ran and #GLOBAL.sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
@@ -1178,7 +1178,7 @@ function setupGameCoroutine()
   end
 
   --start of debug code
-  --This is how Number of players is mannaged in debug mode
+  --This is how Number of players is managed in debug mode
   --Happens in place of populatePlayers
   if DEBUG then
     if not GLOBAL.sortedSeatedPlayers then
@@ -1205,7 +1205,7 @@ function setupGameCoroutine()
   return 1
 end
 
---[[End of order of opperations for game setup]]--
+--[[End of order of operations for game setup]]--
 --[[End of functions used by Set Up Game event]]--
 
 
@@ -1263,7 +1263,7 @@ function setupHandEvent()
   startLuaCoroutine(self, "dealCardsCoroutine")
 end
 
----Order of opperations for dealing
+---Order of operations for dealing
 function dealCardsCoroutine()
   if FLAG.counterVisible then
     toggleCounterVisibility()
@@ -1293,7 +1293,7 @@ function dealCardsCoroutine()
 
   local deck = getDeck(SCRIPT_ZONE.table)
   local rotationVal = deck.getRotation()
-  local dealPostions = #GLOBAL.dealOrder
+  local dealPositions = #GLOBAL.dealOrder
 
   flipDeck(SCRIPT_ZONE.table)
   pause(0.15)
@@ -1302,8 +1302,8 @@ function dealCardsCoroutine()
 
   while deck ~= nil do
     dealLogic(
-      GLOBAL.dealOrder[((orderIdx - 1) % dealPostions) + 1],
-      math.floor(counter / dealPostions) + 1,
+      GLOBAL.dealOrder[((orderIdx - 1) % dealPositions) + 1],
+      math.floor(counter / dealPositions) + 1,
       deck,
       rotationVal
     )
@@ -1316,7 +1316,7 @@ function dealCardsCoroutine()
 end
 
 ---Contains the logic to deal correctly based on the number of
----players seated and the number of times players have recieved cards
+---players seated and the number of times players have received cards
 ---@param target string<"Color">
 ---@param round integer
 ---@param deck object<deck>
@@ -1513,7 +1513,7 @@ function hideSetBuriedButton()
 end
 
 ---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
----a counter in front of `GLOBAL.pickingPlayer`<br> and player accross from color.
+---a counter in front of `GLOBAL.pickingPlayer`<br> and player across from color.
 ---Flips over pickers tricks to see score of hand<br>
 ---Must be ran from within a coroutine
 function toggleCounterVisibility()
@@ -1572,8 +1572,8 @@ function toggleCounterVisibility()
   end
 end
 
----Makes sure buried cards are face down and unhides blinds and `GLOBAL.pickingPlayers`<br>
----hand objects. Calculates global `GLOBAL.leadOutPlayer`, hides Set Buried button
+---Makes sure buried cards are face down and ensures blinds and `GLOBAL.pickingPlayers`<br>
+---hand objects are not hidden. Calculates global `GLOBAL.leadOutPlayer`, hides Set Buried button
 ---@param player object<eventTrigger>
 function setBuriedEvent(player)
   if player.color ~= GLOBAL.pickingPlayer then
@@ -1590,7 +1590,7 @@ function setBuriedEvent(player)
     end
   end
   local buriedCards = getLooseCards(TRICK_ZONE[GLOBAL.pickingPlayer])
-  if GLOBAL.holdCards then --callAnAce active, make sure holdCard(s) not in burried cards
+  if GLOBAL.holdCards then --callAnAce active, make sure holdCard(s) not in buried cards
     local holdCardsLen = #GLOBAL.holdCards
     if holdCardsLen < 3 then
       local count = 0
@@ -1690,7 +1690,7 @@ function onObjectLeaveZone(zone, object)
   end
 end
 
----Runs when a player pickes up an object<br>
+---Runs when a player picks up an object<br>
 ---If someone plays the wrong card, Ex. Player didn't see they have to follow suit
 ---and needs to remove a card from the `GLOBAL.currentTrick`
 ---@param playerColor string
@@ -1715,7 +1715,7 @@ end
 ---@param playerColor string
 ---@param object object
 function onObjectDrop(playerColor, object)
-  --Gaurd clauses don't work in onEvents()
+  --Guard clauses don't work in onEvents()
   if FLAG.trick.inProgress and object.type == "Card" then
     --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
     Wait.time(
@@ -1998,8 +1998,8 @@ end
 
 --[[New functions to adapt Blackjack Card Counter]]--
 
----Returns the color of the handposition located across the table from given color<br>
----Color must be directly accross for the counter because `TABLE_BLOCK` is an invisible triangle
+---Returns the color of the `handPosition` located across the table from given color<br>
+---Color must be directly across for the counter because `TABLE_BLOCK` is an invisible triangle
 ---@param player string<"Color">
 ---@return string<"Color">|nil
 function findColorAcrossTable(player)
@@ -2224,24 +2224,24 @@ end
 ---updates height of panel to fit all buttons
 function buildCallPanel()
   local numOfCallsEnabled = 0
-  local currentoffsetY = -5
-  local buttonoffsetY = -53
+  local currentOffsetY = -5
+  local buttonOffsetY = -53
   for key, value in pairs(CALL_SETTINGS) do
     local attributeID = key .. "Button"
     if value then
       numOfCallsEnabled = numOfCallsEnabled + 1
-      currentoffsetY = currentoffsetY + buttonoffsetY
-      local currentoffsetXY = "00 " .. currentoffsetY
+      currentOffsetY = currentOffsetY + buttonOffsetY
+      local currentOffsetXY = "00 " .. currentOffsetY
       UI.setAttribute(attributeID, "active", "true")
-      UI.setAttribute(attributeID, "offsetXY", currentoffsetXY)
+      UI.setAttribute(attributeID, "offsetXY", currentOffsetXY)
     else
       UI.setAttribute(attributeID, "active", "false")
     end
   end
   local initialFrameSizeY = 58
-  currentoffsetY = initialFrameSizeY + (numOfCallsEnabled * math.abs(buttonoffsetY))
-  UI.setAttribute("callsWindow", "height", currentoffsetY)
-  UI.setAttribute("callsWindowBackground", "height", currentoffsetY)
+  currentOffsetY = initialFrameSizeY + (numOfCallsEnabled * math.abs(buttonOffsetY))
+  UI.setAttribute("callsWindow", "height", currentOffsetY)
+  UI.setAttribute("callsWindowBackground", "height", currentOffsetY)
 end
 
 ---@param rule string<"ruleName">
@@ -2269,7 +2269,7 @@ function updateCalls(call, bool)
   buildCallPanel()
 end
 
----Abstracted gaurd clause for determining if settings window toggle is not valid
+---Abstracted guard clause for determining if settings window toggle is not valid
 ---@param player object<eventTrigger>|nil
 ---@param id string
 ---@param state boolean
@@ -2491,7 +2491,7 @@ function callPartnerEvent(player)
     return
   end
   Wait.time( --0.13s delay allows button click sound to be played
-    function() --Show call partner window for selected parter mode
+    function() --Show call partner window for selected partner mode
       if GLOBAL.leadOutPlayer then
         broadcastToColor("[DC0000]You can not do this now[-]", player.color)
         return
@@ -2730,7 +2730,7 @@ end
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
-  resetActiveChildern(selectPartnerWindow)
+  resetActiveChildren(selectPartnerWindow)
   for _, button in pairs(selectPartnerWindow.children[1].children) do
     if tableContains(list, button.attributes.id) then
       UI.setAttribute(button.attributes.id, "active", "true")
@@ -2749,9 +2749,9 @@ function findPanelElement(id, table)
   end
 end
 
----Sets the `"active"` attribute to `"false"` for all childen of the input `panel`
+---Sets the `"active"` attribute to `"false"` for all children of the input `panel`
 ---@param panel xmlTableElement
-function resetActiveChildern(panel)
+function resetActiveChildren (panel)
   for _, childrenButtons in pairs(panel.children[1].children) do
     if childrenButtons.attributes.active == "true" then
       UI.setAttribute(childrenButtons.attributes.id, "active", "false")
@@ -2768,7 +2768,7 @@ function selectPartnerEvent(player, val, id)
     unknownFormat = " - Unknown"
   end
   GLOBAL.partnerCard = callCard
-  broadcastToAll("[21AF21]" .. player.steam_name .. " picks " .. callCard .. unknownFormat .. " as their parnter")
+  broadcastToAll("[21AF21]" .. player.steam_name .. " picks " .. callCard .. unknownFormat .. " as their partner")
   toggleWindowVisibility(player.color, "selectPartnerWindow")
   local validSuit = getLastWord(callCard)
   Wait.time(
@@ -2823,7 +2823,7 @@ function startLeasterHandCoroutine()
   local lastLeasterTrick = getDeck(SCRIPT_ZONE.table)
   GLOBAL.lastLeasterTrick = lastLeasterTrick.guid
   if not lastLeasterTrick or lastLeasterTrick.getQuantity() ~= 2 then
-    print("startLeasterHand Err: blinds wrong quanity")
+    print("startLeasterHand Err: blinds wrong quantity")
     return 1
   end
   local playerRotation = ROTATION.color[GLOBAL.pickingPlayer]
@@ -2839,12 +2839,12 @@ end
 
 function printLeasterRules()
   Wait.time(function() broadcastToAll("[21AF21]No teams, everyone for themselves![-]") end, 1)
-  Wait.time(function() broadcastToAll("[21AF21]Player with least ammount of points wins +1 from all[-]") end, 3)
+  Wait.time(function() broadcastToAll("[21AF21]Player with least amount of points wins +1 from all[-]") end, 3)
   Wait.time(function() broadcastToAll("[21AF21]Player who takes the last trick gets the blinds[-]") end, 5)
 end
 
 
---[[Start of graphic anamations]]--
+--[[Start of graphic animations]]--
 
 function closeSettingsButtonAnimateEnter(player, val, id)
   local id = id .. "Button"
@@ -2890,7 +2890,7 @@ function animateButtonUp(player, val, id)
   UI.setAttribute(id, "image", id)
 end
 
---[[End of graphic anamations]]--
+--[[End of graphic animations]]--
 
 ---GLOBAL table used for displaying the current settings as notes
 CURRENT_RULES = {
@@ -2915,7 +2915,7 @@ CURRENT_RULES = {
 
 --[[CONST tables]]--
 
---Note: Global tables that contain function pointers must be definded after the function is defined in Lua
+--Note: Global tables that contain function pointers must be defined after the function is defined in Lua
 
 RULE_TABLE = {
   dealerSitsOut = {
