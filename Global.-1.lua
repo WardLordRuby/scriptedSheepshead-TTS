@@ -671,20 +671,21 @@ end
 ---@param player string<"Color">
 ---@return table<"cardNames">
 function getPlayerCards(player)
-  local cards = {}
+  local cardNames = {}
   for _, card in ipairs(getLooseCards(HAND_ZONE[player])) do
-    table.insert(cards, card.getName())
+    --Must be card since objects do not group in the hand zone
+    table.insert(cardNames, card.getName())
   end
   for _, object in ipairs(getLooseCards(TRICK_ZONE[player])) do
     if object.type == "Card" then
-      table.insert(cards, object.getName())
-    else
-      for _, card in ipairs(object.getObjects()) do
-        table.insert(cards, card.getName())
+      table.insert(cardNames, object.getName())
+    else --Must be deck since `getLooseCards` filters by type "Card" & "Deck" only
+      for _, containedCard in ipairs(object.getObjects()) do
+        table.insert(cardNames, containedCard.nickname)
       end
     end
   end
-  return cards
+  return cardNames
 end
 
 ---Filters cards relevant to determining Call an Ace conditions or finding next highest card to call
@@ -854,11 +855,11 @@ function rebuildDeck()
   local faceRotation = moreFaceUpOrDown(SCRIPT_ZONE.table)
   for _, object in ipairs(getLooseCards(SCRIPT_ZONE.table)) do
     if object.type == "Deck" then
-      for _, card in ipairs(object.getObjects()) do
+      for _, containedCard in ipairs(object.getObjects()) do
         object.takeObject({
           rotation = { 0, math.random(0, 360), faceRotation },
           position = { math.random(-5.75, 5.75), 1.4, math.random(-5.75, 5.75) },
-          guid = card.guid
+          guid = containedCard.guid
         })
         pause(0.03)
       end
@@ -1066,10 +1067,10 @@ function removeBlackSevens(deck)
   deck.setPosition(POS.center)
   deck.setRotation(POS.defaultDeckRotation)
   local guids = {}
-  for _, card in ipairs(deck.getObjects()) do
+  for _, containedCard in ipairs(deck.getObjects()) do
     for _, cardName in ipairs(BLACK_SEVENS) do
-      if card.getName() == cardName then
-        table.insert(guids, card.guid)
+      if containedCard.nickname == cardName then
+        table.insert(guids, containedCard.guid)
       end
     end
   end
@@ -1444,7 +1445,7 @@ function pickBlindsCoroutine()
     card.setRotationSmooth(playerRotation)
   end
   pause(0.35)
-  for _, card in ipairs(pickingPlayer.getHandObjects()) do
+  for _, card in ipairs(getLooseCards(HAND_ZONE[GLOBAL.pickingPlayer])) do
     if card.is_face_down then
       card.flip()
     end
@@ -1937,7 +1938,7 @@ end
 ---Shows card counters if hand is over
 function giveTrickToWinnerCoroutine()
   local lastTrick = false
-  if #Player[GLOBAL.leadOutPlayer].getHandObjects() == 0 then
+  if #getLooseCards(HAND_ZONE[GLOBAL.leadOutPlayer]) == 0 then
     lastTrick = true
   end
   pause(1.75)
@@ -2063,7 +2064,7 @@ function countTricks()
   for i, set in ipairs(COUNTER_OBJ_SETS) do
     values[i] = {}
     local objectsInZone = set.z.getObjects()
-    for j, object in ipairs(objectsInZone) do
+    for _, object in ipairs(objectsInZone) do
       if object.type == "Card" then
         obtainCardValue(i, object)
       elseif object.type == "Deck" then
@@ -2093,10 +2094,9 @@ end
 
 ---Checks decks sent to it and, if their cards names contains cardNameTable, it adds the values to a table
 function obtainDeckValue(i, deck)
-  local cards = deck.getObjects()
-  for k, card in ipairs(cards) do
+  for _, containedCard in ipairs(deck.getObjects()) do
     for name, val in pairs(cardNameTable) do
-      if string.find(card.nickname, name) then
+      if string.find(containedCard.nickname, name) then
         table.insert(values[i], val)
       end
     end
