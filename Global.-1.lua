@@ -241,17 +241,10 @@ function onLoad(script_state)
   }
 
   FLAG = {
-    gameSetup = {
-      inProgress = false,
-      ran = false
-    },
-    trick = {
-      inProgress = false,
-      handOut = false
-    },
+    setupRan = false,
+    trickInProgress = false,
     leasterHand = false,
     stopCoroutine = false,
-    dealInProgress = false,
     lookForPlayerText = false,
     continue = nil,
     cardsToBeBuried = false,
@@ -347,19 +340,6 @@ function onSave()
 end
 
 --[[Utility functions]]--
-
----Checks `dealInProgress`, `trick.handOut`, `gameSetup.inProgress`, `selectingPartner`, and `fnRunning`
----@return boolean
-function safeToContinue()
-  if FLAG.dealInProgress
-    or FLAG.trick.handOut
-    or FLAG.gameSetup.inProgress
-    or FLAG.fnRunning
-    or FLAG.selectingPartner then
-      return false
-  end
-  return true
-end
 
 ---Returns `true` if there are 6 seated players and `SETTINGS.dealerSitsOut` is active
 ---@return boolean
@@ -798,11 +778,12 @@ function moveDeckAndDealerChip()
 end
 
 ---prepCards will group and center all cards and respawn the deck if any error is encountered<br>
----Needs to be ran from within a coroutine
+---Needs to be ran from within a coroutine. Note: this fn assumes it is being called from within a
+---coroutine that has already set `FLAG.fnRunning`
 function prepCards()
   local looseCards = getLooseCards(SCRIPT_ZONE.table)
   if not looseCards then
-    respawnDeckCoroutine()
+    respawnDeckCoroutine(true)
     return
   end
 
@@ -811,7 +792,7 @@ function prepCards()
     pause(0.5)
     local deck = getDeck(SCRIPT_ZONE.table)
     if not deck then
-      respawnDeckCoroutine()
+      respawnDeckCoroutine(true)
       return
     end
     deck.setPosition(POS.center)
@@ -821,7 +802,7 @@ function prepCards()
 end
 
 ---Just checks to make sure cards are all there<br>
----Needs to be ran from within a coroutine
+---Note: this fn assumes it is being called from within a coroutine that has already set `FLAG.fnRunning`
 function verifyCardCount()
   local cardCount = countCards(SCRIPT_ZONE.table)
   local modifyDeck, deckModifiable, correctCount
@@ -844,7 +825,7 @@ function verifyCardCount()
     if deckModifiable(deck) then
       modifyDeck(deck)
     else
-      respawnDeckCoroutine()
+      respawnDeckCoroutine(true)
     end
   end
 end
@@ -911,9 +892,7 @@ function onChat(message, player)
     elseif command == "hiderules" then
       removeItem(SCRIPT_ZONE.table, "Tile", true)
     elseif command == "respawndeck" then
-      if adminCheck(player) then
-        respawnDeck(player.color)
-      end
+      respawnDeck(player)
     elseif command == "settings" then
       if adminCheck(player) then
         toggleWindowVisibility(player.color, "settingsWindow")
@@ -950,16 +929,28 @@ function getRuleBook(player)
 end
 
 ---Removes any cards on the table and respawns the deck
----@param player string<"Color">
+---@param player object<commandTrigger>
 function respawnDeck(player)
-  if not safeToContinue() then
-    broadcastToColor("[DC0000]Please wait till event is over and try again.[-]", player)
+  if not adminCheck(player) then
     return
+  end
+  if FLAG.fnRunning then
+    broadcastToColor(
+      "[fc8803]Action in progress, deck will be re-spawned after current action is complete.[-]",
+      player.color
+    )
   end
   startLuaCoroutine(self, "respawnDeckCoroutine")
 end
 
-function respawnDeckCoroutine()
+---Set `fnRunning` if this function should be ran as a continuation of a currently set `FLAG.fnRunning`
+---otherwise will wait for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
+---@param fnRunning option_bool
+function respawnDeckCoroutine(fnRunning)
+  if not fnRunning then
+    startFnRunFlag()    
+  end
+
   local remainingTableCards = getLooseCards(SCRIPT_ZONE.table)
   if not isEmpty(remainingTableCards) then
     removeItem(SCRIPT_ZONE.table, {"Card", "Deck"})
@@ -990,11 +981,15 @@ function respawnDeckCoroutine()
     pause(0.2)
     removeBlackSevens(newDeck)
   end
-  if FLAG.gameSetup.ran and FLAG.firstDealOfGame then
+  if FLAG.setupRan and FLAG.firstDealOfGame then
     pause(0.4)
     moveDeckAndDealerChip()
   end
   pause(0.75)
+
+  if not fnRunning then
+    FLAG.fnRunning = false
+  end
   return 1
 end
 
@@ -1011,7 +1006,7 @@ end
 ---Prints the current game settings<br>
 ---Gets the correct deck for the number of seated players<br>
 ---Will stop `setupGameCoroutine` if there is less than 3 seated players<br>
----Must be ran from within a coroutine
+---Note: this fn assumes it is being called from within a coroutine that has already set `FLAG.fnRunning`
 function printGameSettings()
   if #GLOBAL.sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
@@ -1096,21 +1091,28 @@ function startChipSpawn(player)
   if not adminCheck(player) then
     return
   end
-  if not FLAG.gameSetup.ran then
+  if not FLAG.setupRan then
     broadcastToColor("[DC0000]Setup game before spawning extra chips.[-]", player.color)
     return
   end
-  if not safeToContinue() then
-    broadcastToColor("[DC0000]Action in progress, wait and try this command again.[-]", player.color)
-    return
+  if FLAG.fnRunning then
+    broadcastToColor(
+      "[fc8803]Action in progress, chips will be spawned after current action is complete.[-]",
+      player.color
+    )
   end
   startLuaCoroutine(self, "spawnChips")
 end
 
----Deals specified number of chips to all seated players<br>
----Requires: `FLAG.gameSetup.ran` & is ran from within a coroutine
-function spawnChips()
-  startFnRunFlag()
+---Deals 15 chips to all seated players<br>Set `fnRunning` if this function should be ran as a continuation
+---of a currently set `FLAG.fnRunning` otherwise will wait for any current `FLAG.fnRunning` to complete and
+---starts a new fnRunning instance<br>Requires that `FLAG.setupRan` and is ran from within a coroutine
+---@param fnRunning option_bool
+function spawnChips(fnRunning)
+  if not fnRunning then
+    startFnRunFlag()
+  end
+
   for _, color in ipairs(GLOBAL.sortedSeatedPlayers) do
     local rotatedOffset
     local rotationAngle, playerPos = getItemMoveData(color)
@@ -1131,32 +1133,32 @@ function spawnChips()
       pause(0.02)
     end
   end
-  FLAG.fnRunning = false
+
+  if not fnRunning then
+    FLAG.fnRunning = false    
+  end
   return 1
 end
 
 ---Start of game setup event
 ---@param player object<eventTrigger>
 function setupGameEvent(player)
-  if not safeToContinue() then
+  if not adminCheck(player) or FLAG.fnRunning then
     return
   end
-  if player.admin then
-    FLAG.gameSetup.inProgress = true
-    GLOBAL.gameSetupPlayer = player.color
-    startLuaCoroutine(self, "setupGameCoroutine")
-  else
-    broadcastToColor("[DC0000]You do not have permission to access this feature.", player.color, "[-]")
+  if FLAG.setupRan and #GLOBAL.sortedSeatedPlayers < 3 then
+    broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
+    return
   end
+  GLOBAL.gameSetupPlayer = player.color
+  startLuaCoroutine(self, "setupGameCoroutine")
 end
 
----Start of order of operations for game setup
+---Start of order of operations for game setup<br>Waits for any current `FLAG.fnRunning` to complete and
+---starts a new fnRunning instance
 function setupGameCoroutine()
-  if FLAG.gameSetup.ran and #GLOBAL.sortedSeatedPlayers < 3 then
-    broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
-    FLAG.gameSetup.inProgress = false
-    return 1
-  elseif FLAG.gameSetup.ran then
+  startFnRunFlag()
+  if FLAG.setupRan then
     local gameSetupPlayer = Player[GLOBAL.gameSetupPlayer]
     gameSetupPlayer.broadcast("[b415ff]You are trying to set up a new game for [-]"
       .. #GLOBAL.sortedSeatedPlayers .. " players.")
@@ -1168,7 +1170,7 @@ function setupGameCoroutine()
       FLAG.lookForPlayerText, FLAG.continue = false, nil
       removeItem(SCRIPT_ZONE.table, "Chip")
     else
-      FLAG.lookForPlayerText, FLAG.gameSetup.inProgress, FLAG.continue = false, false, nil
+      FLAG.lookForPlayerText, FLAG.fnRunning, FLAG.continue = false, false, nil
       print("[21AF21]New game was not selected.[-]")
       return 1
     end
@@ -1178,13 +1180,17 @@ function setupGameCoroutine()
     toggleCounterVisibility()
   end
 
+  if FLAG.cardsToBeBuried then
+    hideSetBuriedButton()
+  end
+
   --start of debug code
   --This is how Number of players is managed in debug mode
   --Happens in place of populatePlayers
   if DEBUG then
     if not GLOBAL.sortedSeatedPlayers then
       GLOBAL.sortedSeatedPlayers = copyTable(ALL_PLAYERS)
-      FLAG.gameSetup.inProgress = false
+      FLAG.fnRunning = false
       return 1
     end
   else
@@ -1195,14 +1201,14 @@ function setupGameCoroutine()
   printGameSettings()
 
   if FLAG.stopCoroutine then
-    FLAG.stopCoroutine, FLAG.gameSetup.inProgress = false, false
+    FLAG.stopCoroutine, FLAG.fnRunning = false, false
     return 1
   end
 
-  spawnChips()
+  spawnChips(true)
 
-  FLAG.gameSetup.inProgress = false
-  FLAG.gameSetup.ran, FLAG.firstDealOfGame = true, true
+  FLAG.fnRunning = false
+  FLAG.setupRan, FLAG.firstDealOfGame = true, true
   return 1
 end
 
@@ -1231,41 +1237,45 @@ end
 
 ---Start of New Hand event
 function setupHandEvent()
-  if not safeToContinue() then
+  if FLAG.fnRunning then
     return
   end
-  if not FLAG.gameSetup.ran then
+  if not FLAG.setupRan then
     print("[21AF21]Press Set Up Game First.[-]")
     return
   end
-  FLAG.dealInProgress = true
+
   if FLAG.cardsToBeBuried then
     hideSetBuriedButton()
   end
+
   GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards, GLOBAL.partnerCard = nil, nil, nil, nil
-  FLAG.trick.inProgress, FLAG.leasterHand = false, false
+  FLAG.trickInProgress, FLAG.leasterHand = false, false
+
   if GLOBAL.unknownText then
     getObjectFromGUID(GLOBAL.unknownText).destruct()
     GLOBAL.unknownText = nil
   end
+
   GLOBAL.currentTrick = {}
 
   local selectPartnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
   local playAloneWindowOpen = UI.getAttribute("playAloneWindow", "visibility")
+
   if selectPartnerWindowOpen ~= "" then
-    UI.hide("selectPartnerWindow")
-    UI.setAttribute("selectPartnerWindow", "visibility", "")
+    hideUIElement("selectPartnerWindow")
   end
   if playAloneWindowOpen ~= "" then
-    UI.hide("playAloneWindow")
-    UI.setAttribute("playAloneWindow", "visibility", "")
+    hideUIElement("playAloneWindow")
   end
 
   startLuaCoroutine(self, "dealCardsCoroutine")
 end
 
----Order of operations for dealing
+---Order of operations for dealing<br>
+---Waits for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
 function dealCardsCoroutine()
+  startFnRunFlag()
   if FLAG.counterVisible then
     toggleCounterVisibility()
   end
@@ -1312,7 +1322,7 @@ function dealCardsCoroutine()
     pause(0.25)
   end
 
-  FLAG.dealInProgress = false
+  FLAG.fnRunning = false
   return 1
 end
 
@@ -1374,35 +1384,35 @@ end
 ---Prints a message if player passes or is forced to pick
 ---@param player object<eventTrigger>
 function passEvent(player)
-  if not GLOBAL.dealerColorIdx then
+  if not GLOBAL.dealerColorIdx or FLAG.fnRunning or countCards(SCRIPT_ZONE.center) ~= 2 then
     return
   end
+
   local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
   if dealerSitsOutActive() and player.color == dealerColor then
     broadcastToColor("[DC0000]You can not pass while sitting out.[-]", player.color)
     return
   end
-  if not FLAG.dealInProgress and countCards(SCRIPT_ZONE.center) == 2 then
-    if player.color == dealerColor then
-      if not DEBUG then
-        if CALL_SETTINGS.leaster then
-          broadcastToColor("[DC0000]Dealer can not pass. Pick your own or Call a Leaster.[-]", player.color)
-        else
-          broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", player.color)
-        end
+
+  if player.color == dealerColor then
+    if not DEBUG then
+      if CALL_SETTINGS.leaster then
+        broadcastToColor("[DC0000]Dealer can not pass. Pick your own or Call a Leaster.[-]", player.color)
       else
-        print("[DC0000]Dealer can not pass. " .. dealerColor .. " pick your own![-]")
+        broadcastToColor("[DC0000]Dealer can not pass. Pick your own![-]", player.color)
       end
     else
-      broadcastToAll(player.steam_name .. " passed")
-      if CALL_SETTINGS.leaster then
-        local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[
-          cycleColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers, true)
-        ]
-        if player.color == rightOfDealerColor then
-          broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
-          toggleWindowVisibility(dealerColor, "callsWindow", true)
-        end
+      print("[DC0000]Dealer can not pass. " .. dealerColor .. " pick your own![-]")
+    end
+  else
+    broadcastToAll(player.steam_name .. " passed")
+    if CALL_SETTINGS.leaster then
+      local rightOfDealerColor = GLOBAL.sortedSeatedPlayers[
+        cycleColorIndex(GLOBAL.dealerColorIdx, GLOBAL.sortedSeatedPlayers, true)
+      ]
+      if player.color == rightOfDealerColor then
+        broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
+        toggleWindowVisibility(dealerColor, "callsWindow", true)
       end
     end
   end
@@ -1412,20 +1422,18 @@ end
 ---Sets `FLAG.cardsToBeBuried` to trigger buryCards logic
 ---@param player object<eventTrigger>
 function pickBlindsEvent(player)
+  if FLAG.fnRunning or countCards(SCRIPT_ZONE.center) ~= 2 then
+    return
+  end
   if dealerSitsOutActive() and player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
     broadcastToColor("[DC0000]You can not pick while sitting out.[-]", player.color)
-    return
-  end
-  if FLAG.dealInProgress then
-    return
-  end
-  if countCards(SCRIPT_ZONE.center) ~= 2 then
     return
   end
   GLOBAL.pickingPlayer = player.color
   startLuaCoroutine(self, "pickBlindsCoroutine")
 end
 
+---Waits for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
 function pickBlindsCoroutine()
   startFnRunFlag()
   local pickingPlayer = Player[GLOBAL.pickingPlayer]
@@ -1513,12 +1521,10 @@ function hideSetBuriedButton()
   )
 end
 
----Toggles the spawning and deletion of counters.<br> On counter spawn will spawn
----a counter in front of `GLOBAL.pickingPlayer`<br> and player across from color.
----Flips over pickers tricks to see score of hand<br>
----Must be ran from within a coroutine
+---Toggles the spawning and deletion of counters.<br> On counter spawn will spawn a counter in front of
+---`GLOBAL.pickingPlayer` and the player across from the pickingPlayer. Flips over pickers tricks to see
+---score of hand<br>Must be ran from within a coroutine.
 function toggleCounterVisibility()
-  startFnRunFlag()
   if not FLAG.counterVisible then
     local pickerColor = GLOBAL.pickingPlayer
     local pickerRotation = ROTATION.color[pickerColor]
@@ -1559,7 +1565,6 @@ function toggleCounterVisibility()
     --Card counter Loop starts here with `startTrickCount()`
     pause(0.2)
     startTrickCount(tCounter.guid, pCounter.guid)
-    FLAG.fnRunning = false
     if not FLAG.leasterHand then
       pause(1.35)
       displayWonOrLossText()
@@ -1569,7 +1574,6 @@ function toggleCounterVisibility()
     STATIC_OBJECT.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
     FLAG.counterVisible = false
     trickCountStop()
-    FLAG.fnRunning = false
   end
 end
 
@@ -1581,12 +1585,13 @@ function setBuriedEvent(player)
     return
   end
   if countCards(TRICK_ZONE[GLOBAL.pickingPlayer]) ~= 2 then
+    broadcastToColor("[DC0000]You must bury 2 cards[-]", player.color)
     return
   end
   if SETTINGS.jdPartner == false then
     local partnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
     if partnerWindowOpen ~= "" then
-      broadcastToColor("[DC0000]Select Partner before burying cards", player.color)
+      broadcastToColor("[DC0000]Select Partner before burying cards[-]", player.color)
       return
     end
   end
@@ -1601,11 +1606,11 @@ function setBuriedEvent(player)
         end
       end
       if holdCardsLen == 2 and count == 2 then
-        broadcastToColor("[DC0000]You can not bury both of your hold cards", player.color)
+        broadcastToColor("[DC0000]You can not bury both of your hold cards[-]", player.color)
         return
       end
       if holdCardsLen == 1 and count == 1 then
-        broadcastToColor("[DC0000]You can not bury your hold card", player.color)
+        broadcastToColor("[DC0000]You can not bury your hold card[-]", player.color)
         return
       end
     end
@@ -1637,7 +1642,7 @@ function setLeadOutPlayer()
 end
 
 ---Runs when an object tries to enter a container<br>
----Doesn't allow card grouping during `FLAG.trick.inProgress` or `FLAG.cardsToBeBuried`<br>
+---Doesn't allow card grouping during `FLAG.trickInProgress` or `FLAG.cardsToBeBuried`<br>
 ---Return: `true` allows object to enter | `false` does not allow object to enter
 ---@param container object<container>
 ---@param object object
@@ -1654,7 +1659,7 @@ function tryObjectEnterContainer(container, object)
       return false
     end
   end
-  if FLAG.trick.inProgress then
+  if FLAG.trickInProgress then
     if isInZone(object, SCRIPT_ZONE.center) then
       return false
     end
@@ -1683,11 +1688,12 @@ end
 ---@param object object
 function onObjectLeaveZone(zone, object)
   --Starts trick
-  if safeToContinue()
+  if not FLAG.fnRunning
+    and not FLAG.selectingPartner
     and not FLAG.cardsToBeBuried
     and GLOBAL.leadOutPlayer
     and zone == HAND_ZONE[GLOBAL.leadOutPlayer] then
-      FLAG.trick.inProgress = true
+      FLAG.trickInProgress = true
   end
 end
 
@@ -1697,7 +1703,7 @@ end
 ---@param playerColor string
 ---@param object object
 function onObjectPickUp(playerColor, object)
-  if FLAG.trick.inProgress
+  if FLAG.trickInProgress
     and object.type == "Card"
     and isInZone(object, SCRIPT_ZONE.center)
     and len(GLOBAL.currentTrick) > 1 then
@@ -1717,7 +1723,7 @@ end
 ---@param object object
 function onObjectDrop(playerColor, object)
   --Guard clauses don't work in onEvents()
-  if FLAG.trick.inProgress and object.type == "Card" then
+  if FLAG.trickInProgress and object.type == "Card" then
     --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
     Wait.time(
       function()
@@ -1923,8 +1929,7 @@ end
 
 ---Calculates player to give trick to. Sets global GLOBAL.leadOutPlayer
 function calculateTrickWinner()
-  FLAG.trick.handOut = true
-  FLAG.trick.inProgress, FLAG.allowGrouping = false, false
+  FLAG.trickInProgress, FLAG.allowGrouping = false, false
   local trickWinner = Player[GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].playedByColor]
   GLOBAL.leadOutPlayer = trickWinner.color
   broadcastToAll(
@@ -1934,13 +1939,11 @@ function calculateTrickWinner()
   startLuaCoroutine(self, "giveTrickToWinnerCoroutine")
 end
 
----Resets trick FLAG and data then moves Trick to TRICK_ZONE of trickWinner
----Shows card counters if hand is over
+---Resets trick FLAG and data then moves Trick to TRICK_ZONE of trickWinner. Shows card counters if hand is
+---over<br>Waits for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
 function giveTrickToWinnerCoroutine()
-  local lastTrick = false
-  if #getLooseCards(HAND_ZONE[GLOBAL.leadOutPlayer]) == 0 then
-    lastTrick = true
-  end
+  startFnRunFlag()
+  local lastTrick = countCards(HAND_ZONE[GLOBAL.leadOutPlayer]) == 0
   pause(1.75)
   FLAG.allowGrouping = true
   local trick = {}
@@ -1951,7 +1954,7 @@ function giveTrickToWinnerCoroutine()
   local playerTrickZone = TRICK_ZONE[GLOBAL.leadOutPlayer]
   trick = group(trick)[1]
   pause(0.6)
-  trick.flip(); FLAG.trick.handOut = false
+  trick.flip()
   pause(0.9)
   local oldTricks = getDeck(playerTrickZone, "big")
   if oldTricks then
@@ -1991,9 +1994,8 @@ function giveTrickToWinnerCoroutine()
     pause(delay)
     GLOBAL.leadOutPlayer, GLOBAL.partnerCard = nil, nil
     toggleCounterVisibility()
-  else
-    FLAG.fnRunning = false
   end
+  FLAG.fnRunning = false
   return 1
 end
 
@@ -2290,7 +2292,7 @@ function toggleNotValid(player, id, state)
     end
   end
   if id == "jdPartner" or lowerID == "dealersitsout" then
-    if not safeToContinue() then
+    if FLAG.fnRunning then
       if player and player.color then
         broadcastToColor("[DC0000]Please wait and try again[-]", player.color)
       else
@@ -2453,6 +2455,14 @@ end
 
 --[[End of functions for settings window]]--
 
+---Hides a UI window by ID from all players<br>Use `toggleWindowVisibility` to make UI elements visible to
+---specific players
+---@param window string<"windowID">
+function hideUIElement(window)
+  UI.setAttribute(window, "visibility", "")
+  UI.hide(window)
+end
+
 ---@param player string<"Color">
 ---@param window string<"windowID">
 ---@param force option_boolean
@@ -2463,8 +2473,7 @@ function toggleWindowVisibility(player, window, force)
       return
     end
     if visibility == player then
-      UI.setAttribute(window, "visibility", "")
-      UI.hide(window)
+      hideUIElement(window)
     else
       visibility = removeColorFromPipeList(player, visibility)
       UI.setAttribute(window, "visibility", visibility)
@@ -2526,23 +2535,22 @@ end
 ---@param val nil
 ---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
-  if not safeToContinue() then
+  if not GLOBAL.pickingPlayer then
+    return
+  end
+
+  local cardsOnTable = 0
+  for _, zone in pairs(TRICK_ZONE) do
+    cardsOnTable = cardsOnTable + countCards(zone)
+  end
+  if cardsOnTable > 2 then
     broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
     return
   end
+
   local player = player
   local id = string.gsub(id, "Button", "")
   id = upperFirstChar(id)
-  if id ~= "Leaster" then
-    local cardsOnTable = 0
-    for _, zone in pairs(TRICK_ZONE) do
-      cardsOnTable = cardsOnTable + countCards(zone)
-    end
-    if not GLOBAL.pickingPlayer or cardsOnTable > 2 then
-      broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
-      return
-    end
-  end
   Wait.time(function() toggleWindowVisibility(player.color, "callsWindow") end, 0.13)
   if id == "Leaster" then
     if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
@@ -2817,7 +2825,9 @@ function selectPartnerEvent(player, val, id)
 end
 --[[End of functions and buttons for playAloneWindow/selectPartnerWindow window]]--
 
+---Waits for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
 function startLeasterHandCoroutine()
+  startFnRunFlag()
   group(getLooseCards(SCRIPT_ZONE.center))
   pause(0.6)
   local lastLeasterTrick = getDeck(SCRIPT_ZONE.table)
@@ -2833,16 +2843,14 @@ function startLeasterHandCoroutine()
   lastLeasterTrick.interactable = false
   setLeadOutPlayer()
   FLAG.leasterHand = true
-  printLeasterRules()
+  broadcastToAll("[21AF21]No teams, everyone for themselves![-]")
+  pause(2)
+  broadcastToAll("[21AF21]Player with least amount of points wins +1 from all[-]")
+  pause(2)
+  broadcastToAll("[21AF21]Player who takes the last trick gets the blinds[-]")
+  FLAG.fnRunning = false
   return 1
 end
-
-function printLeasterRules()
-  Wait.time(function() broadcastToAll("[21AF21]No teams, everyone for themselves![-]") end, 1)
-  Wait.time(function() broadcastToAll("[21AF21]Player with least amount of points wins +1 from all[-]") end, 3)
-  Wait.time(function() broadcastToAll("[21AF21]Player who takes the last trick gets the blinds[-]") end, 5)
-end
-
 
 --[[Start of graphic animations]]--
 
