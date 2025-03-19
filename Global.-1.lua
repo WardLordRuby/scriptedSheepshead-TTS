@@ -57,7 +57,8 @@ GUID = {
 POS = {
   center = Vector(0, 1.5, 0),
   objectRespawn = Vector(0, 3, 0),
-  defaultDeckRotation = Vector(0, 0, 180)
+  defaultDeckRotation = Vector(0, 0, 180),
+  centerBlockOffset = Vector(3.5, 0, 0)
 }
 
 ROTATION = {
@@ -963,8 +964,12 @@ function respawnDeckCoroutine(fnRunning)
   })
   local deckCopy = getObjectFromGUID(GUID.DECK_COPY)
   deckCopy.setInvisibleTo(ALL_PLAYERS)
+  local newDeckPos = Vector(0, -3, 0)
+  if FLAG.counterVisible then
+    newDeckPos = newDeckPos + POS.centerBlockOffset
+  end
   local newDeck = deckCopy.clone({
-    position = { 0, -3, 0 }
+    position = newDeckPos
   })
   STATIC_OBJECT.hiddenBag.putObject(deckCopy)
   if GLOBAL.blackSevens then
@@ -1059,30 +1064,31 @@ end
 ---Must be ran from within a coroutine
 ---@param deck object<deck>
 function removeBlackSevens(deck)
-  deck.setPosition(POS.center)
+  local deckPos, offsetPos = POS.center, POS.center + Vector(2.75, 1, 0)
+  if FLAG.counterVisible then
+    deckPos = deckPos + POS.centerBlockOffset
+    offsetPos = offsetPos + POS.centerBlockOffset
+  end
+  deck.setPosition(deckPos)
   deck.setRotation(POS.defaultDeckRotation)
-  local guids = {}
   for _, containedCard in ipairs(deck.getObjects()) do
     for _, cardName in ipairs(BLACK_SEVENS) do
       if containedCard.nickname == cardName then
-        table.insert(guids, containedCard.guid)
+        deck.takeObject({
+          guid = containedCard.guid,
+          position = offsetPos,
+          smooth = false
+        })
       end
     end
-  end
-  for _, guid in ipairs(guids) do
-    deck.takeObject({
-      guid = guid,
-      position = POS.center + Vector(2.75, 1, 0),
-      smooth = false
-    })
   end
   print("[21AF21]The two black sevens have been removed from the deck.[-]")
   pause(0.3)
   local smallDeck = getDeck(SCRIPT_ZONE.table, "small")
   smallDeck.setInvisibleTo(ALL_PLAYERS)
+  GLOBAL.blackSevens = smallDeck.guid
   STATIC_OBJECT.hiddenBag.putObject(smallDeck)
   pause(0.25)
-  GLOBAL.blackSevens = smallDeck.guid
 end
 
 ---Helper function for spawning chips from outside a coroutine
