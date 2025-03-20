@@ -54,6 +54,8 @@ GUID = {
   DECK_COPY = "f247a7"
 }
 
+JD_PARTNER_CARD = "Jack of Diamonds"
+
 POS = {
   center = Vector(0, 1.5, 0),
   objectRespawn = Vector(0, 3, 0),
@@ -244,10 +246,12 @@ function onLoad(script_state)
   FLAG = {
     setupRan = false,
     trickInProgress = false,
+    handInProgress = false,
+    crackCalled = false,
     leasterHand = false,
     stopCoroutine = false,
     lookForPlayerText = false,
-    continue = nil,
+    continue = nil, --Note: continue's default is nul because it is also used as an interrupt for `pause`
     cardsToBeBuried = false,
     counterVisible = false,
     firstDealOfGame = false,
@@ -946,10 +950,10 @@ end
 
 ---Set `fnRunning` if this function should be ran as a continuation of a currently set `FLAG.fnRunning`
 ---otherwise will wait for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
----@param fnRunning option_bool
+---@param fnRunning option_boolean
 function respawnDeckCoroutine(fnRunning)
   if not fnRunning then
-    startFnRunFlag()    
+    startFnRunFlag()
   end
 
   local remainingTableCards = getLooseCards(SCRIPT_ZONE.table)
@@ -1113,7 +1117,7 @@ end
 ---Deals 15 chips to all seated players<br>Set `fnRunning` if this function should be ran as a continuation
 ---of a currently set `FLAG.fnRunning` otherwise will wait for any current `FLAG.fnRunning` to complete and
 ---starts a new fnRunning instance<br>Requires that `FLAG.setupRan` and is ran from within a coroutine
----@param fnRunning option_bool
+---@param fnRunning option_boolean
 function spawnChips(fnRunning)
   if not fnRunning then
     startFnRunFlag()
@@ -1141,7 +1145,7 @@ function spawnChips(fnRunning)
   end
 
   if not fnRunning then
-    FLAG.fnRunning = false    
+    FLAG.fnRunning = false
   end
   return 1
 end
@@ -1157,6 +1161,7 @@ function setupGameEvent(player)
     return
   end
   GLOBAL.gameSetupPlayer = player.color
+  FLAG.trickInProgress, FLAG.handInProgress, FLAG.leasterHand = false, false, false
   startLuaCoroutine(self, "setupGameCoroutine")
 end
 
@@ -1256,7 +1261,11 @@ function setupHandEvent()
   end
 
   GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards, GLOBAL.partnerCard = nil, nil, nil, nil
-  FLAG.trickInProgress, FLAG.leasterHand = false, false
+  FLAG.trickInProgress, FLAG.handInProgress, FLAG.leasterHand, FLAG.crackCalled = false, false, false, false
+
+  if SETTINGS.jdPartner then
+    GLOBAL.partnerCard = JD_PARTNER_CARD
+  end
 
   if GLOBAL.unknownText then
     getObjectFromGUID(GLOBAL.unknownText).destruct()
@@ -1470,7 +1479,7 @@ function pickBlindsCoroutine()
   if SETTINGS.jdPartner then
     if pickingPlayer.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       pause(1.5)
-      if doesPlayerPossessCard(pickingPlayer.color, "Jack of Diamonds") then
+      if doesPlayerPossessCard(pickingPlayer.color, JD_PARTNER_CARD) then
         toggleWindowVisibility(pickingPlayer.color, "playAloneWindow", true)
       end
     end
@@ -1699,7 +1708,7 @@ function onObjectLeaveZone(zone, object)
     and not FLAG.cardsToBeBuried
     and GLOBAL.leadOutPlayer
     and zone == HAND_ZONE[GLOBAL.leadOutPlayer] then
-      FLAG.trickInProgress = true
+      FLAG.trickInProgress, FLAG.handInProgress = true, true
   end
 end
 
@@ -1734,13 +1743,9 @@ function onObjectDrop(playerColor, object)
     Wait.time(
       function()
         if isInZone(object, SCRIPT_ZONE.center) then
-          if not DEBUG and playerColor ~= GLOBAL.leadOutPlayer then
-            broadcastToAll("[21AF21]" .. Player[GLOBAL.leadOutPlayer].steam_name .. " leads out.[-]")
-          else
-            addCardDataToCurrentTrick(playerColor, object)
-            if #GLOBAL.currentTrick == GLOBAL.playerCount + 1 then
-              calculateTrickWinner()
-            end
+          addCardDataToCurrentTrick(playerColor, object)
+          if #GLOBAL.currentTrick == GLOBAL.playerCount + 1 then
+            calculateTrickWinner()
           end
         end
       end,
@@ -1935,7 +1940,7 @@ end
 
 ---Calculates player to give trick to. Sets global GLOBAL.leadOutPlayer
 function calculateTrickWinner()
-  FLAG.trickInProgress, FLAG.allowGrouping = false, false
+  FLAG.trickInProgress, FLAG.handInProgress, FLAG.crackCalled, FLAG.allowGrouping = false, false, false, false
   local trickWinner = Player[GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].playedByColor]
   GLOBAL.leadOutPlayer = trickWinner.color
   broadcastToAll(
@@ -2516,7 +2521,7 @@ function callPartnerEvent(player)
       elseif SETTINGS.jdPartner then
         local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
         if player.color == dealerColor and player.color == GLOBAL.pickingPlayer then
-          if doesPlayerPossessCard(player.color, "Jack of Diamonds") then
+          if doesPlayerPossessCard(player.color, JD_PARTNER_CARD) then
             toggleWindowVisibility(player.color, "playAloneWindow", true)
           else
             broadcastToColor("[DC0000]Jack of Diamonds will be your partner[-]", player.color)
@@ -2541,23 +2546,29 @@ end
 ---@param val nil
 ---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
-  if not GLOBAL.pickingPlayer then
-    return
-  end
-
-  local cardsOnTable = 0
-  for _, zone in pairs(TRICK_ZONE) do
-    cardsOnTable = cardsOnTable + countCards(zone)
-  end
-  if cardsOnTable > 2 then
-    broadcastToColor("[DC0000]It's not time to call[-] ", player.color)
-    return
-  end
-
-  local player = player
   local id = string.gsub(id, "Button", "")
   id = upperFirstChar(id)
   Wait.time(function() toggleWindowVisibility(player.color, "callsWindow") end, 0.13)
+
+  if FLAG.handInProgress then
+    broadcastToColor("[DC0000]You can only make calls before the hand starts[-]", player.color)
+    return
+  end
+
+  if id == "Blitz" then
+    broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. id .. "![-]")
+    return
+  end
+
+  if id == "Sheepshead" then
+    if player.color == GLOBAL.pickingPlayer then
+      broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. id .. "![-]")
+    else
+      broadcastToColor("[DC0000]You can only call Sheepshead if you picked[-]", player.color)
+    end
+    return
+  end
+
   if id == "Leaster" then
     if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       if countCards(SCRIPT_ZONE.center) == 2 then
@@ -2565,17 +2576,73 @@ function playerCallsEvent(player, val, id)
         GLOBAL.pickingPlayer = player.color
         startLuaCoroutine(self, "startLeasterHandCoroutine")
       else
-        broadcastToColor("[DC0000] You can only call leaster before you pick the blinds[-]", player.color)
+        broadcastToColor("[DC0000]You can only call 'Leaster' before you pick the blinds[-]", player.color)
       end
     else
-      broadcastToColor("[DC0000] You can only call leaster if you are forced to pick[-]", player.color)
+      broadcastToColor("[DC0000]You can only call 'Leaster' if you are forced to pick[-]", player.color)
     end
-  elseif id:sub(1, 5) == "Crack" then
-    id = string.gsub(insertSpaces(id), "Crack", "Crack's")
-    broadcastToAll("[21AF21]" .. player.steam_name .. id .. "![-]")
-  else
-    broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. id .. "![-]")
+    return
   end
+
+  if not GLOBAL.pickingPlayer then
+    id = insertSpaces(id)
+    broadcastToColor("[DC0000]You can only call '" .. id .. "' after someone picks the blinds[-]", player.color)
+    return
+  end
+
+  if id == "Crack" then
+    local i = getIndex(GLOBAL.pickingPlayer, GLOBAL.sortedSeatedPlayers)
+    local hadChance, noChance = copyTable(GLOBAL.sortedSeatedPlayers), {}
+
+    if i ~= GLOBAL.dealerColorIdx then
+      repeat
+        i = cycleColorIndex(i, GLOBAL.sortedSeatedPlayers)
+        table.insert(noChance, table.remove(hadChance, i))
+      until i == GLOBAL.dealerColorIdx
+    end
+
+    if tableContains(noChance, player.color) then
+      FLAG.crackCalled = true
+      broadcastToAll("[21AF21]" .. player.steam_name .. id .. "s![-]")
+    else
+      broadcastToColor("[DC0000]You can only call 'Crack' if you did not get the chance to pick[-]", player.color)
+    end
+    return
+  end
+
+  if id:sub(1, 5) ~= "Crack" then
+    print("Error: player tried to use unknown call " .. id)
+    return
+  end
+
+  if not FLAG.crackCalled then
+    id = insertSpaces(id)
+    broadcastToColor("[DC0000]You can only call '" .. id .. "' if 'Crack' has already been called[-]", player.color)
+    return
+  end
+
+  if id == "CrackBack" and player.color ~= GLOBAL.pickingPlayer then
+    broadcastToColor(
+      "[DC0000]Only the picker can call 'Crack Back'. The picker's partner can call 'Crack Around the Corner'[-]",
+      player.color
+    )
+    return
+  end
+
+  if id == "CrackAroundTheCorner" and player.color ~= GLOBAL.pickingPlayer then
+    if SETTINGS.jdPartner == nil
+      or not GLOBAL.partnerCard
+      or not doesPlayerPossessCard(player.color, GLOBAL.partnerCard) then
+        broadcastToColor(
+          "[DC0000]Can not call 'Crack Around the Corner' when you are not on the picker's team[-]",
+          player.color
+        )
+        return
+    end
+  end
+
+  id = string.gsub(insertSpaces(id), "Crack", "Cracks")
+  broadcastToAll("[21AF21]" .. player.steam_name .. id .. "![-]")
 end
 
 --[[End of functions and buttons for calls window]]--
@@ -2840,6 +2907,7 @@ function startLeasterHandCoroutine()
   GLOBAL.lastLeasterTrick = lastLeasterTrick.guid
   if not lastLeasterTrick or lastLeasterTrick.getQuantity() ~= 2 then
     print("startLeasterHand Err: blinds wrong quantity")
+    FLAG.fnRunning = false
     return 1
   end
   local playerRotation = ROTATION.color[GLOBAL.pickingPlayer]
@@ -2848,14 +2916,16 @@ function startLeasterHandCoroutine()
   lastLeasterTrick.setRotationSmooth({ 0, playerRotation + 30, POS.defaultDeckRotation.z })
   lastLeasterTrick.interactable = false
   setLeadOutPlayer()
+  printLeasterRules()
   FLAG.leasterHand = true
-  broadcastToAll("[21AF21]No teams, everyone for themselves![-]")
-  pause(2)
-  broadcastToAll("[21AF21]Player with least amount of points wins +1 from all[-]")
-  pause(2)
-  broadcastToAll("[21AF21]Player who takes the last trick gets the blinds[-]")
   FLAG.fnRunning = false
   return 1
+end
+
+function printLeasterRules()
+  broadcastToAll("[21AF21]No teams, everyone for themselves![-]")
+  Wait.time(function() broadcastToAll("[21AF21]Player with least amount of points wins +1 from all[-]") end, 2.5)
+  Wait.time(function() broadcastToAll("[21AF21]Player who takes the last trick gets the blinds[-]") end, 5)
 end
 
 --[[Start of graphic animations]]--
