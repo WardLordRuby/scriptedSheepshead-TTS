@@ -27,13 +27,13 @@
 
 <div align="center">
     
-  | Command            | Description                                                                 |
-  |--------------------|-----------------------------------------------------------------------------|
-  | `.help`            | Displays Commands and their Function                                        |
-  | `.rules`           | Spawns Rule and Gameplay Tip Booklet                                        |
-  | `.hiderules`       | Hides Rule and Gameplay Tip Booklet                                         |
-  | `.respawndeck`     | Removes all cards from table and spawns a fresh deck **admin only**         |
-  | `.spawnchips`      | Gives all seated players 15 additional chips **admin only**                 |
-  | `.settings`        | Opens Window to Change Game Settings **admin only**                         |
+  | Command            | Requires Admin | Description                                          |
+  | :----------------- | :------------- | :--------------------------------------------------- |
+  | `.help`            |                | Displays Commands and their Functions                |
+  | `.rules`           |                | Spawns a Rule and Gameplay Tip Booklet               |
+  | `.hiderules`       |                | Hides all Rule and Gameplay Tip Booklet(s)           |
+  | `.respawndeck`     | ✅             | Removes all cards from table and spawns a fresh deck |
+  | `.spawnchips`      | ✅             | Gives all seated players 15 additional chips         |
+  | `.settings`        | ✅             | Open/Close a UI Window to Change Game Settings       |
 
 </div>

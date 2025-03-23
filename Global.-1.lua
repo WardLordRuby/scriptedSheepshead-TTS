@@ -14,11 +14,11 @@ BLINDS_STR = "Blinds"
 
 CHAT_COMMANDS = {
   "[b415ff]Sheepshead Console Help[-]\n",
-  "[21AF21].rules[-] [Displays Rule and Gameplay Tip Booklet]\n",
-  "[21AF21].hiderules[-] [Hides Rule and Gameplay Tip Booklet]\n",
+  "[21AF21].rules[-] [Spawns a Rule and Gameplay Tip Booklet]\n",
+  "[21AF21].hiderules[-] [Hides all Rule and Gameplay Tip Booklet(s)]\n",
   "[21AF21].respawndeck[-] [Removes all Cards and Spawns a Fresh Deck]\n",
   "[21AF21].spawnchips[-] [Gives all seated players 15 additional chips]\n",
-  "[21AF21].settings[-] [Opens Window to Change Game Settings]"
+  "[21AF21].settings[-] [Open/Close a UI Window to Change Game Settings]"
 }
 
 COIN_PRAM = {
