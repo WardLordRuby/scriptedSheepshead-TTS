@@ -15,14 +15,14 @@ JSON = nil
 ---@field is_face_down boolean
 ---@field guid GUID
 ---@field UI UI
----@field type typeStr
+---@field type typeEnum
 ---@field interactable boolean
 ---@field flip fun(): boolean
 ---@field getZones fun(): table<zoneObject>
 ---@field getObjects fun(): table<object>
 ---@field getRotation fun(): vector
 ---@field getPosition fun(): vector
----@field getName fun(): string<"Nickname">
+---@field getName fun(): name
 ---@field TextTool TextTool # only available on type.3DText
 ---@field getValue fun(): any # return value depends on `self.type`
 ---@field getQuantity fun(): integer # Returns the number of objects contained within (if the Object is a bag, deck or stack), otherwise -1
@@ -38,8 +38,8 @@ JSON = nil
 ---@field putObject fun(object: object): object # Places an `object` into a container (chip stacks/bags/decks). If neither Object is a container, but they are able to be combined (like with 2 cards), then they form a deck/stack. The container is returned as the Object reference. Either this is the container/deck/stack the other Object was placed into, or the deck/stack that was formed by the putObject action
 ---@field clone fun(parameters: cloneParameters): object
 ---@field setLock fun(lock: boolean): boolean # Sets if an object is locked in place
----@field randomize fun(color: colorStr?): boolean # Shuffles deck/bag, rolls dice/coin, lifts other objects into the air. Same as pressing R by default. If the optional parameter color is used, this function will trigger `onObjectRandomized()`, passing that player color
----@field deal fun(number: integer, player_color: colorStr?, index: index?)
+---@field randomize fun(color: colorEnum?): boolean # Shuffles deck/bag, rolls dice/coin, lifts other objects into the air. Same as pressing R by default. If the optional parameter color is used, this function will trigger `onObjectRandomized()`, passing that player color
+---@field deal fun(number: integer, player_color: colorEnum?, index: index?)
 ---@field destruct fun(): boolean
 ---@field reload fun(): object
 
@@ -47,7 +47,7 @@ JSON = nil
 ---@field getFontColor fun(): color # Returns Table of font Color
 ---@field getFontSize fun(): integer # Returns Int of the font size
 ---@field getValue fun(): string # Returns the current text. Behaves the same as Object's getValue()
----@field setFontColor fun(font_color: color|colorStr): boolean # Sets font Color
+---@field setFontColor fun(font_color: color|colorEnum): boolean # Sets font Color
 ---@field setFontSize fun(font_size: integer): boolean # Sets font size
 ---@field setValue fun(text: string): boolean # Sets the current text. Behaves the same as Object's setValue(...)
 
@@ -59,22 +59,24 @@ JSON = nil
 ---@alias textObject object<"type.3DText">
 ---@alias containerObject bagObject|deckObject
 
----@type table<colorStr, player>
+---@alias name string<"Nickname">
+
+---@type table<colorEnum, player>
 Player = nil
 
 ---@class player
 ---@field admin boolean
 ---@field blindfolded boolean
----@field color colorStr
+---@field color colorEnum
 ---@field host boolean
 ---@field lift_height number
 ---@field promoted boolean
 ---@field seated boolean
 ---@field steam_id string
 ---@field steam_name string
----@field team string<"None"|"Clubs"|"Diamonds"|"Hearts"|"Spades"|"Jokers">
+---@field team teamEnum
 ---@field getHandTransform fun(hand_index: index?): transformTable
----@field broadcast fun(message: string, message_color: color|colorStr?) # Message color optional, defaults to {r=1, g=1, b=1}
+---@field broadcast fun(message: string, message_color: color|colorEnum?) # Message color optional, defaults to {r=1, g=1, b=1}
 
 ---@class transformTable
 ---@field position vector
@@ -146,7 +148,7 @@ Wait = nil
 ---@field y number
 ---@field z number
 ---@field copy fun(): vector
----@field rotateOver fun(self: self, axis: axisChar, angle: number): vector
+---@field rotateOver fun(self: self, axis: AxisEnum, angle: number): vector
 
 ---@class vector2
 ---@field [1] number
@@ -158,33 +160,50 @@ Wait = nil
 ---@field g number
 ---@field b number
 
----@alias axisChar string<"char">
+---@enum AxisEnum
+local axis = {
+  x = 'x',
+  y = 'y',
+  z = 'z'
+}
 
----@class axisEnum
----@field x axisChar
----@field y axisChar
----@field z axisChar
+---@enum colorEnum
+local color = {
+  white = "White",
+  brown = "Brown",
+  red = "Red",
+  orange = "Orange",
+  yellow = "Yellow",
+  green = "Green",
+  teal = "Teal",
+  blue = "Blue",
+  purple = "Purple",
+  pink = "Pink",
+  grey = "Grey",
+  black = "Black"
+}
 
----@class colorEnum
----@field white colorStr
----@field brown colorStr
----@field red colorStr
----@field orange colorStr
----@field yellow colorStr
----@field green colorStr
----@field teal colorStr
----@field blue colorStr
----@field purple colorStr
----@field pink colorStr
----@field grey colorStr
----@field black colorStr
+---@enum teamEnum
+local team = {
+  none = "None",
+  clubs = "Clubs",
+  diamonds = "Diamonds",
+  hearts = "Hearts",
+  spades = "Spades",
+  jokers = "Jokers"
+}
 
----@class typeEnum
----@field card typeStr
----@field chip typeStr
----@field counter typeStr
----@field deck typeStr
----@field pdf typeStr
+--[[
+  Moved to global for better type checking inside iterators
+  ---@enum typeEnum
+  local type = {
+    card = "Card",
+    deck = "Deck",
+    chip = "Chip",
+    counter = "Counter",
+    pdf = "Tile"
+  }
+--]]
 
 ---@param objects table<object>
 ---@return table<object>
@@ -217,8 +236,8 @@ function setNotes(notes)
 end
 
 ---@param message string
----@param player_color colorStr
----@param message_tint color|colorStr?
+---@param player_color colorEnum
+---@param message_tint color|colorEnum?
 ---@return boolean
 ---@diagnostic disable-next-line
 function broadcastToColor(message, player_color, message_tint)
@@ -226,7 +245,7 @@ function broadcastToColor(message, player_color, message_tint)
 end
 
 ---@param message string
----@param message_tint color|colorStr?
+---@param message_tint color|colorEnum?
 ---@return boolean
 ---@diagnostic disable-next-line
 function broadcastToAll(message, message_tint)
