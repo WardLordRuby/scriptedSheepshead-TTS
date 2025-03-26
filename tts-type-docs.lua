@@ -1,3 +1,6 @@
+---@type object<"type.Global">
+Global = nil
+
 ---@alias XML table<"XML">
 ---@alias jsonString string<"json_string">
 

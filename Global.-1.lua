@@ -612,7 +612,7 @@ end
 ---Returns the rotationValue.z associated for cards if more cards are face up or face down in a given zone
 ---@param zone zoneObject
 ---@return integer<0|180>
-function moreFaceUpOrDown(zone)
+function Zone.moreFaceUpOrDown(zone)
   local total, faceDownCount = Zone.countCards(zone)
   local halfOfTotal = math.floor(total / 2)
   if halfOfTotal >= faceDownCount then
@@ -679,7 +679,7 @@ function Zone.removeItem(zone, items, skipAnimation)
   local zoneObjects = zone.getObjects()
   for i = #zoneObjects, 1 , -1 do
     local object = zoneObjects[i]
-    assert(type(items) == "table", "string overloaded")
+    assert(type(items) == "table", "`items` overloaded")
     if table.contains(items, object.type) then
       object.destruct()
       if not skipAnimation then
@@ -772,6 +772,18 @@ function playerColor.getItemMoveData(color)
   return ROTATION.color[color], Player[color].getHandTransform().position
 end
 
+---Spawns a rule book in front of player color
+---@param color colorEnum
+function playerColor.spawnRuleBook(color)
+  local playerRotation = ROTATION.color[color]
+  local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
+  spawnObjectJSON({
+    json = RULE_BOOK_JSON,
+    position = { ruleBookPos.x, 1.5, ruleBookPos.z },
+    rotation = { 0, playerRotation - 180, 0 }
+  })
+end
+
 ---Prints `CURRENT_RULES` to the screen
 function displayRules()
   setNotes(table.concat(CURRENT_RULES, ""))
@@ -853,7 +865,7 @@ end
 ---Spreads cards out over the center of the table, makes sure they are face down, and groups cards
 function rebuildDeck()
   FLAG.allowGrouping = false
-  local faceRotation = moreFaceUpOrDown(SCRIPT_ZONE.table)
+  local faceRotation = Zone.moreFaceUpOrDown(SCRIPT_ZONE.table)
   --`getLooseCards` can only return `nil` if `returnFirstDeck` is set
   ---@diagnostic disable-next-line
   for _, object in ipairs(Zone.getLooseCards(SCRIPT_ZONE.table)) do
@@ -914,14 +926,14 @@ function onChat(message, player)
     if command == "help" then
       print(table.concat(CHAT_COMMANDS, ""))
     elseif command == "rules" then
-      getRuleBook(player.color)
+      playerColor.spawnRuleBook(player.color)
     elseif command == "hiderules" then
       Zone.removeItem(SCRIPT_ZONE.table, "Tile", true)
     elseif command == "respawndeck" then
       respawnDeck(player)
     elseif command == "settings" then
       if adminCheck(player) then
-        toggleWindowVisibility(player.color, "settingsWindow")
+        playerColor.toggleWindowVisibility(player.color, "settingsWindow")
       end
     elseif command == "spawnchips" then
       startChipSpawn(player)
@@ -943,18 +955,6 @@ function adminCheck(player)
   return true
 end
 
----Spawns a rule book in front of player color
----@param player colorEnum
-function getRuleBook(player)
-  local playerRotation = ROTATION.color[player]
-  local ruleBookPos = SPAWN_POS.ruleBook:copy():rotateOver('y', playerRotation)
-  spawnObjectJSON({
-    json = RULE_BOOK_JSON,
-    position = { ruleBookPos.x, 1.5, ruleBookPos.z },
-    rotation = { 0, playerRotation - 180, 0 }
-  })
-end
-
 ---Removes any cards on the table and respawns the deck
 ---@param player eventTriggerPlayer
 function respawnDeck(player)
@@ -967,7 +967,7 @@ function respawnDeck(player)
       player.color
     )
   end
-  startLuaCoroutine(self, "respawnDeckCoroutine")
+  startLuaCoroutine(Global, "respawnDeckCoroutine")
 end
 
 ---Set `fnRunning` if this function should be ran as a continuation of a currently set `FLAG.fnRunning`
@@ -1139,7 +1139,7 @@ function startChipSpawn(player)
       player.color
     )
   end
-  startLuaCoroutine(self, "spawnChips")
+  startLuaCoroutine(Global, "spawnChips")
 end
 
 ---Deals 15 chips to all seated players<br>Set `fnRunning` if this function should be ran as a continuation
@@ -1181,16 +1181,21 @@ end
 ---Start of game setup event
 ---@param player eventTriggerPlayer
 function setupGameEvent(player)
-  if not adminCheck(player) or FLAG.fnRunning then
+  if not adminCheck(player) then
+    broadcastToColor("[DC0000]Only admins can setup a new game.[-]", player.color)
     return
   end
   if FLAG.setupRan and #GLOBAL.sortedSeatedPlayers < 3 then
     broadcastToAll("[DC0000]Sheepshead requires 3 to 6 players.[-]")
     return
   end
+  if FLAG.fnRunning then
+    broadcastToColor("[DC0000]Action in progress, try after current action is complete.[-]", player.color)
+    return
+  end
   GLOBAL.gameSetupPlayer = player.color
   FLAG.trickInProgress, FLAG.handInProgress, FLAG.leasterHand = false, false, false
-  startLuaCoroutine(self, "setupGameCoroutine")
+  startLuaCoroutine(Global, "setupGameCoroutine")
 end
 
 ---Start of order of operations for game setup<br>Waits for any current `FLAG.fnRunning` to complete and
@@ -1261,7 +1266,7 @@ end
 ---Adds "Blinds" to the `GLOBAL.dealOrder` table in the position directly after the current dealer<br>
 ---If dealer sits out replaces dealer with blinds
 function calculateDealOrder()
-  assert(GLOBAL.sortedSeatedPlayers)
+  assert(GLOBAL.sortedSeatedPlayers, "`setupGameCoroutine` must be ran by now")
   GLOBAL.dealOrder = table.clone(GLOBAL.sortedSeatedPlayers)
   if GLOBAL.playerCount == #GLOBAL.sortedSeatedPlayers then
     local blindVal = GLOBAL.dealerColorIdx + 1
@@ -1313,7 +1318,7 @@ function setupHandEvent()
     hideUIElement("playAloneWindow")
   end
 
-  startLuaCoroutine(self, "dealCardsCoroutine")
+  startLuaCoroutine(Global, "dealCardsCoroutine")
 end
 
 ---Order of operations for dealing<br>
@@ -1458,7 +1463,7 @@ function passEvent(player)
       ]
       if player.color == rightOfDealerColor then
         broadcastToColor("[21AF21]You have the option to call a leaster.[-]", dealerColor)
-        toggleWindowVisibility(dealerColor, "callsWindow", true)
+        playerColor.toggleWindowVisibility(dealerColor, "callsWindow", true)
       end
     end
   end
@@ -1476,7 +1481,7 @@ function pickBlindsEvent(player)
     return
   end
   GLOBAL.pickingPlayer = player.color
-  startLuaCoroutine(self, "pickBlindsCoroutine")
+  startLuaCoroutine(Global, "pickBlindsCoroutine")
 end
 
 ---Waits for any current `FLAG.fnRunning` to complete and starts a new fnRunning instance
@@ -1516,15 +1521,15 @@ function pickBlindsCoroutine()
     if pickingPlayer.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       pause(1.5)
       if playerColor.possessCard(pickingPlayer.color, JD_PARTNER_CARD) then
-        toggleWindowVisibility(pickingPlayer.color, "playAloneWindow", true)
+        playerColor.toggleWindowVisibility(pickingPlayer.color, "playAloneWindow", true)
       end
     end
   elseif SETTINGS.jdPartner == false then --Call an Ace
     pause(0.5)
-    buildPartnerChoices(pickingPlayer.color)
+    playerColor.buildPartnerChoices(pickingPlayer.color)
     pause(0.25)
     if GLOBAL.holdCards then
-      toggleWindowVisibility(pickingPlayer.color, "selectPartnerWindow")
+      playerColor.toggleWindowVisibility(pickingPlayer.color, "selectPartnerWindow")
     else --Unknown event
       unknownPartnerChoices(pickingPlayer.color)
       pause(0.25)
@@ -1540,7 +1545,7 @@ function pickBlindsCoroutine()
       unknownText.TextTool.setFontColor("Green")
       unknownText.setValue("Place Unknown Card\nFacedown Here")
       GLOBAL.unknownText = unknownText.guid
-      toggleWindowVisibility(pickingPlayer.color, "selectPartnerWindow")
+      playerColor.toggleWindowVisibility(pickingPlayer.color, "selectPartnerWindow")
     end
   end
   FLAG.fnRunning = false
@@ -1991,7 +1996,7 @@ function calculateTrickWinner()
     "[21AF21]" .. trickWinner.steam_name .. " takes the trick with " ..
     GLOBAL.currentTrick[GLOBAL.currentTrick[1].highStrengthIndex].cardName .. "[-]"
   )
-  startLuaCoroutine(self, "giveTrickToWinnerCoroutine")
+  startLuaCoroutine(Global, "giveTrickToWinnerCoroutine")
 end
 
 ---Resets trick FLAG and data then moves Trick to TRICK_ZONE of trickWinner. Shows card counters if hand is
@@ -2060,11 +2065,11 @@ end
 
 ---Returns the color of the `handPosition` located across the table from given color<br>
 ---Color must be directly across for the counter because `TABLE_BLOCK` is an invisible triangle
----@param player colorEnum
+---@param color colorEnum
 ---@return colorEnum?
-function findColorAcrossTable(player)
-  for i, colors in ipairs(ALL_PLAYERS) do
-    if colors == player then
+function playerColor.findColorAcrossTable(color)
+  for i, all_color in ipairs(ALL_PLAYERS) do
+    if all_color == color then
       local acrossVal
       if i > 3 then
         acrossVal = i - 3
@@ -2084,9 +2089,12 @@ end
 ---@param pCounterGUID string?
 function startTrickCount(tCounterGUID, pCounterGUID)
   if tCounterGUID and pCounterGUID then
+    local colorAcrossTable = playerColor.findColorAcrossTable(GLOBAL.pickingPlayer)
+    assert(colorAcrossTable, "`GLOBAL.pickingPlayer` player is not contained in `ALL_PLAYERS`")
+
     GLOBAL.counterGUIDs = {
       [TRICK_ZONE[GLOBAL.pickingPlayer].guid] = pCounterGUID,
-      [TRICK_ZONE[findColorAcrossTable(GLOBAL.pickingPlayer)].guid] = tCounterGUID
+      [TRICK_ZONE[colorAcrossTable].guid] = tCounterGUID
     }
   end
 
@@ -2523,7 +2531,7 @@ end
 ---@param player colorEnum
 ---@param window string<"windowID">
 ---@param force boolean?
-function toggleWindowVisibility(player, window, force)
+function playerColor.toggleWindowVisibility(player, window, force)
   local visibility = UI.getAttribute(window, "visibility")
   if string.find(visibility, player) then
     if force then
@@ -2549,7 +2557,7 @@ end
 
 ---@param player eventTriggerPlayer
 function showCallsEvent(player)
-  toggleWindowVisibility(player.color, "callsWindow")
+  playerColor.toggleWindowVisibility(player.color, "callsWindow")
 end
 
 ---@param player eventTriggerPlayer
@@ -2569,7 +2577,7 @@ function callPartnerEvent(player)
         local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
         if player.color == dealerColor and player.color == GLOBAL.pickingPlayer then
           if playerColor.possessCard(player.color, JD_PARTNER_CARD) then
-            toggleWindowVisibility(player.color, "playAloneWindow", true)
+            playerColor.toggleWindowVisibility(player.color, "playAloneWindow", true)
           else
             broadcastToColor("[DC0000]Jack of Diamonds will be your partner[-]", player.color)
           end
@@ -2578,12 +2586,12 @@ function callPartnerEvent(player)
         end
       elseif SETTINGS.jdPartner == false then --Call an Ace
         if player.color == GLOBAL.pickingPlayer then
-          toggleWindowVisibility(player.color, "selectPartnerWindow", true)
+          playerColor.toggleWindowVisibility(player.color, "selectPartnerWindow", true)
         else
           broadcastToColor("[DC0000]Only the picker can call their partner[-]", player.color)
         end
       end
-      toggleWindowVisibility(player.color, "callsWindow")
+      playerColor.toggleWindowVisibility(player.color, "callsWindow")
     end,
     0.13
   )
@@ -2593,7 +2601,7 @@ end
 ---@param val nil
 ---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
-  Wait.time(function() toggleWindowVisibility(player.color, "callsWindow") end, 0.13)
+  Wait.time(function() playerColor.toggleWindowVisibility(player.color, "callsWindow") end, 0.13)
 
   if dealerSitsOutActive() and player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
     broadcastToColor("[DC0000]You can only make calls when you are not sitting out[-]", player.color)
@@ -2633,7 +2641,7 @@ function playerCallsEvent(player, val, id)
     
     broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
     GLOBAL.pickingPlayer = player.color
-    startLuaCoroutine(self, "startLeasterHandCoroutine")
+    startLuaCoroutine(Global, "startLeasterHandCoroutine")
     return
   end
 
@@ -2704,7 +2712,7 @@ end
 
 ---@param player eventTriggerPlayer
 function callUpEvent(player)
-  toggleWindowVisibility(player.color, "playAloneWindow")
+  playerColor.toggleWindowVisibility(player.color, "playAloneWindow")
   local callCard
   for i = 2, 3 do
     local tryCard = TRUMP_IDENTIFIER[i]
@@ -2750,7 +2758,7 @@ end
 ---if valid holdCards found in player hand will enable corresponding buttons in selectPartnerWindow<br>
 ---and updates the global GLOBAL.holdCards | if no valid holdCards will update as nil
 ---@param color colorEnum
-function buildPartnerChoices(color)
+function playerColor.buildPartnerChoices(color)
   --failCards = all suitableFail including ten's
   local failCards = playerColor.searchCards(color, "SuitableFail", "Diamonds")
   local failSuits, holdCards, partnerChoices = {}, {}, {}
@@ -2864,7 +2872,7 @@ end
 function setActivePartnerButtons(list)
   local xmlTable = UI.getXmlTable()
   local selectPartnerWindow = findPanelElement("selectPartnerWindow", xmlTable)
-  assert(selectPartnerWindow, "Could not find 'selectPartnerWindow' in the UI XML")
+  assert(selectPartnerWindow, "'selectPartnerWindow' exists in Global.xml")
 
   resetActiveChildren(selectPartnerWindow)
   for _, button in pairs(selectPartnerWindow.children[1].children) do
@@ -2905,7 +2913,7 @@ function selectPartnerEvent(player, val, id)
   end
   GLOBAL.partnerCard = callCard
   broadcastToAll("[21AF21]" .. player.steam_name .. " picks " .. callCard .. unknownFormat .. " as their partner")
-  toggleWindowVisibility(player.color, "selectPartnerWindow")
+  playerColor.toggleWindowVisibility(player.color, "selectPartnerWindow")
   local validSuit = string.getLastWord(callCard)
   Wait.time(
     function()
@@ -3010,7 +3018,7 @@ function closeWindow(player, val, id)
   local id2 = string.gsub(id, "Exit", "")
 
   UI.setAttribute(id1, "image", "closeButton")
-  toggleWindowVisibility(player.color, id2)
+  playerColor.toggleWindowVisibility(player.color, id2)
 end
 
 function animateButtonEnter(player, val, id)
