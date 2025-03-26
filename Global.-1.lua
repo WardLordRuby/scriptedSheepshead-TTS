@@ -2593,14 +2593,20 @@ end
 ---@param val nil
 ---@param id string<"eventID">
 function playerCallsEvent(player, val, id)
-  local id = string.gsub(id, "Button", "")
-  id = string.upperFirstChar(id)
   Wait.time(function() toggleWindowVisibility(player.color, "callsWindow") end, 0.13)
+
+  if dealerSitsOutActive() and player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
+    broadcastToColor("[DC0000]You can only make calls when you are not sitting out[-]", player.color)
+    return
+  end
 
   if FLAG.handInProgress then
     broadcastToColor("[DC0000]You can only make calls before the hand starts[-]", player.color)
     return
   end
+
+  local id = string.gsub(id, "Button", "")
+  id = string.upperFirstChar(id)
 
   if id == "Blitz" then
     broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. id .. "![-]")
@@ -2617,17 +2623,17 @@ function playerCallsEvent(player, val, id)
   end
 
   if id == "Leaster" then
-    if player.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
-      if Zone.countCards(SCRIPT_ZONE.center) == 2 then
-        broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
-        GLOBAL.pickingPlayer = player.color
-        startLuaCoroutine(self, "startLeasterHandCoroutine")
-      else
-        broadcastToColor("[DC0000]You can only call 'Leaster' before you pick the blinds[-]", player.color)
-      end
-    else
+    if player.color ~= GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       broadcastToColor("[DC0000]You can only call 'Leaster' if you are forced to pick[-]", player.color)
+      return
     end
+    if Zone.countCards(SCRIPT_ZONE.center) ~= 2 then
+      broadcastToColor("[DC0000]You can only call 'Leaster' before you pick the blinds[-]", player.color)
+    end
+    
+    broadcastToAll("[21AF21]" .. player.steam_name .. " calls for a " .. id .. "[-]")
+    GLOBAL.pickingPlayer = player.color
+    startLuaCoroutine(self, "startLeasterHandCoroutine")
     return
   end
 
