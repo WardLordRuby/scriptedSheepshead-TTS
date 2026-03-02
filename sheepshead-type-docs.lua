@@ -41,9 +41,9 @@ local callCards = {
   queen = "Queen"
 }
 
----@alias index integer<"index">
----@alias UID integer<"UID">
----@alias seconds integer<"seconds">
+---@alias index number<"index">
+---@alias UID number<"UID">
+---@alias seconds number<"seconds">
 
 ---@class allPlayers
 ---@field [1] colorEnum
@@ -54,7 +54,7 @@ local callCards = {
 ---@field [6] colorEnum
 
 ---@class GlobalVars
----@field playerCount integer|nil
+---@field playerCount number|nil
 ---@field sortedSeatedPlayers colorList|nil
 ---@field dealOrder dealOrderList|nil
 ---@field blackSevens GUID|nil
@@ -107,7 +107,7 @@ local callCards = {
 
 ---@class trickProperties
 ---@field highStrengthIndex index
----@field currentHighStrength integer
+---@field currentHighStrength number
 ---@field trump boolean # Whether `currentHighStrength` refers to fail strength or trump strength
 ---@field ledSuit suitEnum
 

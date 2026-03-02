@@ -7,7 +7,7 @@ DEBUG = true
 --[[GLOBAL ENUMS]]--
 
 ---@enum typeEnum
-ObjectType = {
+Type = {
   card = "Card",
   deck = "Deck",
   chip = "Chip",
@@ -95,7 +95,7 @@ ROTATION = {
 }
 
 RULE_BOOK_JSON = [[{
-  "Name": "Custom_PDF",
+  "Name": "Sheepshead Rules",
   "Transform": {
     "posX": 0.0,
     "posY": 0.0,
@@ -355,8 +355,8 @@ end
 ---Pauses script, must be called from within a coroutine
 ---@param time seconds
 function pause(time)
-  local start = Time.time
-  repeat coroutine.yield(0) until Time.time > start + time or FLAG.continue ~= nil
+  local endTime = Time.time + time
+  repeat coroutine.yield(0) until Time.time > endTime or FLAG.continue ~= nil
 end
 
 --[[String manipulation]]--
@@ -559,7 +559,7 @@ end
 function Zone.getDeck(zone, size)
   local decks = {}
   for _, obj in ipairs(zone.getObjects()) do
-    if obj.type == ObjectType.deck then
+    if obj.type == Type.deck then
       table.insert(decks, obj)
     end
   end
@@ -596,8 +596,8 @@ end
 function Zone.getLooseCards(zone, returnFirstDeck)
   local looseCards = {}
   for _, obj in ipairs(zone.getObjects()) do
-    if obj.type == ObjectType.deck or obj.type == ObjectType.card then
-      if returnFirstDeck and obj.type == ObjectType.deck then
+    if obj.type == Type.deck or obj.type == Type.card then
+      if returnFirstDeck and obj.type == Type.deck then
         return obj
       end
       table.insert(looseCards, obj)
@@ -628,12 +628,12 @@ function Zone.countCards(zone)
   local objects = zone.getObjects()
   local cardCount, faceDownCount = 0, 0
   for _, obj in ipairs(objects) do
-    if obj.type == ObjectType.deck then
+    if obj.type == Type.deck then
       cardCount = cardCount + obj.getQuantity()
       if obj.is_face_down then
         faceDownCount = faceDownCount + obj.getQuantity()
       end
-    elseif obj.type == ObjectType.card then
+    elseif obj.type == Type.card then
       cardCount = cardCount + 1
       if obj.is_face_down then
         faceDownCount = faceDownCount + 1
@@ -719,7 +719,7 @@ function playerColor.getCards(color)
   --`getLooseCards` can only return `nil` if `returnFirstDeck` is set
   ---@diagnostic disable-next-line
   for _, object in ipairs(Zone.getLooseCards(TRICK_ZONE[color])) do
-    if object.type == ObjectType.card then
+    if object.type == Type.card then
       table.insert(cardNames, object.getName())
     else --Must be deck since `getLooseCards` filters by type "Card" & "Deck" only
       for _, containedCard in ipairs(object.getObjects()) do
@@ -869,7 +869,7 @@ function rebuildDeck()
   --`getLooseCards` can only return `nil` if `returnFirstDeck` is set
   ---@diagnostic disable-next-line
   for _, object in ipairs(Zone.getLooseCards(SCRIPT_ZONE.table)) do
-    if object.type == ObjectType.deck then
+    if object.type == Type.deck then
       for _, containedCard in ipairs(object.getObjects()) do
         object.takeObject({
           rotation = { 0, math.random(0, 360), faceRotation },
@@ -928,7 +928,7 @@ function onChat(message, player)
     elseif command == "rules" then
       playerColor.spawnRuleBook(player.color)
     elseif command == "hiderules" then
-      Zone.removeItem(SCRIPT_ZONE.table, "Tile", true)
+      Zone.removeItem(SCRIPT_ZONE.table, Type.pdf, true)
     elseif command == "respawndeck" then
       respawnDeck(player)
     elseif command == "settings" then
@@ -980,7 +980,7 @@ function respawnDeckCoroutine(fnRunning)
 
   local remainingTableCards = Zone.getLooseCards(SCRIPT_ZONE.table)
   if not table.isEmpty(remainingTableCards) then
-    Zone.removeItem(SCRIPT_ZONE.table, {ObjectType.card, ObjectType.deck})
+    Zone.removeItem(SCRIPT_ZONE.table, {Type.card, Type.deck})
   end
   STATIC_OBJECT.hiddenBag.takeObject({
     guid = GUID.DECK_COPY,
@@ -1212,7 +1212,7 @@ function setupGameCoroutine()
     pause(6)
     if FLAG.continue then
       FLAG.lookForPlayerText, FLAG.continue = false, nil
-      Zone.removeItem(SCRIPT_ZONE.table, "Chip")
+      Zone.removeItem(SCRIPT_ZONE.table, Type.chip)
     else
       FLAG.lookForPlayerText, FLAG.fnRunning, FLAG.continue = false, false, nil
       print("[21AF21]New game was not selected.[-]")
@@ -1493,7 +1493,7 @@ function pickBlindsCoroutine()
   local playerRotation = pickingPlayer.getHandTransform().rotation
   local blinds = Zone.getLooseCards(SCRIPT_ZONE.center, true)
   if blinds then
-    assert(blinds.type == "Deck", "`getLooseCards` returns `deckObject?` if `returnFirstDeck` flag is set")
+    assert(blinds.type == Type.deck, "`getLooseCards` returns `deckObject?` if `returnFirstDeck` flag is set")
     blinds.takeObject({
       position = playerPosition,
       rotation = playerRotation
@@ -1602,12 +1602,12 @@ function toggleCounterVisibility()
     block.setInvisibleTo(ALL_PLAYERS)
     pause(0.05)
     tCounter = spawnObject({
-      type = "Counter",
+      type = Type.counter,
       position = tCounterPos,
       rotation = { 295, pickerRotation - 180, 0 },
     })
     pCounter = spawnObject({
-      type = "Counter",
+      type = Type.counter,
       position = pCounterPos,
       rotation = { 295, pickerRotation, 0 },
     })
@@ -1618,7 +1618,7 @@ function toggleCounterVisibility()
       group(pickerCards)
       pause(0.6)
       local pickerTricks = Zone.getLooseCards(pickerZone, true)
-      assert(pickerTricks and pickerTricks.type == "Deck",
+      assert(pickerTricks and pickerTricks.type == Type.deck,
         "`nil` check for `pickerCards` applies to `pickerTricks` & `getLooseCards` returns `deckObject?` if `returnFirstDeck` flag is set"
       )
 
@@ -1633,7 +1633,7 @@ function toggleCounterVisibility()
       displayWonOrLossText()
     end
   else
-    Zone.removeItem(SCRIPT_ZONE.table, "Counter", true)
+    Zone.removeItem(SCRIPT_ZONE.table, Type.counter, true)
     STATIC_OBJECT.hiddenBag.putObject(getObjectFromGUID(GUID.TABLE_BLOCK))
     FLAG.counterVisible = false
     trickCountStop()
@@ -1713,7 +1713,7 @@ end
 ---@param object object
 ---@return boolean
 function tryObjectEnterContainer(container, object)
-  if object.type ~= "Card" then
+  if object.type ~= Type.card then
     return true
   end
   if not FLAG.allowGrouping then
@@ -1742,7 +1742,7 @@ function onObjectEnterZone(zone, object)
   end
   --Makes sure other players can not see what cards the picker is burying
   if FLAG.cardsToBeBuried then
-    if zone == TRICK_ZONE[GLOBAL.pickingPlayer] and object.type == "Card" then
+    if zone == TRICK_ZONE[GLOBAL.pickingPlayer] and object.type == Type.card then
       object.setHiddenFrom(table.removeMapCloned(GLOBAL.sortedSeatedPlayers, GLOBAL.pickingPlayer))
     end
   end
@@ -1769,7 +1769,7 @@ end
 ---@param object object
 function onObjectPickUp(playerColor, object)
   if FLAG.trickInProgress
-    and object.type == "Card"
+    and object.type == Type.card
     and Zone.contains(SCRIPT_ZONE.center, object)
     and table.len(GLOBAL.currentTrick) > 1 then
       local objectName = object.getName()
@@ -1788,7 +1788,7 @@ end
 ---@param object object
 function onObjectDrop(playerColor, object)
   --Guard clauses don't work in onEvents()
-  if FLAG.trickInProgress and object.type == "Card" then
+  if FLAG.trickInProgress and object.type == Type.card then
     --Wait function allows script to continue in the case of a player throwing a card into `SCRIPT_ZONE.center`
     Wait.time(
       function()
@@ -2132,9 +2132,9 @@ function countTricks()
     TRICK_VALUES[i] = {}
     local objectsInZone = set.z.getObjects()
     for _, object in ipairs(objectsInZone) do
-      if object.type == ObjectType.card then
+      if object.type == Type.card then
         obtainCardValue(i, object)
-      elseif object.type == ObjectType.deck then
+      elseif object.type == Type.deck then
         local z = object.getRotation().z
         if z > 345 or z < 15 then
           obtainDeckValue(i, object)
