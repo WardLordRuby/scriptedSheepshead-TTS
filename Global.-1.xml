@@ -277,7 +277,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOnDealerSitsOut"
+        <Button id="dealerSitsOut=true"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -297,7 +297,7 @@
         active="false"
         >
 
-        <Button id="turnOffDealerSitsOut"
+        <Button id="dealerSitsOut=false"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -308,7 +308,7 @@
       </Image>
 
       <!-- JD Partner Button -->
-      <Image id="settingsButtonjdPartnerOn"
+      <Image id="settingsButtonPartnerModeOn"
         image="jdPartner"
         width="304"
         height="32"
@@ -319,7 +319,7 @@
         tooltipPosition="Below"
         >
 
-        <Button id="turnOffjdPartner"
+        <Button id="partnerMode=Mode.callAnAce"
           rectAlignment="UpperLeft"
           width="152"
           offsetXY="0 0"
@@ -330,7 +330,7 @@
       </Image>
 
       <!-- Call an Ace Button -->
-      <Image id="settingsButtonjdPartnerOff"
+      <Image id="settingsButtonPartnerModeOff"
         image="callAce"
         width="304"
         height="32"
@@ -342,7 +342,7 @@
         active="false"
         >
 
-        <Button id="turnOnjdPartner"
+        <Button id="partnerMode=Mode.jdPartner"
           rectAlignment="UpperLeft"
           width="152"
           offsetXY="150 0"
@@ -370,7 +370,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOnCalls"
+        <Button id="calls=true"
           rectAlignment="UpperLeft"
           width="335"
           offsetXY="-305 0"
@@ -390,7 +390,7 @@
         active="false"
         >
 
-        <Button id="turnOffCalls"
+        <Button id="calls=false"
           rectAlignment="UpperLeft"
           width="335"
           offsetXY="-305 0"
@@ -409,7 +409,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOnSheepshead"
+        <Button id="sheepshead=true"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -432,7 +432,7 @@
         active="false"
         >
 
-        <Button id="turnOffSheepshead"
+        <Button id="sheepshead=false"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -454,7 +454,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOnBlitz"
+        <Button id="blitz=true"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -477,7 +477,7 @@
         active="false"
         >
 
-        <Button id="turnOffBlitz"
+        <Button id="blitz=false"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -499,7 +499,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOnLeaster"
+        <Button id="leaster=true"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -522,7 +522,7 @@
         active="false"
         >
 
-        <Button id="turnOffLeaster"
+        <Button id="leaster=false"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -543,7 +543,7 @@
         offsetXY="322 -182"
         rectAlignment="UpperLeft"
         >
-        <Button id="turnOnCrack"
+        <Button id="crack=true"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -566,7 +566,7 @@
         active="false"
         >
 
-        <Button id="turnOffCrack"
+        <Button id="crack=false"
           rectAlignment="UpperLeft"
           width="310"
           offsetXY="-280 0"
@@ -588,7 +588,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOnCrackBack"
+        <Button id="crackBack=true"
           rectAlignment="UpperLeft"
           width="288"
           offsetXY="-261 0"
@@ -611,7 +611,7 @@
         active="false"
         >
 
-        <Button id="turnOffCrackBack"
+        <Button id="crackBack=false"
           rectAlignment="UpperLeft"
           width="288"
           offsetXY="-261 0"
@@ -633,7 +633,7 @@
         rectAlignment="UpperLeft"
         >
 
-        <Button id="turnOncrackAroundTheCorner"
+        <Button id="crackAroundTheCorner=true"
           rectAlignment="UpperLeft"
           width="288"
           offsetXY="-261 0"
@@ -656,7 +656,7 @@
         active="false"
         >
 
-        <Button id="turnOffcrackAroundTheCorner"
+        <Button id="crackAroundTheCorner=false"
           rectAlignment="UpperLeft"
           width="288"
           offsetXY="-261 0"

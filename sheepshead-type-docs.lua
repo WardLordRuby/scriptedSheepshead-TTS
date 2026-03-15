@@ -87,7 +87,7 @@ local callCards = {
 ---@field fnRunning boolean
 
 ---@class GlobalSettings
----@field jdPartner boolean|nil # `false` == Call an Ace && `nil` == No Partner
+---@field jdPartner modeEnum
 ---@field dealerSitsOut boolean
 ---@field calls boolean
 ---@field threeHanded boolean

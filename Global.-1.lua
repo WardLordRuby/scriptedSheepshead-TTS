@@ -15,6 +15,13 @@ Type = {
   pdf = "Tile"
 }
 
+---@enum modeEnum
+Mode = {
+  jdPartner = 1,
+  callAnAce = 2,
+  noPartner = 3
+}
+
 --[[CONST values]]--
 
 ---@type allPlayers
@@ -220,7 +227,7 @@ function onLoad(script_state)
   STATIC_OBJECT.hiddenBag.setInvisibleTo(ALL_PLAYERS)
   STATIC_OBJECT.setBuriedButton.setInvisibleTo(ALL_PLAYERS)
 
-  ---@type GlobalVars
+  ---@class GlobalVars
   GLOBAL = {
     playerCount = nil,
     sortedSeatedPlayers = nil,
@@ -239,7 +246,7 @@ function onLoad(script_state)
     counterGUIDs = nil
   }
 
-  ---@type GlobalFlags
+  ---@class GlobalFlags
   FLAG = {
     setupRan = false,
     trickInProgress = false,
@@ -258,9 +265,9 @@ function onLoad(script_state)
   }
 
   ---Note: the ordering of these values matters for correctly setting state `onLoad`
-  ---@type GlobalSettings
+  ---@class GlobalSettings
   SETTINGS = {
-    jdPartner = true,
+    partnerMode = Mode.jdPartner,
     dealerSitsOut = false,
     calls = false,
     threeHanded = false
@@ -377,6 +384,25 @@ end
 ---@return string
 function string.lowerFirstChar(str)
   return str:sub(1, 1):lower() .. str:sub(2)
+end
+
+---@param str string
+---@return string, string
+function string.splitAssignment(str)
+  return string.match(str, "([^=]+)=([^=]+)")
+end
+
+---@param str string
+---@return string, string
+function string.splitStringEnum(str)
+  return string.match(str, "([^.]+).([^.]+)")
+end
+
+---@param key string
+---@param val boolean|modeEnum
+---@return string
+function string.joinKeyValue(key, val)
+  return string.format("%s=%s", key, tostring(val))
 end
 
 ---Inserts a space before every capital letter in string
@@ -1297,7 +1323,7 @@ function setupHandEvent()
   GLOBAL.pickingPlayer, GLOBAL.leadOutPlayer, GLOBAL.holdCards, GLOBAL.partnerCard = nil, nil, nil, nil
   FLAG.trickInProgress, FLAG.handInProgress, FLAG.leasterHand, FLAG.crackCalled = false, false, false, false
 
-  if SETTINGS.jdPartner then
+  if SETTINGS.partnerMode == Mode.jdPartner then
     GLOBAL.partnerCard = JD_PARTNER_CARD
   end
 
@@ -1517,14 +1543,14 @@ function pickBlindsCoroutine()
   FLAG.cardsToBeBuried = true
   showSetBuriedButton()
 
-  if SETTINGS.jdPartner then
+  if SETTINGS.partnerMode == Mode.jdPartner then
     if pickingPlayer.color == GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx] then
       pause(1.5)
       if playerColor.possessCard(pickingPlayer.color, JD_PARTNER_CARD) then
         playerColor.toggleWindowVisibility(pickingPlayer.color, "playAloneWindow", true)
       end
     end
-  elseif SETTINGS.jdPartner == false then --Call an Ace
+  elseif SETTINGS.partnerMode == Mode.callAnAce then
     pause(0.5)
     playerColor.buildPartnerChoices(pickingPlayer.color)
     pause(0.25)
@@ -1651,7 +1677,7 @@ function setBuriedEvent(player)
     broadcastToColor("[DC0000]You must bury 2 cards[-]", player.color)
     return
   end
-  if SETTINGS.jdPartner == false then
+  if SETTINGS.partnerMode == Mode.callAnAce then
     local partnerWindowOpen = UI.getAttribute("selectPartnerWindow", "visibility")
     if partnerWindowOpen ~= "" then
       broadcastToColor("[DC0000]Select Partner before burying cards[-]", player.color)
@@ -1873,7 +1899,7 @@ function addCardDataToCurrentTrick(playerColor, object)
   calculateCardData(#GLOBAL.currentTrick, objectIsTrump, object.is_face_down)
 end
 
----Function will return early if card does not need to be compared to currentHighStrength
+---Function will return early if card does not need to be compared to `currentHighStrength`
 ---@param cardIndex integer
 ---@param objectIsTrump boolean
 ---@param isFaceDown boolean?
@@ -1908,7 +1934,7 @@ function initializeCurrentTrick(objectName, isTrump)
   setLeadOutCardProperties(objectName, isTrump)
 end
 
----Trick properties stored in GLOBAL.currentTrick[1]
+---Trick properties stored in `GLOBAL.currentTrick[1]`
 ---@param objectName string
 ---@param isTrump boolean
 function setLeadOutCardProperties(objectName, isTrump)
@@ -1928,7 +1954,7 @@ function setLeadOutCardProperties(objectName, isTrump)
   GLOBAL.currentTrick[1].highStrengthIndex = 2
 end
 
----Trick properties stored in GLOBAL.currentTrick[1]
+---Trick properties stored in `GLOBAL.currentTrick[1]`
 ---@param isTrump boolean
 ---@param strengthVal integer
 ---@param index integer
@@ -1955,7 +1981,7 @@ function isTrump(objectName)
   return false
 end
 
----Only search for strengths higher than currentHighStrength
+---Only search for strengths higher than `GLOBAL.currentTrick[1].currentHighStrength`
 ---@param objectName string
 ---@param isTrump boolean
 ---@return integer
@@ -2312,14 +2338,14 @@ function buildCallPanel()
 end
 
 ---@param rule string<"ruleName">
----@param bool boolean
-function updateRules(rule, bool)
-  SETTINGS[rule] = bool
+---@param value boolean|integer
+function updateRules(rule, value)
+  SETTINGS[rule] = value
   if RULE_TABLE[rule].execute then
-    RULE_TABLE[rule].execute(bool)
+    RULE_TABLE[rule].execute(value)
   end
-  if RULE_TABLE[rule][bool] then
-    for desc, ruleIdx in pairs(RULE_TABLE[rule][bool]) do
+  if RULE_TABLE[rule][value] then
+    for desc, ruleIdx in pairs(RULE_TABLE[rule][value]) do
       CURRENT_RULES[ruleIdx] = desc
     end
     displayRules()
@@ -2327,7 +2353,7 @@ function updateRules(rule, bool)
 end
 
 ---@param call string<"callName">
----@param bool boolean
+---@param bool boolean|integer
 function updateCalls(call, bool)
   CALL_SETTINGS[call] = bool
   if CALL_TABLE[call] then
@@ -2339,11 +2365,12 @@ end
 ---Abstracted guard clause for determining if settings window toggle is not valid
 ---@param player eventTriggerPlayer?
 ---@param id string
----@param state boolean
+---@param state boolean|integer
 ---@return boolean
 function toggleNotValid(player, id, state)
   local lowerID = string.lower(id)
-  if not SETTINGS.calls and state then
+
+  if CALL_SETTINGS[id] ~= nil and not SETTINGS.calls and state then
     for key in pairs(CALL_SETTINGS) do
       local lowerKey = string.lower(key)
       if string.find(lowerID, lowerKey) then
@@ -2351,57 +2378,83 @@ function toggleNotValid(player, id, state)
       end
     end
   end
-  if not CALL_SETTINGS.crack and state then
-    if string.find(lowerID, "crack.") then
-      return true
-    end
-  end
-  if id == "jdPartner" or lowerID == "dealersitsout" then
-    if FLAG.fnRunning then
-      if player and player.color then
-        broadcastToColor("[DC0000]Please wait and try again[-]", player.color)
-      else
-        print("[DC0000]Please wait and try again[-]")
-      end
-      return true
-    end
-  end
-  if id == "jdPartner" and SETTINGS.jdPartner == nil then
+
+  if not CALL_SETTINGS.crack and state and string.find(lowerID, "crack.") then
     return true
   end
+
+  if (id == "partnerMode" or id == "dealerSitsOut") and FLAG.fnRunning then
+    print("fn running: " .. tostring(FLAG.fnRunning))
+    if player and player.color then
+      broadcastToColor("[DC0000]Please wait and try again[-]", player.color)
+    else
+      print("[DC0000]Please wait and try again[-]")
+    end
+    return true
+  end
+
+  if id == "partnerMode" and SETTINGS.partnerMode == Mode.noPartner then
+    return true
+  end
+
   return false
 end
 
 ---Toggle setting via formatted id
 ---@param player eventTriggerPlayer?
 ---@param val string<"number">?
----@param id string<"turnOnSettingName"|"turnOffSettingName">
+---@param id string<"settingName=boolean"|"settingName=Enum.variant">
 function toggleSetting(player, val, id)
-  local idName, state
-  if string.find(id, "turnOn") then
-    idName = string.gsub(id, "turnOn", "")
-    state = true
-  elseif string.find(id, "turnOff") then
-    idName = string.gsub(id, "turnOff", "")
-    state = false
-  else
+  local idName, state, elementState = parseSettingId(id)
+  if not idName or state == nil then
+    print(string.format("Error: failed to parse element id: '%s'", id))
     return
   end
   if toggleNotValid(player, idName, state) then
     return
   end
-  idName = string.lowerFirstChar(idName)
-  for key, _ in pairs(SETTINGS) do
-    if key == idName then
-      updateRules(idName, state)
-    end
+
+  if SETTINGS[idName] ~= nil then
+    updateRules(idName, state)
   end
-  for key, _ in pairs(CALL_SETTINGS) do
-    if key == idName then
-      updateCalls(idName, state)
-    end
+  if CALL_SETTINGS[idName] ~= nil then
+    updateCalls(idName, state)
   end
+
+  if type(state) ~= "boolean" then
+    assert(elementState ~= nil)
+    state = elementState
+  end
+
   toggleUISettingsButtonState(idName, state)
+end
+
+ModeElementStates = {
+  jdPartner = true,
+  callAnAce = false
+}
+
+ValueMap = {
+  ["true"] = true,
+  ["false"] = false,
+  ["Mode"] = { variants = Mode, elementStates = ModeElementStates }
+}
+
+---Parses settings button id into var, state, enum?
+---@param id string<"settingName=state"|"settingName=Enum.variant">
+---@return string?, boolean|integer?, boolean?
+function parseSettingId(id)
+  local setting, value = string.splitAssignment(id)
+  local typedValue = ValueMap[value] ---@type any
+  if typedValue ~= nil then
+    return setting, typedValue
+  end
+
+  local enum, variant = string.splitStringEnum(value)
+  local enumMaps = ValueMap[enum]
+  assert(enumMaps ~= nil)
+  typedValue = enumMaps.variants[variant]
+  return setting, typedValue, enumMaps.elementStates[variant]
 end
 
 ---Toggles the displayed state of a UI button
@@ -2423,8 +2476,7 @@ function stateChangeCalls(bool)
     UI.setAttribute("callSettingsBackground", "image", "callsDisabled")
     for key, value in pairs(CALL_SETTINGS) do
       if value then
-        local formatKey = "turnOff" .. key
-        toggleSetting(nil, nil, formatKey)
+        toggleSetting(nil, nil, string.joinKeyValue(key, false))
       end
     end
   end
@@ -2448,26 +2500,34 @@ function stateChangeDealerSitsOut(bool)
   end
 end
 
----@param bool boolean
-function stateChangeThreeHanded(bool)
-  local jdPartnerID = UI.getAttribute("settingsButtonjdPartnerOff", "active")
-  local jdPartner
-  if jdPartnerID == "false" then
-    jdPartner = true
-    jdPartnerID = "settingsButtonjdPartnerOn"
-  else
-    jdPartner = false
-    jdPartnerID = "settingsButtonjdPartnerOff"
+---@param newState boolean
+function stateChangeThreeHanded(newState)
+  local currState = SETTINGS.partnerMode == Mode.noPartner
+  if currState == newState then
+    local stateString = currState and "enabled" or "disabled"
+    print(string.format("Error: Tried to switch state to %s when ThreeHanded is already %s", stateString, stateString))
+    return
   end
-  if bool then
-    SETTINGS.jdPartner = nil
+
+  local callAnAceSelected = UI.getAttribute("settingsButtonCallAnAce", "active")
+  local partnerMode, partnerElementID
+  if callAnAceSelected == "true" then
+    partnerMode = Mode.callAnAce
+    partnerElementID = "settingsButtonPartnerModeOff"
+  else
+    partnerMode = Mode.jdPartner
+    partnerElementID = "settingsButtonPartnerModeOn"
+  end
+
+  if newState then
+    SETTINGS.partnerMode = Mode.noPartner
     if not SETTINGS.calls then
-      Wait.time(function() toggleSetting(nil, nil, "turnOnCalls") end, 3)
+      Wait.time(function() toggleSetting(nil, nil, string.joinKeyValue("calls", true)) end, 3)
     end
     if not CALL_SETTINGS.leaster then
-      Wait.time(function() toggleSetting(nil, nil, "turnOnLeaster") end, 3)
+      Wait.time(function() toggleSetting(nil, nil, string.joinKeyValue("leaster", true)) end, 3)
     end
-    UI.setAttribute(jdPartnerID, "tooltip", "Can not change setting, No partner playing 3 handed")
+    UI.setAttribute(partnerElementID, "tooltip", "Can not change setting, No partner playing 3 handed")
   else
     local callCount = 0
     for _, callEnabled in pairs(CALL_SETTINGS) do
@@ -2479,10 +2539,10 @@ function stateChangeThreeHanded(bool)
       end
     end
     if callCount == 1 then
-      Wait.time(function() toggleSetting(nil, nil, "turnOffCalls") end, 3)
+      Wait.time(function() toggleSetting(nil, nil, string.joinKeyValue("calls", false)) end, 3)
     end
-    UI.setAttribute(jdPartnerID, "tooltip", "")
-    updateRules("jdPartner", jdPartner)
+    UI.setAttribute(partnerElementID, "tooltip", "")
+    updateRules("partnerMode", partnerMode)
   end
 end
 
@@ -2497,8 +2557,7 @@ function stateChangeCrack(bool)
     for key, value in pairs(CALL_SETTINGS) do
       local lowerKey = string.lower(key)
       if value and string.find(lowerKey, "crack.") then
-        local formatKey = "turnOff" .. key
-        toggleSetting(nil, nil, formatKey)
+        toggleSetting(nil, nil, string.joinKeyValue(key, false))
       end
     end
   end
@@ -2511,8 +2570,7 @@ function stateChangeCrackSubSet(bool, call)
     for key, value in pairs(CALL_SETTINGS) do
       local lowerKey = string.lower(key)
       if value and string.find(lowerKey, "crack.") and key ~= call then
-        local formatKey = "turnOff" .. key
-        toggleSetting(nil, nil, formatKey)
+        toggleSetting(nil, nil, string.joinKeyValue(key, false))
       end
     end
   end
@@ -2520,8 +2578,8 @@ end
 
 --[[End of functions for settings window]]--
 
----Hides a UI window by ID from all players<br>Use `toggleWindowVisibility` to make UI elements visible to
----specific players
+---Hides a UI window by ID from all players<br>
+---Use `toggleWindowVisibility` to make UI elements visible to specific players
 ---@param window string<"windowID">
 function hideUIElement(window)
   UI.setAttribute(window, "visibility", "")
@@ -2573,7 +2631,7 @@ function callPartnerEvent(player)
       end
       if GLOBAL.partnerCard then
         broadcastToAll("[21AF21]" .. player.steam_name .. " calls " .. GLOBAL.partnerCard .. " as their partner[-]")
-      elseif SETTINGS.jdPartner then
+      elseif SETTINGS.partnerMode == Mode.jdPartner then
         local dealerColor = GLOBAL.sortedSeatedPlayers[GLOBAL.dealerColorIdx]
         if player.color == dealerColor and player.color == GLOBAL.pickingPlayer then
           if playerColor.possessCard(player.color, JD_PARTNER_CARD) then
@@ -2584,7 +2642,7 @@ function callPartnerEvent(player)
         else
           broadcastToColor("[DC0000]You can only call up if you are forced to pick and have the Jack[-]", player.color)
         end
-      elseif SETTINGS.jdPartner == false then --Call an Ace
+      elseif SETTINGS.partnerMode == Mode.callAnAce then
         if player.color == GLOBAL.pickingPlayer then
           playerColor.toggleWindowVisibility(player.color, "selectPartnerWindow", true)
         else
@@ -2691,7 +2749,7 @@ function playerCallsEvent(player, val, id)
   end
 
   if id == "CrackAroundTheCorner" and player.color ~= GLOBAL.pickingPlayer then
-    if SETTINGS.jdPartner == nil
+    if SETTINGS.partnerMode == Mode.noPartner
       or not GLOBAL.partnerCard
       or not playerColor.possessCard(player.color, GLOBAL.partnerCard) then
         broadcastToColor(
@@ -3085,12 +3143,12 @@ RULE_TABLE = {
     [false] = {["Dealer Pick your Own       \nCan Call if Forced to Pick    \n"] = 15},
     execute = stateChangeThreeHanded
   },
-  jdPartner = {
-    [true] = {
+  partnerMode = {
+    [Mode.jdPartner] = {
       ["Jack of Diamonds Partner    \n"] = 14,
       ["Dealer Pick your Own       \nCan Call if Forced to Pick    \n"] = 15
     },
-    [false] = {
+    [Mode.callAnAce] = {
       ["Call an Ace                \n"] = 14,
       ["Dealer Pick your Own       \n"] = 15
     }
